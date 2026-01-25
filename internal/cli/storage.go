@@ -130,13 +130,13 @@ func resolveStorageAction(raw string) (string, bool) {
 
 func resolveStoragePath(explicit string) string {
 	path := strings.TrimSpace(explicit)
-	if path == "" {
-		path = defaultStoragePath
+	if path != "" {
+		return expandPath(path)
 	}
 	if envPath := strings.TrimSpace(os.Getenv(defaultEnvAppriseStoragePath)); envPath != "" {
-		path = envPath
+		return expandPath(envPath)
 	}
-	return expandPath(path)
+	return expandPath(defaultStoragePath)
 }
 
 func loadStorageURLs(opts *cliOptions) []taggedURL {
