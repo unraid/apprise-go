@@ -3,3 +3,20 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.1.1 (2026-01-25)
+
+### Features
+
+- Refactor image URL handling to raw.githubusercontent
+- add macos builds
+- build binary
+- fully reproduce apprise in Go
+- add form/xml notifiers and schema coverage
+- add json notifier and cli runner
+- initial commit
+
+### Fixes
+
+- update parity checks to ignore asset URL changes
+- use upstream version instead of version
+- update module golang.org/x/crypto to v0.47.0

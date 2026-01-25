@@ -9,7 +9,7 @@ const (
 )
 
 // Override at build time with: -ldflags "-X github.com/unraid/apprise-go/internal/version.Version=1.2.3"
-var Version = "0.1.0"
+var Version = "0.1.1"
 
 // UpstreamVersion tracks the caronc/apprise release version we are compatible with.
 // Override at build time with: -ldflags "-X github.com/unraid/apprise-go/internal/version.UpstreamVersion=1.2.3"
