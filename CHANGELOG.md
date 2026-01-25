@@ -3,6 +3,12 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.1.5 (2026-01-25)
+
+### Fixes
+
+- hardened runtime flag
+
 ## 0.1.4 (2026-01-25)
 
 ### Fixes
