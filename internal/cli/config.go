@@ -16,8 +16,8 @@ const (
 )
 
 var (
-	urlDetectionRe = regexp.MustCompile(`([a-z0-9]+?:\/\/.*?)(?=$|[\s,]+[a-z0-9]{1,32}?:\/\/)`)
-	splitDelimsRe  = regexp.MustCompile(`[\[\];,\s]+`)
+	urlSchemeRe   = regexp.MustCompile(`(?i)[a-z0-9]{1,32}://`)
+	splitDelimsRe = regexp.MustCompile(`[\[\];,\s]+`)
 )
 
 type taggedURL struct {
@@ -92,9 +92,23 @@ func parseTaggedLine(line string) []taggedURL {
 }
 
 func detectURLs(raw string) []string {
-	matches := urlDetectionRe.FindAllString(raw, -1)
+	matches := urlSchemeRe.FindAllStringIndex(raw, -1)
 	if len(matches) > 0 {
-		return matches
+		urls := make([]string, 0, len(matches))
+		for idx, match := range matches {
+			start := match[0]
+			end := len(raw)
+			if idx+1 < len(matches) {
+				end = matches[idx+1][0]
+			}
+			chunk := strings.TrimSpace(raw[start:end])
+			chunk = strings.TrimRight(chunk, ",")
+			if chunk == "" {
+				continue
+			}
+			urls = append(urls, chunk)
+		}
+		return urls
 	}
 	parts := splitDelimsRe.Split(raw, -1)
 	urls := make([]string, 0, len(parts))
