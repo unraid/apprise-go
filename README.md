@@ -1,7 +1,7 @@
 # apprise-go
 
 apprise-go is a Go port of Apprise by Chris Caron:
-https://github.com/caronc/apprise
+[caronc/apprise](https://github.com/caronc/apprise)
 
 This repo is not affiliated with or endorsed by the upstream Apprise project.
 
