@@ -153,6 +153,32 @@ func TestStorageClearRemovesAll(t *testing.T) {
 	}
 }
 
+func TestStoragePathPrecedence(t *testing.T) {
+	explicitDir := t.TempDir()
+	envDir := t.TempDir()
+	url := "json://user:pass@example.com"
+	uid := urlID(t, url)
+
+	writeCacheFile(t, explicitDir, uid)
+	t.Setenv(defaultEnvAppriseStoragePath, envDir)
+	t.Setenv(defaultEnvAppriseURLs, url)
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := Run([]string{"--storage-path", explicitDir, "storage"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("storage list failed: code=%d stdout=%s stderr=%s", code, strings.TrimSpace(stdout.String()), strings.TrimSpace(stderr.String()))
+	}
+
+	output := stdout.String()
+	if !strings.Contains(output, uid) {
+		t.Fatalf("expected uid in output: %s", output)
+	}
+	if !strings.Contains(output, "active") {
+		t.Fatalf("expected active state in output: %s", output)
+	}
+}
+
 func urlID(t *testing.T, url string) string {
 	t.Helper()
 
