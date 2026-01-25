@@ -17,6 +17,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Checkout upstream Apprise
+        run: |
+          set -euo pipefail
+          upstream_version=$(sed -n 's/^var UpstreamVersion = "\([^"]*\)"/\1/p' internal/version/version.go)
+          if [[ -z "${upstream_version}" ]]; then
+            echo "UpstreamVersion not found in internal/version/version.go" >&2
+            exit 1
+          fi
+
+          target="../apprise"
+          if [[ -d "${target}" ]]; then
+            echo "Upstream apprise repo already present at ${target}"
+            exit 0
+          fi
+
+          mkdir -p "${target}"
+          git -C "${target}" init
+          git -C "${target}" remote add origin https://github.com/caronc/apprise
+          if git -C "${target}" fetch --depth 1 origin "refs/tags/v${upstream_version}"; then
+            git -C "${target}" checkout --detach FETCH_HEAD
+          elif git -C "${target}" fetch --depth 1 origin "refs/tags/${upstream_version}"; then
+            git -C "${target}" checkout --detach FETCH_HEAD
+          else
+            echo "Tag not found; falling back to default branch."
+            git -C "${target}" fetch --depth 1 origin HEAD
+            git -C "${target}" checkout --detach FETCH_HEAD
+          fi
+
       - name: Set up Go
         uses: actions/setup-go@v6
         with:

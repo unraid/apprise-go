@@ -21,7 +21,7 @@ func TestPythonVersionMatchesGo(t *testing.T) {
 		t.Fatalf("python apprise version empty (stderr: %s)", strings.TrimSpace(stderr))
 	}
 
-	if pyVersion != version.Version {
-		t.Fatalf("version mismatch: python=%s go=%s", pyVersion, version.Version)
+	if pyVersion != version.UpstreamVersion {
+		t.Fatalf("version mismatch: python=%s upstream=%s", pyVersion, version.UpstreamVersion)
 	}
 }

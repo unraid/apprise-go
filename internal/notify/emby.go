@@ -268,7 +268,7 @@ func (e *EmbyTarget) embyAuthHeader() string {
 		fmt.Sprintf(`MediaBrowser Client="%s"`, "Apprise"),
 		fmt.Sprintf(`Device="%s"`, "Apprise"),
 		fmt.Sprintf(`DeviceId="%s"`, embyDeviceID),
-		fmt.Sprintf(`Version="%s"`, version.Version),
+		fmt.Sprintf(`Version="%s"`, version.UpstreamVersion),
 	}
 
 	if e.userID != "" {

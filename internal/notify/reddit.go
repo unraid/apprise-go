@@ -244,5 +244,5 @@ func encodeRedditForm(values map[string]string) string {
 }
 
 func redditUserAgent() string {
-	return fmt.Sprintf("%s v%s", version.Title, version.Version)
+	return fmt.Sprintf("%s v%s", version.Title, version.UpstreamVersion)
 }
