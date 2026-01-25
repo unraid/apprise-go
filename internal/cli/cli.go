@@ -1524,7 +1524,7 @@ func isStorageAction(args []string) bool {
 	if len(args) == 0 {
 		return false
 	}
-	return strings.HasPrefix("storage", strings.ToLower(args[0]))
+	return strings.HasPrefix(strings.ToLower(args[0]), "storage")
 }
 
 func resolveNotifyURLs(opts *cliOptions, args []string, stderr io.Writer) []taggedURL {
