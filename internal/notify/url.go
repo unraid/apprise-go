@@ -14,8 +14,11 @@ type ParsedURL struct {
 	Scheme       string
 	Host         string
 	Port         int
+	HasPort      bool
 	User         string
+	HasUser      bool
 	Password     string
+	HasPassword  bool
 	Path         string
 	Query        map[string]string
 	QueryAdd     map[string]string
@@ -67,11 +70,14 @@ func ParseURL(raw string) (*ParsedURL, error) {
 	host := u.Hostname()
 
 	port := 0
+	hasPort := false
 	if portRaw := u.Port(); portRaw != "" {
+		hasPort = true
 		value, err := strconv.Atoi(portRaw)
 		if err != nil {
 			if strings.EqualFold(u.Scheme, "tgram") {
 				host = u.Host
+				hasPort = false
 			} else {
 				return nil, fmt.Errorf("invalid port: %s", portRaw)
 			}
@@ -84,10 +90,14 @@ func ParseURL(raw string) (*ParsedURL, error) {
 
 	user := ""
 	password := ""
+	hasUser := false
+	hasPassword := false
 	if u.User != nil {
+		hasUser = true
 		user = u.User.Username()
 		if pw, ok := u.User.Password(); ok {
 			password = pw
+			hasPassword = true
 		}
 	}
 	if strings.EqualFold(u.Scheme, "tgram") && strings.EqualFold(u.Hostname(), telegramAuthorityHost) && user != "" {
@@ -97,6 +107,8 @@ func ParseURL(raw string) (*ParsedURL, error) {
 		}
 		user = ""
 		password = ""
+		hasUser = false
+		hasPassword = false
 	}
 
 	parsedPath := u.EscapedPath()
@@ -111,8 +123,11 @@ func ParseURL(raw string) (*ParsedURL, error) {
 		Scheme:       strings.ToLower(u.Scheme),
 		Host:         host,
 		Port:         port,
+		HasPort:      hasPort,
 		User:         user,
+		HasUser:      hasUser,
 		Password:     password,
+		HasPassword:  hasPassword,
 		Path:         parsedPath,
 		Query:        qsd.qsd,
 		QueryAdd:     qsd.add,
