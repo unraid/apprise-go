@@ -12,7 +12,6 @@ Environment
 - CLI binary name: `apprise` (drop-in goal)
 
 Workflow
-- Use Graphite (`gt`) for stacked PRs.
 - Tests should compare Go behavior to the installed Python apprise using a local capture server.
 - Request-spec parity is driven by provider folders in `internal/parity/providers/<provider>` with `manifest.json` and `cases.json`.
 - Keep Go version strings aligned with upstream apprise (see `internal/version/version.go`).
