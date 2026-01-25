@@ -58,7 +58,7 @@ jobs:
           PY
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: chore/sync-upstream-version
           delete-branch: true
