@@ -27,7 +27,7 @@ jobs:
           fi
 
           target="../apprise"
-          if [[ -d "${target}" ]]; then
+          if [[ -d "${target}" ]] && ([[ -d "${target}/.git" ]] || git -C "${target}" rev-parse --is-inside-work-tree >/dev/null 2>&1); then
             echo "Upstream apprise repo already present at ${target}"
             exit 0
           fi

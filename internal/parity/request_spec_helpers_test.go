@@ -24,6 +24,13 @@ var headerKeep = map[string]struct{}{
 	"authorization": {},
 }
 
+const (
+	appriseUpstreamAssetPrefix = "https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-"
+	appriseGoAssetPrefix       = "https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-"
+	appriseUpstreamRepoURL     = "https://github.com/caronc/apprise"
+	appriseGoRepoURL           = "https://github.com/unraid/apprise-go"
+)
+
 func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpec) {
 	t.Helper()
 
@@ -42,8 +49,8 @@ func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpe
 	if pythonURL.Scheme != goURL.Scheme || pythonURL.Host != goURL.Host || pythonURL.Path != goURL.Path || pythonURL.Fragment != goURL.Fragment {
 		t.Fatalf("url mismatch: python=%s go=%s", pythonSpec.URL, goSpec.URL)
 	}
-	pythonQuery := pythonURL.Query().Encode()
-	goQuery := goURL.Query().Encode()
+	pythonQuery := normalizeQueryValues(pythonURL.Query()).Encode()
+	goQuery := normalizeQueryValues(goURL.Query()).Encode()
 	if pythonQuery != goQuery {
 		t.Fatalf("url query mismatch: python=%s go=%s", pythonQuery, goQuery)
 	}
@@ -136,6 +143,9 @@ func assertJSONBodyEqual(t *testing.T, pythonBody, goBody string) {
 		t.Fatalf("parse go json body: %v", err)
 	}
 
+	pythonValue = normalizeJSONValue(pythonValue)
+	goValue = normalizeJSONValue(goValue)
+
 	if !reflect.DeepEqual(pythonValue, goValue) {
 		t.Fatalf("json body mismatch: python=%v go=%v", pythonValue, goValue)
 	}
@@ -153,7 +163,56 @@ func assertQueryEqual(t *testing.T, pythonBody, goBody string) {
 		t.Fatalf("parse go query: %v", err)
 	}
 
-	if pythonValues.Encode() != goValues.Encode() {
-		t.Fatalf("query mismatch: python=%s go=%s", pythonValues.Encode(), goValues.Encode())
+	pythonNormalized := normalizeQueryValues(pythonValues)
+	goNormalized := normalizeQueryValues(goValues)
+
+	if pythonNormalized.Encode() != goNormalized.Encode() {
+		t.Fatalf("query mismatch: python=%s go=%s", pythonNormalized.Encode(), goNormalized.Encode())
 	}
+}
+
+func normalizeQueryValues(values url.Values) url.Values {
+	normalized := url.Values{}
+	for key, list := range values {
+		clean := make([]string, len(list))
+		for i, value := range list {
+			clean[i] = normalizeAppriseURL(value)
+		}
+		normalized[key] = clean
+	}
+	return normalized
+}
+
+func normalizeJSONValue(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		normalized := make(map[string]any, len(typed))
+		for key, entry := range typed {
+			normalized[key] = normalizeJSONValue(entry)
+		}
+		return normalized
+	case []any:
+		normalized := make([]any, len(typed))
+		for i, entry := range typed {
+			normalized[i] = normalizeJSONValue(entry)
+		}
+		return normalized
+	case string:
+		return normalizeAppriseURL(typed)
+	default:
+		return typed
+	}
+}
+
+func normalizeAppriseURL(value string) string {
+	if strings.HasPrefix(value, appriseUpstreamAssetPrefix) {
+		return appriseGoAssetPrefix + strings.TrimPrefix(value, appriseUpstreamAssetPrefix)
+	}
+	if strings.HasPrefix(value, appriseGoAssetPrefix) {
+		return value
+	}
+	if value == appriseUpstreamRepoURL {
+		return appriseGoRepoURL
+	}
+	return value
 }
