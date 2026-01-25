@@ -18,7 +18,7 @@
     "name": "image-options",
     "requests": [
       {
-        "body": "{\"title\": \"Apprise Notifications\", \"body\": \"body\", \"icon\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-warning-128x128.png\", \"sound\": \"minuet.caf\", \"url\": \"https://example.com\", \"badge\": 2, \"level\": \"passive\", \"category\": \"alerts\", \"group\": \"ops\", \"volume\": 3, \"device_key\": \"device1\"}",
+        "body": "{\"title\": \"Apprise Notifications\", \"body\": \"body\", \"icon\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-128x128.png\", \"sound\": \"minuet.caf\", \"url\": \"https://example.com\", \"badge\": 2, \"level\": \"passive\", \"category\": \"alerts\", \"group\": \"ops\", \"volume\": 3, \"device_key\": \"device1\"}",
         "headers": {
           "accept": "*/*",
           "authorization": "Basic dXNlcjpwYXNz",

@@ -3,7 +3,7 @@
     "name": "webhook",
     "requests": [
       {
-        "body": "{\"token\": \"token123\", \"flockml\": \"<flockml><b>title</b><br/>body</flockml>\", \"sendAs\": {\"name\": \"Apprise\", \"profileImage\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-info-72x72.png\"}}",
+        "body": "{\"token\": \"token123\", \"flockml\": \"<flockml><b>title</b><br/>body</flockml>\", \"sendAs\": {\"name\": \"Apprise\", \"profileImage\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-72x72.png\"}}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json",

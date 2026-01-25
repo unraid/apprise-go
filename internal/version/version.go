@@ -8,9 +8,8 @@ const (
 	Copyright = "Copyright (C) 2025 Chris Caron <lead2gold@gmail.com>"
 )
 
-// Version matches the upstream apprise release version by default.
 // Override at build time with: -ldflags "-X github.com/unraid/apprise-go/internal/version.Version=1.2.3"
-var Version = "1.9.7"
+var Version = "0.1.0"
 
 // UpstreamVersion tracks the caronc/apprise release version we are compatible with.
 // Override at build time with: -ldflags "-X github.com/unraid/apprise-go/internal/version.UpstreamVersion=1.2.3"

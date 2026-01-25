@@ -9,8 +9,6 @@ import (
 
 const lineURL = "https://api.line.me/v2/bot/message/push"
 
-const lineImageURLMask = "https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-%s-128x128.png"
-
 var lineTargetDelimiters = regexp.MustCompile(`[ \t\r\n,#\\/]+`)
 
 type LineTarget struct {
@@ -97,7 +95,7 @@ func (l *LineTarget) buildRequestForTarget(target, body, title string, notifyTyp
 		"name": "Apprise",
 	}
 	if l.includeImage {
-		sender["iconUrl"] = fmt.Sprintf(lineImageURLMask, string(notifyType))
+		sender["iconUrl"] = appriseImageURL(notifyType, "128x128")
 	}
 
 	payload := map[string]any{

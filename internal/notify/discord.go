@@ -102,13 +102,9 @@ func (d *DiscordTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func defaultImageURL(notifyType NotifyType) string {
-	notify := strings.ToLower(string(notifyType))
-	if notify == "" {
-		notify = string(NotifyInfo)
+	if strings.TrimSpace(string(notifyType)) == "" {
+		notifyType = NotifyInfo
 	}
 
-	return fmt.Sprintf(
-		"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-%s-256x256.png",
-		notify,
-	)
+	return appriseImageURL(notifyType, "256x256")
 }

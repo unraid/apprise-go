@@ -3,7 +3,7 @@
     "name": "default",
     "requests": [
       {
-        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-info-256x256.png\", \"content\": \"apprise parity\\r\\nhello from python\"}",
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"content\": \"apprise parity\\r\\nhello from python\"}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json; charset=utf-8",
@@ -18,7 +18,7 @@
     "name": "botname",
     "requests": [
       {
-        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-info-256x256.png\", \"username\": \"mybot\", \"content\": \"body\"}",
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"username\": \"mybot\", \"content\": \"body\"}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json; charset=utf-8",

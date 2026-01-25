@@ -9,8 +9,9 @@ providers_root = repo_root / "internal" / "parity" / "providers"
 
 sys.path.insert(0, str(script_dir))
 
-from apprise.common import NotifyType  # noqa: E402
 from capture_request import capture_request  # noqa: E402
+
+from apprise.common import NotifyType  # noqa: E402
 
 DEFAULT_ENV = {
     "APPRISE_FIXED_TIME": "2024-01-01T00:00:00Z",
@@ -20,6 +21,14 @@ DEFAULT_ENV = {
     "APPRISE_VAPID_TEST_PUBLIC_KEY": "parity-public-key",
     "APPRISE_VAPID_TEST_ENCRYPTED": "cGFyaXR5LXZhcGlk",
 }
+UPSTREAM_ASSET_BASE = (
+    "https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/"
+)
+LOCAL_ASSET_BASE = (
+    "https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/"
+)
+UPSTREAM_APP_URL = "https://github.com/caronc/apprise"
+LOCAL_APP_URL = "https://github.com/unraid/apprise-go"
 
 
 def apply_default_env():
@@ -36,6 +45,18 @@ def parse_notify_type(raw):
     if value == "failure":
         return NotifyType.FAILURE
     return NotifyType.INFO
+
+
+def rewrite_values(value):
+    if isinstance(value, str):
+        return value.replace(UPSTREAM_ASSET_BASE, LOCAL_ASSET_BASE).replace(
+            UPSTREAM_APP_URL, LOCAL_APP_URL
+        )
+    if isinstance(value, list):
+        return [rewrite_values(entry) for entry in value]
+    if isinstance(value, dict):
+        return {key: rewrite_values(entry) for key, entry in value.items()}
+    return value
 
 
 def main():
@@ -64,7 +85,9 @@ def main():
                 case.get("title", ""),
                 parse_notify_type(case.get("type")),
             )
-            golden_cases.append({"name": case["name"], "requests": specs})
+            golden_cases.append(
+                {"name": case["name"], "requests": rewrite_values(specs)}
+            )
 
         golden_path = provider_dir / "golden.json"
         golden_path.write_text(json.dumps(golden_cases, indent=2, sort_keys=True))

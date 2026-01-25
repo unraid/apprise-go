@@ -19,7 +19,7 @@
     "name": "event-with-source-image",
     "requests": [
       {
-        "body": "{\"source\": \"Scheduler\", \"type\": \"warning\", \"notification\": {\"update\": true, \"name\": \"Apprise\", \"event\": \"42\"}, \"discord\": {\"color\": \"#CACF29\", \"ping\": {\"pingUser\": 0, \"pingRole\": 0}, \"text\": {\"title\": \"update\", \"content\": \"\", \"description\": \"body\", \"footer\": \"Apprise Notifications\", \"icon\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-warning-256x256.png\"}, \"ids\": {\"channel\": 111111}, \"images\": {\"thumbnail\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-warning-256x256.png\"}}}",
+        "body": "{\"source\": \"Scheduler\", \"type\": \"warning\", \"notification\": {\"update\": true, \"name\": \"Apprise\", \"event\": \"42\"}, \"discord\": {\"color\": \"#CACF29\", \"ping\": {\"pingUser\": 0, \"pingRole\": 0}, \"text\": {\"title\": \"update\", \"content\": \"\", \"description\": \"body\", \"footer\": \"Apprise Notifications\", \"icon\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-256x256.png\"}, \"ids\": {\"channel\": 111111}, \"images\": {\"thumbnail\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-256x256.png\"}}}",
         "headers": {
           "accept": "text/plain",
           "content-type": "application/json",
@@ -30,7 +30,7 @@
         "url": "https://notifiarr.com/api/v1/notification/apprise"
       },
       {
-        "body": "{\"source\": \"Scheduler\", \"type\": \"warning\", \"notification\": {\"update\": true, \"name\": \"Apprise\", \"event\": \"42\"}, \"discord\": {\"color\": \"#CACF29\", \"ping\": {\"pingUser\": 0, \"pingRole\": 0}, \"text\": {\"title\": \"update\", \"content\": \"\", \"description\": \"body\", \"footer\": \"Apprise Notifications\", \"icon\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-warning-256x256.png\"}, \"ids\": {\"channel\": 222222}, \"images\": {\"thumbnail\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-warning-256x256.png\"}}}",
+        "body": "{\"source\": \"Scheduler\", \"type\": \"warning\", \"notification\": {\"update\": true, \"name\": \"Apprise\", \"event\": \"42\"}, \"discord\": {\"color\": \"#CACF29\", \"ping\": {\"pingUser\": 0, \"pingRole\": 0}, \"text\": {\"title\": \"update\", \"content\": \"\", \"description\": \"body\", \"footer\": \"Apprise Notifications\", \"icon\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-256x256.png\"}, \"ids\": {\"channel\": 222222}, \"images\": {\"thumbnail\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-256x256.png\"}}}",
         "headers": {
           "accept": "text/plain",
           "content-type": "application/json",
@@ -41,7 +41,7 @@
         "url": "https://notifiarr.com/api/v1/notification/apprise"
       },
       {
-        "body": "{\"source\": \"Scheduler\", \"type\": \"warning\", \"notification\": {\"update\": true, \"name\": \"Apprise\", \"event\": \"42\"}, \"discord\": {\"color\": \"#CACF29\", \"ping\": {\"pingUser\": 0, \"pingRole\": 0}, \"text\": {\"title\": \"update\", \"content\": \"\", \"description\": \"body\", \"footer\": \"Apprise Notifications\", \"icon\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-warning-256x256.png\"}, \"ids\": {\"channel\": 987654}, \"images\": {\"thumbnail\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-warning-256x256.png\"}}}",
+        "body": "{\"source\": \"Scheduler\", \"type\": \"warning\", \"notification\": {\"update\": true, \"name\": \"Apprise\", \"event\": \"42\"}, \"discord\": {\"color\": \"#CACF29\", \"ping\": {\"pingUser\": 0, \"pingRole\": 0}, \"text\": {\"title\": \"update\", \"content\": \"\", \"description\": \"body\", \"footer\": \"Apprise Notifications\", \"icon\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-256x256.png\"}, \"ids\": {\"channel\": 987654}, \"images\": {\"thumbnail\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-256x256.png\"}}}",
         "headers": {
           "accept": "text/plain",
           "content-type": "application/json",

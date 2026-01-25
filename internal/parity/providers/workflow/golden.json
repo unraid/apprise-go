@@ -3,7 +3,7 @@
     "name": "legacy",
     "requests": [
       {
-        "body": "{\"type\": \"message\", \"attachments\": [{\"contentType\": \"application/vnd.microsoft.card.adaptive\", \"contentUrl\": null, \"content\": {\"$schema\": \"http://adaptivecards.io/schemas/adaptive-card.json\", \"type\": \"AdaptiveCard\", \"version\": \"1.4\", \"body\": [{\"type\": \"Image\", \"url\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-info-32x32.png\", \"height\": \"32px\", \"altText\": \"info\"}, {\"type\": \"TextBlock\", \"text\": \"title\", \"style\": \"heading\", \"weight\": \"Bolder\", \"size\": \"Large\", \"id\": \"title\"}, {\"type\": \"TextBlock\", \"text\": \"body\", \"style\": \"default\", \"wrap\": true, \"id\": \"body\"}], \"msteams\": {\"width\": \"full\"}}}]}",
+        "body": "{\"type\": \"message\", \"attachments\": [{\"contentType\": \"application/vnd.microsoft.card.adaptive\", \"contentUrl\": null, \"content\": {\"$schema\": \"http://adaptivecards.io/schemas/adaptive-card.json\", \"type\": \"AdaptiveCard\", \"version\": \"1.4\", \"body\": [{\"type\": \"Image\", \"url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-32x32.png\", \"height\": \"32px\", \"altText\": \"info\"}, {\"type\": \"TextBlock\", \"text\": \"title\", \"style\": \"heading\", \"weight\": \"Bolder\", \"size\": \"Large\", \"id\": \"title\"}, {\"type\": \"TextBlock\", \"text\": \"body\", \"style\": \"default\", \"wrap\": true, \"id\": \"body\"}], \"msteams\": {\"width\": \"full\"}}}]}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json",
@@ -18,7 +18,7 @@
     "name": "power-automate",
     "requests": [
       {
-        "body": "{\"type\": \"message\", \"attachments\": [{\"contentType\": \"application/vnd.microsoft.card.adaptive\", \"contentUrl\": null, \"content\": {\"$schema\": \"http://adaptivecards.io/schemas/adaptive-card.json\", \"type\": \"AdaptiveCard\", \"version\": \"1.4\", \"body\": [{\"type\": \"Image\", \"url\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-warning-32x32.png\", \"height\": \"32px\", \"altText\": \"warning\"}, {\"type\": \"TextBlock\", \"text\": \"subject\", \"style\": \"heading\", \"weight\": \"Bolder\", \"size\": \"Large\", \"id\": \"title\"}, {\"type\": \"TextBlock\", \"text\": \"message\", \"style\": \"default\", \"wrap\": true, \"id\": \"body\"}], \"msteams\": {\"width\": \"full\"}}}]}",
+        "body": "{\"type\": \"message\", \"attachments\": [{\"contentType\": \"application/vnd.microsoft.card.adaptive\", \"contentUrl\": null, \"content\": {\"$schema\": \"http://adaptivecards.io/schemas/adaptive-card.json\", \"type\": \"AdaptiveCard\", \"version\": \"1.4\", \"body\": [{\"type\": \"Image\", \"url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-32x32.png\", \"height\": \"32px\", \"altText\": \"warning\"}, {\"type\": \"TextBlock\", \"text\": \"subject\", \"style\": \"heading\", \"weight\": \"Bolder\", \"size\": \"Large\", \"id\": \"title\"}, {\"type\": \"TextBlock\", \"text\": \"message\", \"style\": \"default\", \"wrap\": true, \"id\": \"body\"}], \"msteams\": {\"width\": \"full\"}}}]}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json",

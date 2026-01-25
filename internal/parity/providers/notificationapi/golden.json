@@ -3,7 +3,7 @@
     "name": "template",
     "requests": [
       {
-        "body": "{\"type\": \"apprise\", \"parameters\": {\"appBody\": \"hello from python\", \"appTitle\": \"apprise parity\", \"appType\": \"info\", \"appId\": \"Apprise\", \"appDescription\": \"Apprise Notifications\", \"appColor\": \"#3AA3E3\", \"appImageUrl\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-info-72x72.png\", \"appUrl\": \"https://github.com/caronc/apprise\"}, \"to\": {\"id\": \"john\"}}",
+        "body": "{\"type\": \"apprise\", \"parameters\": {\"appBody\": \"hello from python\", \"appTitle\": \"apprise parity\", \"appType\": \"info\", \"appId\": \"Apprise\", \"appDescription\": \"Apprise Notifications\", \"appColor\": \"#3AA3E3\", \"appImageUrl\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-72x72.png\", \"appUrl\": \"https://github.com/unraid/apprise-go\"}, \"to\": {\"id\": \"john\"}}",
         "headers": {
           "accept": "*/*",
           "authorization": "Basic Y2xpZW50aWQ6c2VjcmV0",

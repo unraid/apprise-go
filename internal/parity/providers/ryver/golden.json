@@ -3,7 +3,7 @@
     "name": "default",
     "requests": [
       {
-        "body": "{\"body\": \"**apprise parity**\\r\\nhello from python\", \"createSource\": {\"displayName\": \"bot\", \"avatar\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-info-72x72.png\"}}",
+        "body": "{\"body\": \"**apprise parity**\\r\\nhello from python\", \"createSource\": {\"displayName\": \"bot\", \"avatar\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-72x72.png\"}}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json",

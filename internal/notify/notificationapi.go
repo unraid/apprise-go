@@ -251,7 +251,7 @@ func (n *NotificationAPITarget) buildPayload(body, title string, notifyType Noti
 		parameters["appDescription"] = "Apprise Notifications"
 		parameters["appColor"] = appriseColor(notifyType)
 		parameters["appImageUrl"] = appriseImageURL(notifyType, "72x72")
-		parameters["appUrl"] = "https://github.com/caronc/apprise"
+		parameters["appUrl"] = "https://github.com/unraid/apprise-go"
 		payload["parameters"] = parameters
 	} else {
 		textBody := body

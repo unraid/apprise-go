@@ -10,10 +10,7 @@ import (
 	"strings"
 )
 
-const (
-	barkImageURLMask = "https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-%s-128x128.png"
-	barkDefaultTitle = "Apprise Notifications"
-)
+const barkDefaultTitle = "Apprise Notifications"
 
 var barkSounds = []string{
 	"alarm.caf",
@@ -231,7 +228,7 @@ func (b *BarkTarget) buildRequestForTarget(deviceKey, body, title string, notify
 }
 
 func barkImageURL(notifyType NotifyType) string {
-	return fmt.Sprintf(barkImageURLMask, string(notifyType))
+	return appriseImageURL(notifyType, "128x128")
 }
 
 func matchBarkSound(value string) string {

@@ -19,7 +19,7 @@
     "name": "image-title",
     "requests": [
       {
-        "body": "{\"to\": \"user1\", \"messages\": [{\"type\": \"text\", \"text\": \"title\\r\\nbody\", \"sender\": {\"name\": \"Apprise\", \"iconUrl\": \"https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-warning-128x128.png\"}}]}",
+        "body": "{\"to\": \"user1\", \"messages\": [{\"type\": \"text\", \"text\": \"title\\r\\nbody\", \"sender\": {\"name\": \"Apprise\", \"iconUrl\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-128x128.png\"}}]}",
         "headers": {
           "accept": "*/*",
           "authorization": "Bearer token123",

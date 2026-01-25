@@ -2,7 +2,7 @@ package notify
 
 import "fmt"
 
-const appriseImageURLMask = "https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/apprise-%s-%s.png"
+const appriseImageURLMask = "https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-%s-%s.png"
 const appriseDefaultColor = "#888888"
 
 func appriseImageURL(notifyType NotifyType, size string) string {
