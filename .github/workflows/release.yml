@@ -69,6 +69,7 @@ jobs:
           input_path: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}
           p12_file: apple_codesign.p12
           p12_password: ${{ secrets.APPLE_BUILD_CERTIFICATE_PASSWORD }}
+          sign_args: --code-signature-flags runtime
           notarize: false
 
       - name: Zip darwin binary
