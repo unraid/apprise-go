@@ -40,9 +40,8 @@ jobs:
           elif git -C "${target}" fetch --depth 1 origin "refs/tags/${upstream_version}"; then
             git -C "${target}" checkout --detach FETCH_HEAD
           else
-            echo "Tag not found; falling back to default branch."
-            git -C "${target}" fetch --depth 1 origin HEAD
-            git -C "${target}" checkout --detach FETCH_HEAD
+            echo "Upstream tag not found for version ${upstream_version}." >&2
+            exit 1
           fi
 
       - name: Set up Go
