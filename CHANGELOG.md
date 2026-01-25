@@ -3,6 +3,12 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.1.3 (2026-01-25)
+
+### Fixes
+
+- swap all actions to version numbers as the shas must be complete
+
 ## 0.1.2 (2026-01-25)
 
 ### Fixes
