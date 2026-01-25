@@ -81,7 +81,7 @@ jobs:
 
       - name: Upload artifact
         if: github.event_name != 'release'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}
