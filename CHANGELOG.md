@@ -3,6 +3,12 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.1.7 (2026-01-25)
+
+### Features
+
+- add windows builds
+
 ## 0.1.6 (2026-01-25)
 
 ### Fixes
