@@ -1,9 +1,10 @@
+# Release workflow: publish signed/notarized release assets.
+# Preview/CI artifacts are handled by parity.yml.
 name: release
 
 on:
   release:
     types: [published]
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -17,8 +18,10 @@ jobs:
         include:
           - goos: linux
             goarch: amd64
+            notarize: false
           - goos: linux
             goarch: arm64
+            notarize: false
           - goos: darwin
             goarch: amd64
             notarize: true
@@ -41,7 +44,7 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           mkdir -p dist
-          go build -o "dist/apprise-go-${GOOS}-${GOARCH}" ./cmd/apprise
+          go build -trimpath -ldflags "-s -w" -o "dist/apprise-go-${GOOS}-${GOARCH}" ./cmd/apprise
 
       - name: Write signing certificate
         if: matrix.notarize
@@ -59,13 +62,27 @@ jobs:
           printf '%s' "$APP_STORE_CONNECT_KEY_JSON" > app_store_connect_key.json
           chmod 600 app_store_connect_key.json
 
-      - name: Sign and notarize darwin binary
+      - name: Sign darwin binary
         if: matrix.notarize
         uses: indygreg/apple-code-sign-action@v1
         with:
           input_path: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}
           p12_file: apple_codesign.p12
           p12_password: ${{ secrets.APPLE_BUILD_CERTIFICATE_PASSWORD }}
+          notarize: false
+
+      - name: Zip darwin binary
+        if: matrix.notarize
+        run: |
+          zip -j "dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}.zip" \
+            "dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}"
+
+      - name: Notarize darwin zip
+        if: matrix.notarize
+        uses: indygreg/apple-code-sign-action@v1
+        with:
+          input_path: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+          sign: false
           notarize: true
           app_store_connect_api_key_json_file: app_store_connect_key.json
 
@@ -73,15 +90,14 @@ jobs:
         if: always()
         run: rm -f apple_codesign.p12 app_store_connect_key.json
 
-      - name: Upload release asset
-        if: github.event_name == 'release'
+      - name: Upload release asset (darwin zip)
+        if: github.event_name == 'release' && matrix.notarize
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+
+      - name: Upload release asset (non-darwin)
+        if: github.event_name == 'release' && !matrix.notarize
         uses: softprops/action-gh-release@v2
         with:
           files: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}
-
-      - name: Upload artifact
-        if: github.event_name != 'release'
-        uses: actions/upload-artifact@v6
-        with:
-          name: apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}

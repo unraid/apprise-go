@@ -1,3 +1,5 @@
+# Parity workflow: CI parity checks and build artifacts for PRs, pushes, schedules,
+# and manual preview builds.
 name: parity
 
 on:
@@ -5,6 +7,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
   schedule:
     - cron: "0 9 * * 1"
 
@@ -95,7 +98,7 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           mkdir -p dist
-          go build -o "dist/apprise-go-${GOOS}-${GOARCH}" ./cmd/apprise
+          go build -trimpath -ldflags "-s -w" -o "dist/apprise-go-${GOOS}-${GOARCH}" ./cmd/apprise
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v6
