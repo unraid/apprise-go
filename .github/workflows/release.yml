@@ -19,15 +19,27 @@ jobs:
           - goos: linux
             goarch: amd64
             notarize: false
+            ext: ""
           - goos: linux
             goarch: arm64
             notarize: false
+            ext: ""
           - goos: darwin
             goarch: amd64
             notarize: true
+            ext: ""
           - goos: darwin
             goarch: arm64
             notarize: true
+            ext: ""
+          - goos: windows
+            goarch: amd64
+            notarize: false
+            ext: ".exe"
+          - goos: windows
+            goarch: arm64
+            notarize: false
+            ext: ".exe"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -42,9 +54,10 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
+          BIN_EXT: ${{ matrix.ext }}
         run: |
           mkdir -p dist
-          go build -trimpath -ldflags "-s -w" -o "dist/apprise-go-${GOOS}-${GOARCH}" ./cmd/apprise
+          go build -trimpath -ldflags "-s -w" -o "dist/apprise-go-${GOOS}-${GOARCH}${BIN_EXT}" ./cmd/apprise
 
       - name: Write signing certificate
         if: matrix.notarize
@@ -101,4 +114,4 @@ jobs:
         if: github.event_name == 'release' && !matrix.notarize
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}
+          files: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}

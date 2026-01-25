@@ -76,12 +76,22 @@ jobs:
         include:
           - goos: linux
             goarch: amd64
+            ext: ""
           - goos: linux
             goarch: arm64
+            ext: ""
           - goos: darwin
             goarch: amd64
+            ext: ""
           - goos: darwin
             goarch: arm64
+            ext: ""
+          - goos: windows
+            goarch: amd64
+            ext: ".exe"
+          - goos: windows
+            goarch: arm64
+            ext: ".exe"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -96,12 +106,13 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: "0"
+          BIN_EXT: ${{ matrix.ext }}
         run: |
           mkdir -p dist
-          go build -trimpath -ldflags "-s -w" -o "dist/apprise-go-${GOOS}-${GOARCH}" ./cmd/apprise
+          go build -trimpath -ldflags "-s -w" -o "dist/apprise-go-${GOOS}-${GOARCH}${BIN_EXT}" ./cmd/apprise
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v6
         with:
-          name: apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+          path: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
