@@ -71,3 +71,115 @@ func (w *WeComBotTarget) Send(body, title string, notifyType NotifyType) error {
 
 	return SendRequest(spec)
 }
+
+func init() {
+	RegisterSchemaEntryOrdered(97, SchemaEntry{
+		"attachment_support": false,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"cto": map[string]any{
+					"default":  4,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "text",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"key": map[string]any{
+					"alias_of": "key",
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"rto": map[string]any{
+					"default":  4,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+			},
+			"kwargs":    map[string]any{},
+			"templates": []string{"{schema}://{key}"},
+			"tokens": map[string]any{
+				"key": map[string]any{
+					"map_to":   "key",
+					"name":     "Bot Webhook Key",
+					"private":  true,
+					"regex":    []string{"^[a-z0-9_-]+$", "i"},
+					"required": true,
+					"type":     "string",
+				},
+				"schema": map[string]any{
+					"default":  "wecombot",
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"wecombot"},
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": nil,
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": []string{"wecombot"},
+		"service_name":     "WeCom Bot",
+		"service_url":      "https://weixin.qq.com/",
+		"setup_url":        "https://appriseit.com/services/wecombot/",
+	})
+}

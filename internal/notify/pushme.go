@@ -114,3 +114,125 @@ func buildQuery(pairs []queryPair) string {
 	}
 	return strings.Join(parts, "&")
 }
+
+func init() {
+	RegisterSchemaEntryOrdered(82, SchemaEntry{
+		"attachment_support": false,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"cto": map[string]any{
+					"default":  4,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "text",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"push_key": map[string]any{
+					"alias_of": "token",
+				},
+				"rto": map[string]any{
+					"default":  4,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"status": map[string]any{
+					"default":  true,
+					"map_to":   "status",
+					"name":     "Show Status",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"token": map[string]any{
+					"alias_of": "token",
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+			},
+			"kwargs":    map[string]any{},
+			"templates": []string{"{schema}://{token}"},
+			"tokens": map[string]any{
+				"schema": map[string]any{
+					"default":  "pushme",
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"pushme"},
+				},
+				"token": map[string]any{
+					"map_to":   "token",
+					"name":     "Token",
+					"private":  true,
+					"required": true,
+					"type":     "string",
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": []string{"pushme"},
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": nil,
+		"service_name":     "PushMe",
+		"service_url":      "https://push.i-i.me/",
+		"setup_url":        "https://appriseit.com/services/pushme/",
+	})
+}

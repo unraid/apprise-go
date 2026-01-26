@@ -202,3 +202,156 @@ func normalizeSplunkNotifyType(raw string) (NotifyType, bool) {
 		return NotifyInfo, false
 	}
 }
+
+func init() {
+	RegisterSchemaEntryOrdered(119, SchemaEntry{
+		"attachment_support": false,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"action": map[string]any{
+					"default":  "map",
+					"map_to":   "action",
+					"name":     "Action",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"map", "info", "acknowledgement", "warning", "recovery", "resolve", "critical"},
+				},
+				"apikey": map[string]any{
+					"alias_of": "apikey",
+				},
+				"cto": map[string]any{
+					"default":  4,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"entity_id": map[string]any{
+					"alias_of": "entity_id",
+				},
+				"format": map[string]any{
+					"default":  "text",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"route": map[string]any{
+					"alias_of": "routing_key",
+				},
+				"routing_key": map[string]any{
+					"alias_of": "routing_key",
+				},
+				"rto": map[string]any{
+					"default":  4,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+			},
+			"kwargs": map[string]any{
+				"mapping": map[string]any{
+					"map_to":   "mapping",
+					"name":     "Action Mapping",
+					"prefix":   ":",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+			},
+			"templates": []string{"{schema}://{routing_key}@{apikey}", "{schema}://{routing_key}@{apikey}/{entity_id}"},
+			"tokens": map[string]any{
+				"apikey": map[string]any{
+					"map_to":   "apikey",
+					"name":     "API Key",
+					"private":  true,
+					"regex":    []string{"^[A-Z0-9_-]+$", "i"},
+					"required": true,
+					"type":     "string",
+				},
+				"entity_id": map[string]any{
+					"map_to":   "entity_id",
+					"name":     "Entity ID",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"routing_key": map[string]any{
+					"map_to":   "routing_key",
+					"name":     "Target Routing Key",
+					"private":  false,
+					"regex":    []string{"^[A-Z0-9_-]+$", "i"},
+					"required": true,
+					"type":     "string",
+				},
+				"schema": map[string]any{
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"splunk", "victorops"},
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": nil,
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": []string{"splunk", "victorops"},
+		"service_name":     "Splunk On-Call",
+		"service_url":      "https://www.splunk.com/en_us/products/on-call.html",
+		"setup_url":        "https://appriseit.com/services/splunk/",
+	})
+}

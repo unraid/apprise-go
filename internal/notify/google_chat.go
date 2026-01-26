@@ -140,3 +140,144 @@ func splitPathSegments(rawPath string) []string {
 	}
 	return segments
 }
+
+func init() {
+	RegisterSchemaEntryOrdered(66, SchemaEntry{
+		"attachment_support": false,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"cto": map[string]any{
+					"default":  4,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "markdown",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"key": map[string]any{
+					"alias_of": "webhook_key",
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"rto": map[string]any{
+					"default":  4,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"thread": map[string]any{
+					"alias_of": "thread_key",
+				},
+				"token": map[string]any{
+					"alias_of": "webhook_token",
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"workspace": map[string]any{
+					"alias_of": "workspace",
+				},
+			},
+			"kwargs":    map[string]any{},
+			"templates": []string{"{schema}://{workspace}/{webhook_key}/{webhook_token}", "{schema}://{workspace}/{webhook_key}/{webhook_token}/{thread_key}"},
+			"tokens": map[string]any{
+				"schema": map[string]any{
+					"default":  "gchat",
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"gchat"},
+				},
+				"thread_key": map[string]any{
+					"map_to":   "thread_key",
+					"name":     "Thread Key",
+					"private":  true,
+					"required": false,
+					"type":     "string",
+				},
+				"webhook_key": map[string]any{
+					"map_to":   "webhook_key",
+					"name":     "Webhook Key",
+					"private":  true,
+					"required": true,
+					"type":     "string",
+				},
+				"webhook_token": map[string]any{
+					"map_to":   "webhook_token",
+					"name":     "Webhook Token",
+					"private":  true,
+					"required": true,
+					"type":     "string",
+				},
+				"workspace": map[string]any{
+					"map_to":   "workspace",
+					"name":     "Workspace",
+					"private":  true,
+					"required": true,
+					"type":     "string",
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": nil,
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": []string{"gchat"},
+		"service_name":     "Google Chat",
+		"service_url":      "https://chat.google.com/",
+		"setup_url":        "https://appriseit.com/services/googlechat/",
+	})
+}

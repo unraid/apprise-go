@@ -3,7 +3,6 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -168,4 +167,192 @@ func (d *DotTarget) buildRequest(body, title string) (RequestSpec, error) {
 		},
 		Body: string(data),
 	}, nil
+}
+
+func init() {
+	RegisterSchemaEntryOrdered(102, SchemaEntry{
+		"attachment_support": true,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"border": map[string]any{
+					"default":  0,
+					"map_to":   "border",
+					"max":      1,
+					"min":      0,
+					"name":     "Border",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+				"cto": map[string]any{
+					"default":  4,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"dither_kernel": map[string]any{
+					"default":  "FLOYD_STEINBERG",
+					"map_to":   "dither_kernel",
+					"name":     "Dither Kernel",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"THRESHOLD", "ATKINSON", "BURKES", "FLOYD_STEINBERG", "SIERRA2", "STUCKI", "JARVIS_JUDICE_NINKE", "DIFFUSION_ROW", "DIFFUSION_COLUMN", "DIFFUSION_2D"},
+				},
+				"dither_type": map[string]any{
+					"default":  "DIFFUSION",
+					"map_to":   "dither_type",
+					"name":     "Dither Type",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"DIFFUSION", "ORDERED", "NONE"},
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "text",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"icon": map[string]any{
+					"map_to":   "icon",
+					"name":     "Icon Base64 (Text API)",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"image": map[string]any{
+					"map_to":   "image_data",
+					"name":     "Image Base64 (Image API)",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"link": map[string]any{
+					"map_to":   "link",
+					"name":     "Link",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"refresh": map[string]any{
+					"default":  true,
+					"map_to":   "refresh_now",
+					"name":     "Refresh Now",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"rto": map[string]any{
+					"default":  4,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"signature": map[string]any{
+					"map_to":   "signature",
+					"name":     "Text Signature",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+			},
+			"kwargs":    map[string]any{},
+			"templates": []string{"{schema}://{apikey}@{device_id}/{mode}/"},
+			"tokens": map[string]any{
+				"apikey": map[string]any{
+					"map_to":   "apikey",
+					"name":     "API Key",
+					"private":  true,
+					"required": true,
+					"type":     "string",
+				},
+				"device_id": map[string]any{
+					"map_to":   "device_id",
+					"name":     "Device Serial Number",
+					"private":  false,
+					"required": true,
+					"type":     "string",
+				},
+				"mode": map[string]any{
+					"default":  "text",
+					"map_to":   "mode",
+					"name":     "API Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"text", "image"},
+				},
+				"schema": map[string]any{
+					"default":  "dot",
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"dot"},
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": nil,
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": []string{"dot"},
+		"service_name":     "Dot.",
+		"service_url":      "https://dot.mindreset.tech",
+		"setup_url":        "https://appriseit.com/services/dot/",
+	})
 }

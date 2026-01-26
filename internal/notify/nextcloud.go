@@ -3,7 +3,6 @@ package notify
 import (
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 )
 
@@ -164,4 +163,188 @@ func isNextcloudGroup(entry string) bool {
 		return true
 	}
 	return strings.HasPrefix(trimmed, "#")
+}
+
+func init() {
+	RegisterSchemaEntryOrdered(46, SchemaEntry{
+		"attachment_support": false,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"cto": map[string]any{
+					"default":  4,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "text",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"rto": map[string]any{
+					"default":  4,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"to": map[string]any{
+					"alias_of": "targets",
+					"delim":    []string{",", " "},
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"url_prefix": map[string]any{
+					"map_to":   "url_prefix",
+					"name":     "URL Prefix",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"version": map[string]any{
+					"default":  21,
+					"map_to":   "version",
+					"min":      1,
+					"name":     "Version",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+			},
+			"kwargs": map[string]any{
+				"headers": map[string]any{
+					"map_to":   "headers",
+					"name":     "HTTP Header",
+					"prefix":   "+",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+			},
+			"templates": []string{"{schema}://{host}/{targets}", "{schema}://{host}:{port}/{targets}", "{schema}://{user}:{password}@{host}/{targets}", "{schema}://{user}:{password}@{host}:{port}/{targets}"},
+			"tokens": map[string]any{
+				"host": map[string]any{
+					"map_to":   "host",
+					"name":     "Hostname",
+					"private":  false,
+					"required": true,
+					"type":     "string",
+				},
+				"password": map[string]any{
+					"map_to":   "password",
+					"name":     "Password",
+					"private":  true,
+					"required": false,
+					"type":     "string",
+				},
+				"port": map[string]any{
+					"map_to":   "port",
+					"max":      65535,
+					"min":      1,
+					"name":     "Port",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+				"schema": map[string]any{
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"ncloud", "nclouds"},
+				},
+				"target_group": map[string]any{
+					"map_to":   "targets",
+					"name":     "Target Group",
+					"prefix":   "#",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"target_user": map[string]any{
+					"map_to":   "targets",
+					"name":     "Target User",
+					"prefix":   "@",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"targets": map[string]any{
+					"delim":    []string{"/"},
+					"group":    []string{"target_group", "target_user"},
+					"map_to":   "targets",
+					"name":     "Targets",
+					"private":  false,
+					"required": true,
+					"type":     "list:string",
+				},
+				"user": map[string]any{
+					"map_to":   "user",
+					"name":     "Username",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": []string{"ncloud"},
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": []string{"nclouds"},
+		"service_name":     "Nextcloud",
+		"service_url":      "https://nextcloud.com/",
+		"setup_url":        "https://appriseit.com/services/nextcloud/",
+	})
 }

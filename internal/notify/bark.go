@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -318,4 +317,231 @@ func parseIntInRange(raw string, min, max int) int {
 		return 0
 	}
 	return value
+}
+
+func init() {
+	RegisterSchemaEntryOrdered(87, SchemaEntry{
+		"attachment_support": false,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"badge": map[string]any{
+					"map_to":   "badge",
+					"min":      0,
+					"name":     "Badge",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+				"call": map[string]any{
+					"default":  false,
+					"map_to":   "call",
+					"name":     "Call",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"category": map[string]any{
+					"map_to":   "category",
+					"name":     "Category",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"click": map[string]any{
+					"map_to":   "click",
+					"name":     "Click",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"cto": map[string]any{
+					"default":  4,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "text",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"group": map[string]any{
+					"map_to":   "group",
+					"name":     "Group",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"icon": map[string]any{
+					"map_to":   "icon",
+					"name":     "Icon URL",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"image": map[string]any{
+					"default":  true,
+					"map_to":   "include_image",
+					"name":     "Include Image",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"level": map[string]any{
+					"map_to":   "level",
+					"name":     "Level",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"active", "timeSensitive", "passive", "critical"},
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"rto": map[string]any{
+					"default":  4,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"sound": map[string]any{
+					"map_to":   "sound",
+					"name":     "Sound",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"alarm.caf", "anticipate.caf", "bell.caf", "birdsong.caf", "bloom.caf", "calypso.caf", "chime.caf", "choo.caf", "descent.caf", "electronic.caf", "fanfare.caf", "glass.caf", "gotosleep.caf", "healthnotification.caf", "horn.caf", "ladder.caf", "mailsent.caf", "minuet.caf", "multiwayinvitation.caf", "newmail.caf", "newsflash.caf", "noir.caf", "paymentsuccess.caf", "shake.caf", "sherwoodforest.caf", "silence.caf", "spell.caf", "suspense.caf", "telegraph.caf", "tiptoes.caf", "typewriters.caf", "update.caf"},
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"to": map[string]any{
+					"alias_of": "targets",
+					"delim":    []string{",", " "},
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"volume": map[string]any{
+					"map_to":   "volume",
+					"max":      10,
+					"min":      0,
+					"name":     "Volume",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+			},
+			"kwargs":    map[string]any{},
+			"templates": []string{"{schema}://{host}/{targets}", "{schema}://{host}:{port}/{targets}", "{schema}://{user}:{password}@{host}/{targets}", "{schema}://{user}:{password}@{host}:{port}/{targets}"},
+			"tokens": map[string]any{
+				"host": map[string]any{
+					"map_to":   "host",
+					"name":     "Hostname",
+					"private":  false,
+					"required": true,
+					"type":     "string",
+				},
+				"password": map[string]any{
+					"map_to":   "password",
+					"name":     "Password",
+					"private":  true,
+					"required": false,
+					"type":     "string",
+				},
+				"port": map[string]any{
+					"map_to":   "port",
+					"max":      65535,
+					"min":      1,
+					"name":     "Port",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+				"schema": map[string]any{
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"bark", "barks"},
+				},
+				"target_device": map[string]any{
+					"map_to":   "targets",
+					"name":     "Target Device",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"targets": map[string]any{
+					"delim":    []string{"/"},
+					"group":    []string{"target_device"},
+					"map_to":   "targets",
+					"name":     "Targets",
+					"private":  false,
+					"required": true,
+					"type":     "list:string",
+				},
+				"user": map[string]any{
+					"map_to":   "user",
+					"name":     "Username",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": []string{"bark"},
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": []string{"barks"},
+		"service_name":     "Bark",
+		"service_url":      "https://github.com/Finb/Bark",
+		"setup_url":        "https://appriseit.com/services/bark/",
+	})
 }

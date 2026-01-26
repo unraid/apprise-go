@@ -454,3 +454,102 @@ func aesBlock(key []byte) (cipher.Block, error) {
 func newGCM(block cipher.Block) (cipher.AEAD, error) {
 	return cipher.NewGCM(block)
 }
+
+func init() {
+	RegisterSchemaEntryOrdered(23, SchemaEntry{
+		"attachment_support": false,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"from": map[string]any{
+					"alias_of": "subscriber",
+				},
+				"image": map[string]any{
+					"default":  true,
+					"map_to":   "include_image",
+					"name":     "Include Image",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"keyfile": map[string]any{
+					"map_to":   "keyfile",
+					"name":     "PEM Private KeyFile",
+					"private":  true,
+					"required": false,
+					"type":     "string",
+				},
+				"mode": map[string]any{
+					"default":  "chrome",
+					"map_to":   "mode",
+					"name":     "Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"chrome", "firefox", "edge", "opera", "apple"},
+				},
+				"subfile": map[string]any{
+					"map_to":   "subfile",
+					"name":     "Subscripion File",
+					"private":  true,
+					"required": false,
+					"type":     "string",
+				},
+				"to": map[string]any{
+					"alias_of": "targets",
+					"delim":    []string{",", " "},
+				},
+				"ttl": map[string]any{
+					"default":  0,
+					"map_to":   "ttl",
+					"max":      60,
+					"min":      0,
+					"name":     "ttl",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+			},
+			"kwargs":    map[string]any{},
+			"templates": []string{"{schema}://{subscriber}", "{schema}://{subscriber}/{targets}"},
+			"tokens": map[string]any{
+				"schema": map[string]any{
+					"default":  "vapid",
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"vapid"},
+				},
+				"subscriber": map[string]any{
+					"map_to":   "subscriber",
+					"name":     "API Key",
+					"private":  true,
+					"required": true,
+					"type":     "string",
+				},
+				"targets": map[string]any{
+					"delim":    []string{"/"},
+					"group":    []any{},
+					"map_to":   "targets",
+					"name":     "Targets",
+					"private":  false,
+					"required": false,
+					"type":     "list:string",
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": nil,
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []string{"cryptography"},
+		},
+		"secure_protocols": []string{"vapid"},
+		"service_name":     "Vapid Web Push Notifications",
+		"service_url":      "https://datatracker.ietf.org/doc/html/draft-thomson-webpush-vapid",
+		"setup_url":        "https://appriseit.com/services/vapid/",
+	})
+}

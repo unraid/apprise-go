@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 )
 
@@ -241,4 +240,192 @@ func addJSONSpaces(input []byte) string {
 	}
 
 	return b.String()
+}
+
+func init() {
+	RegisterSchemaEntryOrdered(1, SchemaEntry{
+		"attachment_support": false,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"cto": map[string]any{
+					"default":  4,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "text",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"from": map[string]any{
+					"alias_of": "sender",
+				},
+				"lang": map[string]any{
+					"default":  "fr_FR",
+					"map_to":   "lang",
+					"name":     "Language",
+					"private":  false,
+					"required": true,
+					"type":     "string",
+				},
+				"media": map[string]any{
+					"default":  "SMSUnicode",
+					"map_to":   "media",
+					"name":     "Media Type",
+					"private":  false,
+					"required": true,
+					"type":     "string",
+					"values":   []string{"SMS", "SMSLong", "SMSUnicode", "SMSUnicodeLong"},
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"rto": map[string]any{
+					"default":  4,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"sender": map[string]any{
+					"default":  "",
+					"map_to":   "sender",
+					"name":     "Sender Name",
+					"private":  false,
+					"required": true,
+					"type":     "string",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"timeout": map[string]any{
+					"default":  2880,
+					"map_to":   "timeout",
+					"name":     "Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+				"to": map[string]any{
+					"alias_of": "targets",
+					"delim":    []string{",", " "},
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"voice": map[string]any{
+					"default":  "claire08s",
+					"map_to":   "voice",
+					"name":     "TTS Voice",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+					"values":   []string{"claire08s", "laura8k"},
+				},
+			},
+			"kwargs":    map[string]any{},
+			"templates": []string{"{schema}://{user}:{password}@{space_id}/{targets}"},
+			"tokens": map[string]any{
+				"password": map[string]any{
+					"map_to":   "password",
+					"name":     "Service Password",
+					"private":  true,
+					"required": true,
+					"type":     "string",
+				},
+				"schema": map[string]any{
+					"default":  "sfr",
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"sfr"},
+				},
+				"space_id": map[string]any{
+					"map_to":   "space_id",
+					"name":     "Space ID",
+					"private":  true,
+					"required": true,
+					"type":     "string",
+				},
+				"target": map[string]any{
+					"map_to":   "targets",
+					"name":     "Recipient Phone Number",
+					"private":  false,
+					"regex":    []string{"^\\+?[0-9\\s)(+-]+$", "i"},
+					"required": false,
+					"type":     "string",
+				},
+				"targets": map[string]any{
+					"delim":    []string{"/"},
+					"group":    []string{"target"},
+					"map_to":   "targets",
+					"name":     "Targets",
+					"private":  false,
+					"required": true,
+					"type":     "list:string",
+				},
+				"user": map[string]any{
+					"map_to":   "user",
+					"name":     "Service ID",
+					"private":  false,
+					"required": true,
+					"type":     "string",
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": []string{"sfr"},
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": nil,
+		"service_name":     "Société Française du Radiotéléphone",
+		"service_url":      "https://www.sfr.fr/",
+		"setup_url":        "https://appriseit.com/services/sfr/",
+	})
 }

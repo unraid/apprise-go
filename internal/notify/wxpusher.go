@@ -168,3 +168,143 @@ func normalizeWxPusherEntries(entries []string) []string {
 	sort.Strings(sorted)
 	return sorted
 }
+
+func init() {
+	RegisterSchemaEntryOrdered(112, SchemaEntry{
+		"attachment_support": false,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"cto": map[string]any{
+					"default":  4,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "text",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"rto": map[string]any{
+					"default":  4,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"to": map[string]any{
+					"alias_of": "targets",
+					"delim":    []string{",", " "},
+				},
+				"token": map[string]any{
+					"alias_of": "token",
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+			},
+			"kwargs":    map[string]any{},
+			"templates": []string{"{schema}://{token}/{targets}"},
+			"tokens": map[string]any{
+				"schema": map[string]any{
+					"default":  "wxpusher",
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"wxpusher"},
+				},
+				"target_topic": map[string]any{
+					"map_to":   "targets",
+					"name":     "Target Topic",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+				"target_user": map[string]any{
+					"map_to":   "targets",
+					"name":     "Target User ID",
+					"private":  false,
+					"regex":    []string{"^UID_[^\\s]+$", "i"},
+					"required": false,
+					"type":     "string",
+				},
+				"targets": map[string]any{
+					"delim":    []string{"/"},
+					"group":    []string{"target_topic", "target_user"},
+					"map_to":   "targets",
+					"name":     "Targets",
+					"private":  false,
+					"required": false,
+					"type":     "list:string",
+				},
+				"token": map[string]any{
+					"map_to":   "token",
+					"name":     "App Token",
+					"private":  true,
+					"regex":    []string{"^AT_[^\\s]+$", "i"},
+					"required": true,
+					"type":     "string",
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": nil,
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": []string{"wxpusher"},
+		"service_name":     "WxPusher",
+		"service_url":      "https://wxpusher.zjiecode.com/",
+		"setup_url":        "https://appriseit.com/services/wxpusher/",
+	})
+}

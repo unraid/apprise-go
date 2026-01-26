@@ -3,7 +3,6 @@ package notify
 import (
 	"fmt"
 	"net/url"
-	"strconv"
 	"strings"
 )
 
@@ -166,4 +165,184 @@ func (b *BurstSMSTarget) buildPayload(message string, recipients []string) url.V
 	payload.Set("from", b.source)
 	payload.Set("to", strings.Join(recipients, ","))
 	return payload
+}
+
+func init() {
+	RegisterSchemaEntryOrdered(123, SchemaEntry{
+		"attachment_support": false,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"batch": map[string]any{
+					"default":  false,
+					"map_to":   "batch",
+					"name":     "Batch Mode",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"country": map[string]any{
+					"default":  "us",
+					"map_to":   "country",
+					"name":     "Country",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"au", "nz", "gb", "us"},
+				},
+				"cto": map[string]any{
+					"default":  4,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "text",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"from": map[string]any{
+					"alias_of": "sender_id",
+				},
+				"key": map[string]any{
+					"alias_of": "apikey",
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"rto": map[string]any{
+					"default":  4,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"secret": map[string]any{
+					"alias_of": "secret",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"to": map[string]any{
+					"alias_of": "targets",
+					"delim":    []string{",", " "},
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"validity": map[string]any{
+					"default":  0,
+					"map_to":   "validity",
+					"name":     "validity",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+			},
+			"kwargs":    map[string]any{},
+			"templates": []string{"{schema}://{apikey}:{secret}@{sender_id}/{targets}"},
+			"tokens": map[string]any{
+				"apikey": map[string]any{
+					"map_to":   "apikey",
+					"name":     "API Key",
+					"private":  true,
+					"regex":    []string{"^[a-z0-9]+$", "i"},
+					"required": true,
+					"type":     "string",
+				},
+				"schema": map[string]any{
+					"default":  "burstsms",
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"burstsms"},
+				},
+				"secret": map[string]any{
+					"map_to":   "secret",
+					"name":     "API Secret",
+					"private":  true,
+					"regex":    []string{"^[a-z0-9]+$", "i"},
+					"required": true,
+					"type":     "string",
+				},
+				"sender_id": map[string]any{
+					"map_to":   "source",
+					"name":     "Sender ID",
+					"private":  false,
+					"required": true,
+					"type":     "string",
+				},
+				"target_phone": map[string]any{
+					"map_to":   "targets",
+					"name":     "Target Phone No",
+					"prefix":   "+",
+					"private":  false,
+					"regex":    []string{"^[0-9\\s)(+-]+$", "i"},
+					"required": false,
+					"type":     "string",
+				},
+				"targets": map[string]any{
+					"delim":    []string{"/"},
+					"group":    []string{"target_phone"},
+					"map_to":   "targets",
+					"name":     "Targets",
+					"private":  false,
+					"required": true,
+					"type":     "list:string",
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": nil,
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": []string{"burstsms"},
+		"service_name":     "Burst SMS",
+		"service_url":      "https://burstsms.com/",
+		"setup_url":        "https://appriseit.com/services/burstsms/",
+	})
 }

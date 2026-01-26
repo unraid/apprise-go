@@ -3,6 +3,7 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 const pushedURL = "https://api.pushed.co/1/push"

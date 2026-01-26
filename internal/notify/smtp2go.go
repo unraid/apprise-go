@@ -184,10 +184,10 @@ func (s *SMTP2GoTarget) Send(body, title string, notifyType NotifyType) error {
 
 func (s *SMTP2GoTarget) buildPayload(body, title string, recipients []emailEntry) map[string]any {
 	payload := map[string]any{
-		"api_key":  s.apiKey,
-		"sender":   formatEmail(s.fromName, s.fromAddr),
-		"subject":  title,
-		"to":       []string{},
+		"api_key":   s.apiKey,
+		"sender":    formatEmail(s.fromName, s.fromAddr),
+		"subject":   title,
+		"to":        []string{},
 		"html_body": body,
 	}
 
@@ -252,4 +252,181 @@ func formatEmail(name, email string) string {
 
 func isSimpleEmail(value string) bool {
 	return smtp2goEmailRegex.MatchString(value)
+}
+
+func init() {
+	RegisterSchemaEntryOrdered(18, SchemaEntry{
+		"attachment_support": true,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"batch": map[string]any{
+					"default":  false,
+					"map_to":   "batch",
+					"name":     "Batch Mode",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"bcc": map[string]any{
+					"delim":    []string{",", " "},
+					"group":    []any{},
+					"map_to":   "bcc",
+					"name":     "Blind Carbon Copy",
+					"private":  false,
+					"required": false,
+					"type":     "list:string",
+				},
+				"cc": map[string]any{
+					"delim":    []string{",", " "},
+					"group":    []any{},
+					"map_to":   "cc",
+					"name":     "Carbon Copy",
+					"private":  false,
+					"required": false,
+					"type":     "list:string",
+				},
+				"cto": map[string]any{
+					"default":  4,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "html",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"name": map[string]any{
+					"map_to":   "from_name",
+					"name":     "From Name",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"rto": map[string]any{
+					"default":  4,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"to": map[string]any{
+					"alias_of": "targets",
+					"delim":    []string{",", " "},
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+			},
+			"kwargs": map[string]any{
+				"headers": map[string]any{
+					"map_to":   "headers",
+					"name":     "Email Header",
+					"prefix":   "+",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+			},
+			"templates": []string{"{schema}://{user}@{host}:{apikey}/", "{schema}://{user}@{host}:{apikey}/{targets}"},
+			"tokens": map[string]any{
+				"apikey": map[string]any{
+					"map_to":   "apikey",
+					"name":     "API Key",
+					"private":  true,
+					"required": true,
+					"type":     "string",
+				},
+				"host": map[string]any{
+					"map_to":   "host",
+					"name":     "Domain",
+					"private":  false,
+					"required": true,
+					"type":     "string",
+				},
+				"schema": map[string]any{
+					"default":  "smtp2go",
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"smtp2go"},
+				},
+				"targets": map[string]any{
+					"delim":    []string{"/"},
+					"group":    []any{},
+					"map_to":   "targets",
+					"name":     "Target Emails",
+					"private":  false,
+					"required": false,
+					"type":     "list:string",
+				},
+				"user": map[string]any{
+					"map_to":   "user",
+					"name":     "User Name",
+					"private":  false,
+					"required": true,
+					"type":     "string",
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": nil,
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": []string{"smtp2go"},
+		"service_name":     "SMTP2Go",
+		"service_url":      "https://www.smtp2go.com/",
+		"setup_url":        "https://appriseit.com/services/smtp2go/",
+	})
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -293,4 +292,202 @@ func (s *SendPulseTarget) buildEmailPayload(body, title, target string) map[stri
 	return map[string]any{
 		"email": emailPayload,
 	}
+}
+
+func init() {
+	RegisterSchemaEntryOrdered(104, SchemaEntry{
+		"attachment_support": true,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"bcc": map[string]any{
+					"delim":    []string{",", " "},
+					"group":    []any{},
+					"map_to":   "bcc",
+					"name":     "Blind Carbon Copy",
+					"private":  false,
+					"required": false,
+					"type":     "list:string",
+				},
+				"cc": map[string]any{
+					"delim":    []string{",", " "},
+					"group":    []any{},
+					"map_to":   "cc",
+					"name":     "Carbon Copy",
+					"private":  false,
+					"required": false,
+					"type":     "list:string",
+				},
+				"cto": map[string]any{
+					"default":  4,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "html",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"from": map[string]any{
+					"map_to":   "from_addr",
+					"name":     "From Email",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"id": map[string]any{
+					"alias_of": "client_id",
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"rto": map[string]any{
+					"default":  4,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"secret": map[string]any{
+					"alias_of": "client_secret",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"template": map[string]any{
+					"map_to":   "template",
+					"name":     "Template ID",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+				"to": map[string]any{
+					"alias_of": "targets",
+					"delim":    []string{",", " "},
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+			},
+			"kwargs": map[string]any{
+				"template_data": map[string]any{
+					"map_to":   "template_data",
+					"name":     "Template Data",
+					"prefix":   "+",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+			},
+			"templates": []string{"{schema}://{user}@{host}/{client_secret}/", "{schema}://{user}@{host}/{client_id}/{client_secret}/{targets}"},
+			"tokens": map[string]any{
+				"client_id": map[string]any{
+					"map_to":   "client_id",
+					"name":     "Client ID",
+					"private":  true,
+					"regex":    []string{"^[A-Z0-9._-]+$", "i"},
+					"required": true,
+					"type":     "string",
+				},
+				"client_secret": map[string]any{
+					"map_to":   "client_secret",
+					"name":     "Client Secret",
+					"private":  true,
+					"regex":    []string{"^[A-Z0-9._-]+$", "i"},
+					"required": true,
+					"type":     "string",
+				},
+				"host": map[string]any{
+					"map_to":   "host",
+					"name":     "Domain",
+					"private":  false,
+					"required": true,
+					"type":     "string",
+				},
+				"schema": map[string]any{
+					"default":  "sendpulse",
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"sendpulse"},
+				},
+				"target_email": map[string]any{
+					"map_to":   "targets",
+					"name":     "Target Email",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"targets": map[string]any{
+					"delim":    []string{"/"},
+					"group":    []string{"target_email"},
+					"map_to":   "targets",
+					"name":     "Targets",
+					"private":  false,
+					"required": false,
+					"type":     "list:string",
+				},
+				"user": map[string]any{
+					"map_to":   "user",
+					"name":     "User Name",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": nil,
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": []string{"sendpulse"},
+		"service_name":     "SendPulse",
+		"service_url":      "https://sendpulse.com",
+		"setup_url":        "https://appriseit.com/services/sendpulse/",
+	})
 }
