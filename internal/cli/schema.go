@@ -1,21 +1,22 @@
 package cli
 
 import (
-	"bytes"
-	_ "embed"
 	"encoding/json"
+
+	"github.com/unraid/apprise-go/internal/notify"
 )
 
-//go:embed schema.json
-var schemaJSON []byte
-
-func SchemaJSON() []byte {
-	return bytes.TrimSpace(schemaJSON)
+func SchemaJSON() ([]byte, error) {
+	return notify.SchemaJSON()
 }
 
 func LoadSchema() (map[string]any, error) {
+	data, err := SchemaJSON()
+	if err != nil {
+		return nil, err
+	}
 	var schema map[string]any
-	if err := json.Unmarshal(SchemaJSON(), &schema); err != nil {
+	if err := json.Unmarshal(data, &schema); err != nil {
 		return nil, err
 	}
 	return schema, nil

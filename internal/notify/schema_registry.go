@@ -24,30 +24,30 @@ type schemaRegistry struct {
 	bySchema map[string]SchemaEntry
 }
 
-var schemaRegistry = &schemaRegistry{
+var schemaRegistryState = &schemaRegistry{
 	entries:  []schemaEntryRecord{},
 	asset:    map[string]any{},
 	bySchema: map[string]SchemaEntry{},
 }
 
 func RegisterSchemaEntryOrdered(order int, entry SchemaEntry) {
-	schemaRegistry.register(order, entry)
+	schemaRegistryState.register(order, entry)
 }
 
 func RegisterSchemaAsset(asset map[string]any) {
-	schemaRegistry.registerAsset(asset)
+	schemaRegistryState.registerAsset(asset)
 }
 
 func SchemaEntries() []SchemaEntry {
-	return schemaRegistry.entriesOrdered()
+	return schemaRegistryState.entriesOrdered()
 }
 
 func SchemaEntryForSchema(schema string) (SchemaEntry, bool) {
-	return schemaRegistry.entryForSchema(schema)
+	return schemaRegistryState.entryForSchema(schema)
 }
 
 func SchemaDetails() map[string]any {
-	return schemaRegistry.details()
+	return schemaRegistryState.details()
 }
 
 func SchemaJSON() ([]byte, error) {

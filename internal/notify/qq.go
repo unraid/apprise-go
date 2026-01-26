@@ -3,7 +3,6 @@ package notify
 import (
 	"fmt"
 	"net/url"
-	"strings"
 )
 
 const qqURL = "https://qmsg.zendee.cn/send/%s"

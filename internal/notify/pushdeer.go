@@ -110,3 +110,131 @@ func chooseTitle(body, title string) string {
 	}
 	return body
 }
+
+func init() {
+	RegisterSchemaEntryOrdered(58, SchemaEntry{
+		"service_name":       "PushDeer",
+		"service_url":        "https://www.pushdeer.com/",
+		"setup_url":          "https://appriseit.com/services/pushdeer/",
+		"attachment_support": false,
+		"category":           "native",
+		"enabled":            true,
+		"protocols":          []string{"pushdeer"},
+		"secure_protocols":   []string{"pushdeers"},
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []string{},
+			"packages_required":    []string{},
+		},
+		"details": map[string]any{
+			"args": map[string]any{
+				"cto": map[string]any{
+					"default":  4.0,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "text",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"rto": map[string]any{
+					"default":  4.0,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+			},
+			"kwargs": map[string]any{},
+			"templates": []string{
+				"{schema}://{pushkey}",
+				"{schema}://{host}/{pushkey}",
+				"{schema}://{host}:{port}/{pushkey}",
+			},
+			"tokens": map[string]any{
+				"host": map[string]any{
+					"map_to":   "host",
+					"name":     "Hostname",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"port": map[string]any{
+					"map_to":   "port",
+					"max":      65535,
+					"min":      1,
+					"name":     "Port",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+				"pushkey": map[string]any{
+					"map_to":   "pushkey",
+					"name":     "Pushkey",
+					"private":  true,
+					"regex":    []string{"^[a-z0-9]+$", "i"},
+					"required": true,
+					"type":     "string",
+				},
+				"schema": map[string]any{
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"pushdeer", "pushdeers"},
+				},
+			},
+		},
+	})
+}

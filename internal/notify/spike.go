@@ -3,7 +3,6 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 const spikeURL = "https://api.spike.sh/v1/alerts/%s"

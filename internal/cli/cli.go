@@ -142,7 +142,12 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	}
 
 	if opts.showSchema {
-		if _, err := stdout.Write(append(SchemaJSON(), '\n')); err != nil {
+		schemaJSON, err := SchemaJSON()
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			return 1
+		}
+		if _, err := stdout.Write(append(schemaJSON, '\n')); err != nil {
 			fmt.Fprintln(stderr, err)
 			return 1
 		}

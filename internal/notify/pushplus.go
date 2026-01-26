@@ -3,7 +3,6 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 const pushplusURL = "https://www.pushplus.plus/send"

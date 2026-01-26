@@ -256,3 +256,30 @@ func splitSlackList(raw string) []string {
 	}
 	return values
 }
+
+func init() {
+	RegisterSchemaOverride("slack", applySlackOverrides)
+}
+
+func applySlackOverrides(target *ParsedURL, values map[string]SchemaValue) {
+	if rawToken := strings.TrimSpace(target.Query["token"]); rawToken != "" {
+		entries := splitSlackList(rawToken)
+		if len(entries) > 0 && strings.HasPrefix(entries[0], "xo") {
+			values["access_token"] = schemaValueString(entries[0])
+			values["token_a"] = schemaValueAny(nil)
+			values["token_b"] = schemaValueAny(nil)
+			values["token_c"] = schemaValueAny(nil)
+		} else {
+			if len(entries) > 0 {
+				values["token_a"] = schemaValueString(entries[0])
+			}
+			if len(entries) > 1 {
+				values["token_b"] = schemaValueString(entries[1])
+			}
+			if len(entries) > 2 {
+				values["token_c"] = schemaValueString(entries[2])
+			}
+			values["access_token"] = schemaValueAny(nil)
+		}
+	}
+}

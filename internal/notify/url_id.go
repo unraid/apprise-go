@@ -38,7 +38,7 @@ func URLID(target *ParsedURL, storageIDLen int, storageSalt []byte) string {
 	fullpath = strings.TrimRight(fullpath, "/")
 	hasher.Write([]byte(fullpath))
 
-	if strings.HasSuffix(scheme, "s") {
+	if isSecureScheme(scheme) {
 		hasher.Write([]byte("s"))
 	} else {
 		hasher.Write([]byte("i"))
