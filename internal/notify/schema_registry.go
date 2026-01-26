@@ -125,6 +125,9 @@ func (r *schemaRegistry) details() map[string]any {
 		asset[key] = value
 	}
 	r.mu.RUnlock()
+	if mask := resolveImagePathMask(); mask != "" {
+		asset["image_path_mask"] = mask
+	}
 
 	return map[string]any{
 		"version": version.UpstreamVersion,

@@ -2,6 +2,7 @@ package capture
 
 import (
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -28,7 +29,16 @@ func NewServer(t *testing.T) *Server {
 	t.Helper()
 
 	server := &Server{t: t}
-	server.srv = httptest.NewServer(http.HandlerFunc(server.handle))
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Skipf("unable to bind test server listener: %v", err)
+		return server
+	}
+
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(server.handle))
+	srv.Listener = listener
+	srv.Start()
+	server.srv = srv
 	return server
 }
 
