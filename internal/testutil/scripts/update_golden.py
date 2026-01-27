@@ -9,9 +9,8 @@ providers_root = repo_root / "internal" / "parity" / "providers"
 
 sys.path.insert(0, str(script_dir))
 
-from capture_request import capture_request  # noqa: E402
-
 from apprise.common import NotifyType  # noqa: E402
+from capture_request import capture_request  # noqa: E402
 
 DEFAULT_ENV = {
     "APPRISE_FIXED_TIME": "2024-01-01T00:00:00Z",
@@ -20,6 +19,7 @@ DEFAULT_ENV = {
     "APPRISE_VAPID_TEST_JWT": "parity.jwt.token",
     "APPRISE_VAPID_TEST_PUBLIC_KEY": "parity-public-key",
     "APPRISE_VAPID_TEST_ENCRYPTED": "cGFyaXR5LXZhcGlk",
+    "APPRISE_SIMPLEPUSH_TEST_IV": "00112233445566778899AABBCCDDEEFF",
 }
 UPSTREAM_ASSET_BASE = (
     "https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/"

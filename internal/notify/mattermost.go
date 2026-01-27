@@ -56,17 +56,38 @@ func NewMattermostTarget(target *ParsedURL) (*MattermostTarget, error) {
 }
 
 func (m *MattermostTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := m.BuildRequest(body, title, notifyType)
-	if err != nil {
-		return err
+	message := mergeTitleBody(title, body)
+	if len(m.channels) == 0 {
+		spec, err := m.buildSpec(message, notifyType, "")
+		if err != nil {
+			return err
+		}
+		return SendRequest(spec)
 	}
 
-	return SendRequest(spec)
+	for _, channel := range m.channels {
+		spec, err := m.buildSpec(message, notifyType, channel)
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (m *MattermostTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
 	message := mergeTitleBody(title, body)
+	channel := ""
+	if len(m.channels) > 0 {
+		channel = m.channels[0]
+	}
+	return m.buildSpec(message, notifyType, channel)
+}
 
+func (m *MattermostTarget) buildSpec(message string, notifyType NotifyType, channel string) (RequestSpec, error) {
 	payload := map[string]any{
 		"text":     message,
 		"icon_url": nil,
@@ -82,8 +103,8 @@ func (m *MattermostTarget) BuildRequest(body, title string, notifyType NotifyTyp
 	}
 	payload["username"] = username
 
-	if len(m.channels) > 0 {
-		payload["channel"] = strings.TrimPrefix(m.channels[0], "#")
+	if channel != "" {
+		payload["channel"] = strings.TrimPrefix(channel, "#")
 	}
 
 	data, err := json.Marshal(payload)

@@ -3,16 +3,30 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
+const (
+	rocketModeWebhook = "webhook"
+	rocketModeBasic   = "basic"
+	rocketModeToken   = "token"
+)
+
 type RocketChatTarget struct {
-	webhook string
-	host    string
-	port    int
-	secure  bool
-	avatar  bool
-	targets []string
+	mode      string
+	webhook   string
+	host      string
+	port      int
+	secure    bool
+	avatar    bool
+	user      string
+	password  string
+	authToken string
+	authUser  string
+	channels  []string
+	rooms     []string
+	users     []string
 }
 
 func NewRocketChatTarget(target *ParsedURL) (*RocketChatTarget, error) {
@@ -22,63 +36,282 @@ func NewRocketChatTarget(target *ParsedURL) (*RocketChatTarget, error) {
 	}
 
 	mode := strings.ToLower(strings.TrimSpace(target.Query["mode"]))
-	if mode != "" && mode != "webhook" {
+	if mode != "" && mode != rocketModeWebhook && mode != rocketModeBasic && mode != rocketModeToken {
 		return nil, fmt.Errorf("unsupported mode: %s", mode)
 	}
 
-	webhook := strings.TrimSpace(target.User)
-	if target.Password != "" {
-		webhook = strings.TrimSpace(target.Password)
-	}
-	if override, ok := target.Query["webhook"]; ok && strings.TrimSpace(override) != "" {
-		webhook = strings.TrimSpace(override)
-	}
-	if webhook == "" {
-		return nil, fmt.Errorf("missing webhook")
+	user := strings.TrimSpace(target.User)
+	password := strings.TrimSpace(target.Password)
+	webhook := strings.TrimSpace(target.Query["webhook"])
+	if webhook == "" && user != "" && password == "" {
+		webhook = user
 	}
 
-	avatar := parseBool(target.Query["avatar"], true)
-
-	targets := splitPath(target.Path)
-	if toValue, ok := target.Query["to"]; ok && strings.TrimSpace(toValue) != "" {
-		targets = append(targets, parseDelimitedList(toValue)...)
+	if mode == "" {
+		if webhook != "" {
+			mode = rocketModeWebhook
+		} else if len(password) > 32 {
+			mode = rocketModeToken
+		} else {
+			mode = rocketModeBasic
+		}
 	}
 
-	return &RocketChatTarget{
-		webhook: webhook,
-		host:    host,
-		port:    target.Port,
-		secure:  target.Scheme == "rockets",
-		avatar:  avatar,
-		targets: targets,
-	}, nil
+	if mode == rocketModeWebhook {
+		if webhook == "" && password != "" {
+			webhook = password
+		}
+		if webhook == "" {
+			return nil, fmt.Errorf("missing webhook")
+		}
+	}
+
+	if (mode == rocketModeBasic || mode == rocketModeToken) && (user == "" || password == "") {
+		return nil, fmt.Errorf("missing credentials")
+	}
+
+	avatarProvided := false
+	avatar := false
+	if rawAvatar, ok := target.Query["avatar"]; ok {
+		avatarProvided = true
+		avatar = parseBool(rawAvatar, true)
+	}
+	if !avatarProvided {
+		if mode == rocketModeBasic {
+			avatar = false
+		} else {
+			avatar = true
+		}
+	}
+
+	rawTargets := splitPath(target.Path)
+	if toValue := strings.TrimSpace(target.Query["to"]); toValue != "" {
+		rawTargets = append(rawTargets, parseDelimitedList(toValue)...)
+	}
+	channels, rooms, users := splitRocketTargets(rawTargets)
+
+	targetEntry := &RocketChatTarget{
+		mode:     mode,
+		webhook:  webhook,
+		host:     host,
+		port:     target.Port,
+		secure:   strings.EqualFold(target.Scheme, "rockets"),
+		avatar:   avatar,
+		user:     user,
+		password: password,
+		channels: channels,
+		rooms:    rooms,
+		users:    users,
+	}
+	if mode == rocketModeToken {
+		targetEntry.authToken = password
+		targetEntry.authUser = user
+	}
+
+	return targetEntry, nil
 }
 
 func (r *RocketChatTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := r.BuildRequest(body, title, notifyType)
-	if err != nil {
-		return err
+	switch r.mode {
+	case rocketModeWebhook:
+		return r.sendWebhook(body, title, notifyType)
+	case rocketModeToken, rocketModeBasic:
+		return r.sendAuthenticated(body, title, notifyType)
+	default:
+		return fmt.Errorf("unsupported mode")
 	}
-
-	return SendRequest(spec)
 }
 
 func (r *RocketChatTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if r.mode != rocketModeWebhook {
+		return RequestSpec{}, fmt.Errorf("rocket chat authenticated modes use multiple requests")
+	}
+	return r.buildWebhookRequest(body, title, notifyType, "")
+}
+
+func (r *RocketChatTarget) sendWebhook(body, title string, notifyType NotifyType) error {
+	targets := r.webhookTargets()
+	if len(targets) == 0 {
+		spec, err := r.buildWebhookRequest(body, title, notifyType, "")
+		if err != nil {
+			return err
+		}
+		return SendRequest(spec)
+	}
+
+	for _, target := range targets {
+		spec, err := r.buildWebhookRequest(body, title, notifyType, target)
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *RocketChatTarget) sendAuthenticated(body, title string, notifyType NotifyType) error {
+	if r.mode == rocketModeBasic {
+		if err := r.login(); err != nil {
+			return err
+		}
+		defer func() { _ = r.logout() }()
+	}
+
+	payload := r.buildPayload(body, title, notifyType)
+	headers := r.authHeaders()
+	urlStr := r.apiURL("/api/v1/chat.postMessage")
+
+	for _, user := range r.users {
+		payload["channel"] = "@" + user
+		delete(payload, "roomId")
+		spec, err := rocketRequest(urlStr, payload, headers)
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	for _, channel := range r.channels {
+		payload["channel"] = "#" + channel
+		delete(payload, "roomId")
+		spec, err := rocketRequest(urlStr, payload, headers)
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	for _, room := range r.rooms {
+		payload["roomId"] = room
+		delete(payload, "channel")
+		spec, err := rocketRequest(urlStr, payload, headers)
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *RocketChatTarget) buildWebhookRequest(body, title string, notifyType NotifyType, target string) (RequestSpec, error) {
+	payload := r.buildPayload(body, title, notifyType)
+	if strings.TrimSpace(target) != "" {
+		payload["channel"] = target
+	}
+
+	urlStr := r.apiURL(fmt.Sprintf("/hooks/%s", r.webhook))
+	headers := map[string]string{
+		"User-Agent":   "Apprise",
+		"Accept":       "*/*",
+		"Content-Type": "application/json",
+	}
+	return rocketRequest(urlStr, payload, headers)
+}
+
+func (r *RocketChatTarget) buildPayload(body, title string, notifyType NotifyType) map[string]any {
 	payload := map[string]any{
 		"text": mergeTitleBody(title, body),
 	}
 	if r.avatar {
 		payload["avatar"] = appriseImageURL(notifyType, "128x128")
 	}
-	if len(r.targets) > 0 {
-		payload["channel"] = r.targets[0]
+	return payload
+}
+
+func (r *RocketChatTarget) login() error {
+	values := url.Values{}
+	values.Set("username", r.user)
+	values.Set("password", r.password)
+
+	spec := RequestSpec{
+		Method: "POST",
+		URL:    r.apiURL("/api/v1/login"),
+		Headers: map[string]string{
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+		Body: values.Encode(),
 	}
 
-	data, err := json.Marshal(payload)
+	status, response, err := rocketSend(spec)
 	if err != nil {
-		return RequestSpec{}, err
+		return err
+	}
+	if status < 200 || status >= 300 {
+		return fmt.Errorf("rocket chat login failed")
 	}
 
+	if response["status"] != "success" {
+		return fmt.Errorf("rocket chat login failed")
+	}
+	data, _ := response["data"].(map[string]any)
+	authToken, _ := data["authToken"].(string)
+	userID, _ := data["userId"].(string)
+	if authToken == "" || userID == "" {
+		return fmt.Errorf("rocket chat login failed")
+	}
+	r.authToken = authToken
+	r.authUser = userID
+	return nil
+}
+
+func (r *RocketChatTarget) logout() error {
+	if r.authToken == "" || r.authUser == "" {
+		return nil
+	}
+	spec := RequestSpec{
+		Method: "POST",
+		URL:    r.apiURL("/api/v1/logout"),
+		Headers: map[string]string{
+			"X-Auth-Token": r.authToken,
+			"X-User-Id":    r.authUser,
+		},
+		Body: "",
+	}
+	if err := SendRequest(spec); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *RocketChatTarget) authHeaders() map[string]string {
+	headers := map[string]string{
+		"User-Agent":   "Apprise",
+		"Accept":       "*/*",
+		"Content-Type": "application/json",
+	}
+	if r.authToken != "" {
+		headers["X-Auth-Token"] = r.authToken
+	}
+	if r.authUser != "" {
+		headers["X-User-Id"] = r.authUser
+	}
+	return headers
+}
+
+func (r *RocketChatTarget) webhookTargets() []string {
+	targets := make([]string, 0, len(r.channels)+len(r.rooms)+len(r.users))
+	for _, user := range r.users {
+		targets = append(targets, "@"+user)
+	}
+	for _, channel := range r.channels {
+		targets = append(targets, "#"+channel)
+	}
+	for _, room := range r.rooms {
+		targets = append(targets, room)
+	}
+	return targets
+}
+
+func (r *RocketChatTarget) apiURL(path string) string {
 	scheme := "http"
 	if r.secure {
 		scheme = "https"
@@ -87,19 +320,59 @@ func (r *RocketChatTarget) BuildRequest(body, title string, notifyType NotifyTyp
 	if r.port != 0 {
 		host = fmt.Sprintf("%s:%d", host, r.port)
 	}
-	url := fmt.Sprintf("%s://%s/hooks/%s", scheme, host, r.webhook)
+	return fmt.Sprintf("%s://%s%s", scheme, host, path)
+}
 
-	headers := map[string]string{
-		"User-Agent":   "Apprise",
-		"Accept":       "*/*",
-		"Content-Type": "application/json",
+func splitRocketTargets(entries []string) ([]string, []string, []string) {
+	if len(entries) == 0 {
+		return nil, nil, nil
+	}
+	channels := []string{}
+	rooms := []string{}
+	users := []string{}
+	for _, entry := range entries {
+		trimmed := strings.TrimSpace(entry)
+		if trimmed == "" {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "#") {
+			name := strings.TrimPrefix(trimmed, "#")
+			if name != "" {
+				channels = append(channels, name)
+			}
+			continue
+		}
+		if strings.HasPrefix(trimmed, "@") {
+			name := strings.TrimPrefix(trimmed, "@")
+			if name != "" {
+				users = append(users, name)
+			}
+			continue
+		}
+		rooms = append(rooms, trimmed)
+	}
+	return channels, rooms, users
+}
+
+func rocketRequest(urlStr string, payload map[string]any, headers map[string]string) (RequestSpec, error) {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return RequestSpec{}, err
 	}
 	return RequestSpec{
 		Method:  "POST",
-		URL:     url,
+		URL:     urlStr,
 		Headers: headers,
 		Body:    string(data),
 	}, nil
+}
+
+func rocketSend(spec RequestSpec) (int, map[string]any, error) {
+	status, response, err := matrixSend(spec)
+	if err != nil {
+		return status, map[string]any{}, err
+	}
+	return status, response, nil
 }
 
 func init() {

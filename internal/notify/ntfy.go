@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -21,6 +22,20 @@ type NtfyTarget struct {
 	mode         NtfyMode
 	topics       []string
 	includeImage bool
+	avatarURL    string
+	authType     string
+	user         string
+	password     string
+	token        string
+	notifyFormat string
+	priority     string
+	delay        string
+	click        string
+	email        string
+	tags         []string
+	actions      string
+	attach       string
+	filename     string
 }
 
 func NewNtfyTarget(target *ParsedURL) (*NtfyTarget, error) {
@@ -47,11 +62,49 @@ func NewNtfyTarget(target *ParsedURL) (*NtfyTarget, error) {
 		includeImage = parseBool(rawImage, true)
 	}
 
+	user := strings.TrimSpace(target.User)
+	password := strings.TrimSpace(target.Password)
+	token := strings.TrimSpace(target.Query["token"])
+	authType := strings.ToLower(strings.TrimSpace(target.Query["auth"]))
+	if authType == "" {
+		if token != "" || (user != "" && password == "") {
+			authType = "token"
+		} else {
+			authType = "basic"
+		}
+	}
+	if authType == "token" && token == "" {
+		if user != "" {
+			token = user
+			user = ""
+			password = ""
+		}
+	}
+
+	notifyFormat := strings.ToLower(strings.TrimSpace(target.Query["format"]))
+	if notifyFormat == "" {
+		notifyFormat = "text"
+	}
+
 	return &NtfyTarget{
 		target:       target,
 		mode:         mode,
 		topics:       topics,
 		includeImage: includeImage,
+		avatarURL:    strings.TrimSpace(target.Query["avatar_url"]),
+		authType:     authType,
+		user:         user,
+		password:     password,
+		token:        token,
+		notifyFormat: notifyFormat,
+		priority:     strings.TrimSpace(target.Query["priority"]),
+		delay:        strings.TrimSpace(target.Query["delay"]),
+		click:        strings.TrimSpace(target.Query["click"]),
+		email:        strings.TrimSpace(target.Query["email"]),
+		tags:         parseDelimitedList(target.Query["tags"]),
+		actions:      strings.TrimSpace(target.Query["actions"]),
+		attach:       strings.TrimSpace(target.Query["attach"]),
+		filename:     strings.TrimSpace(target.Query["filename"]),
 	}, nil
 }
 
@@ -70,6 +123,12 @@ func (n *NtfyTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 		"title":   title,
 		"message": body,
 	}
+	if n.attach != "" {
+		payload["attach"] = n.attach
+		if n.filename != "" {
+			payload["filename"] = n.filename
+		}
+	}
 
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -82,9 +141,43 @@ func (n *NtfyTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 		"Content-Type": "application/json",
 	}
 
+	if n.mode == NtfyModePrivate {
+		if n.authType == "basic" && n.user != "" {
+			encoded := base64.StdEncoding.EncodeToString([]byte(n.user + ":" + n.password))
+			headers["Authorization"] = "Basic " + encoded
+		} else if n.authType == "token" && n.token != "" {
+			headers["Authorization"] = "Bearer " + n.token
+		}
+	}
+
 	_ = notifyType
 	if n.includeImage {
-		// TODO: attach image when asset support is added.
+		icon := n.avatarURL
+		if icon == "" {
+			icon = appriseImageURL(notifyType, "256x256")
+		}
+		headers["X-Icon"] = icon
+	}
+	if n.notifyFormat == "markdown" {
+		headers["X-Markdown"] = "yes"
+	}
+	if n.priority != "" {
+		headers["X-Priority"] = n.priority
+	}
+	if n.delay != "" {
+		headers["X-Delay"] = n.delay
+	}
+	if n.click != "" {
+		headers["X-Click"] = n.click
+	}
+	if n.email != "" {
+		headers["X-Email"] = n.email
+	}
+	if len(n.tags) > 0 {
+		headers["X-Tags"] = strings.Join(n.tags, ",")
+	}
+	if n.actions != "" {
+		headers["X-Actions"] = n.actions
 	}
 
 	return RequestSpec{

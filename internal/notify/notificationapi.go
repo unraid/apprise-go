@@ -255,9 +255,6 @@ func (n *NotificationAPITarget) buildPayload(body, title string, notifyType Noti
 		payload["parameters"] = parameters
 	} else {
 		textBody := body
-		if len(n.channels) == 0 {
-			n.channels = []string{"email"}
-		}
 		for _, channel := range n.channels {
 			switch channel {
 			case "sms":

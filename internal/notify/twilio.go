@@ -191,14 +191,16 @@ func (t *TwilioTarget) BuildRequest(body, title string, notifyType NotifyType) (
 func (t *TwilioTarget) Send(body, title string, notifyType NotifyType) error {
 	targets := t.targets
 	sourceDigits := strings.TrimPrefix(t.source, "+")
-	if len(targets) == 0 && (len(sourceDigits) == 5 || len(sourceDigits) == 6) {
-		return fmt.Errorf("missing targets")
-	}
-	if len(targets) == 0 && t.method != twilioMethodCall {
-		targets = []twilioTarget{{mode: t.defaultMode, target: t.source}}
+	if len(targets) == 0 {
+		if len(sourceDigits) == 5 || len(sourceDigits) == 6 {
+			return nil
+		}
+		if t.method != twilioMethodCall {
+			targets = []twilioTarget{{mode: t.defaultMode, target: t.source}}
+		}
 	}
 	if len(targets) == 0 {
-		return fmt.Errorf("missing targets")
+		return nil
 	}
 
 	message := mergeTitleBody(title, body)

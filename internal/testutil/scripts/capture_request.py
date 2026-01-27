@@ -249,11 +249,28 @@ def apply_vapid_fixes():
         pass
 
 
+def apply_simplepush_fixes():
+    iv_hex = os.environ.get("APPRISE_SIMPLEPUSH_TEST_IV")
+    if not iv_hex:
+        return
+    try:
+        iv_bytes = bytes.fromhex(iv_hex)
+    except Exception:
+        return
+    try:
+        import apprise.plugins.simplepush as simplepush
+
+        simplepush.urandom = lambda n, _iv=iv_bytes: _iv[:n]
+    except Exception:
+        pass
+
+
 def capture_request(url, body, title, notify_type):
     apply_fixed_time()
     apply_store_fix()
     apply_oauth_fixes()
     apply_vapid_fixes()
+    apply_simplepush_fixes()
 
     captured = []
 
@@ -365,6 +382,65 @@ def capture_request(url, body, title, notify_type):
                 b"arn:aws:sns:us-east-1:000000000000:topic"
                 b"</TopicArn></CreateTopicResult></CreateTopicResponse>"
             )
+        elif parsed.path == "/.well-known/matrix/client":
+            base_url = f"{parsed.scheme}://{parsed.netloc}"
+            response._content = json.dumps(
+                {"m.homeserver": {"base_url": base_url}}
+            ).encode("utf-8")
+        elif parsed.path.endswith("/_matrix/client/versions"):
+            response._content = b'{"versions":["r0"]}'
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith("/login"):
+            host = parsed.hostname or parsed.netloc.split(":")[0]
+            response._content = json.dumps(
+                {
+                    "access_token": "token",
+                    "home_server": host,
+                    "user_id": f"@user:{host}",
+                }
+            ).encode("utf-8")
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith("/register"):
+            host = parsed.hostname or parsed.netloc.split(":")[0]
+            response._content = json.dumps(
+                {
+                    "access_token": "token",
+                    "home_server": host,
+                    "user_id": f"@user:{host}",
+                }
+            ).encode("utf-8")
+        elif "/_matrix/client/" in parsed.path and "/join/" in parsed.path:
+            host = parsed.hostname or parsed.netloc.split(":")[0]
+            response._content = json.dumps({"room_id": f"!room:{host}"}).encode("utf-8")
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith("/createRoom"):
+            host = parsed.hostname or parsed.netloc.split(":")[0]
+            response._content = json.dumps(
+                {"room_id": f"!room:{host}", "room_alias": f"#room:{host}"}
+            ).encode("utf-8")
+        elif "/_matrix/client/" in parsed.path and "/directory/room/" in parsed.path:
+            host = parsed.hostname or parsed.netloc.split(":")[0]
+            response._content = json.dumps({"room_id": f"!room:{host}"}).encode("utf-8")
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith(
+            "/joined_rooms"
+        ):
+            host = parsed.hostname or parsed.netloc.split(":")[0]
+            response._content = json.dumps({"joined_rooms": [f"#room:{host}"]}).encode(
+                "utf-8"
+            )
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith("/logout"):
+            response._content = b"{}"
+        elif "/_matrix/media/" in parsed.path and parsed.path.endswith("/upload"):
+            host = parsed.hostname or parsed.netloc.split(":")[0]
+            response._content = json.dumps({"content_uri": f"mxc://{host}/abc"}).encode(
+                "utf-8"
+            )
+        elif parsed.path.endswith("/api/v1/login"):
+            response._content = json.dumps(
+                {
+                    "status": "success",
+                    "data": {"authToken": "token", "userId": "user-id"},
+                }
+            ).encode("utf-8")
+        elif parsed.path.endswith("/api/v1/logout"):
+            response._content = b"{}"
         else:
             response._content = b"ok"
         response.url = prepared.url

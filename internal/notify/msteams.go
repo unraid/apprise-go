@@ -3,41 +3,71 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
 type MSTeamsTarget struct {
-	team         string
-	tokenA       string
-	tokenB       string
-	tokenC       string
-	tokenD       string
-	version      int
-	includeImage bool
+	team           string
+	tokenA         string
+	tokenB         string
+	tokenC         string
+	tokenD         string
+	version        int
+	includeImage   bool
+	templatePath   string
+	templateTokens map[string]string
 }
 
 func NewMSTeamsTarget(target *ParsedURL) (*MSTeamsTarget, error) {
 	entries := splitPath(target.Path)
 
-	team := strings.TrimSpace(target.Host)
+	rawHost := strings.TrimSpace(target.Host)
 	tokenA := ""
-	if team == "" {
+	if rawHost == "" {
 		return nil, fmt.Errorf("missing team")
 	}
-	if len(entries) > 0 {
-		tokenA = entries[0]
-	}
+	team := ""
 	tokenB := ""
-	if len(entries) > 1 {
-		tokenB = entries[1]
-	}
 	tokenC := ""
-	if len(entries) > 2 {
-		tokenC = entries[2]
-	}
 	tokenD := ""
-	if len(entries) > 3 {
-		tokenD = entries[3]
+	if strings.TrimSpace(target.User) != "" {
+		tokenA = strings.TrimSpace(target.User) + "@" + rawHost
+		if len(entries) > 0 {
+			tokenB = entries[0]
+		}
+		if len(entries) > 1 {
+			tokenC = entries[1]
+		}
+		if len(entries) > 2 {
+			tokenD = entries[2]
+		}
+	} else if strings.Contains(rawHost, "@") {
+		tokenA = rawHost
+		if len(entries) > 0 {
+			tokenB = entries[0]
+		}
+		if len(entries) > 1 {
+			tokenC = entries[1]
+		}
+		if len(entries) > 2 {
+			tokenD = entries[2]
+		}
+	} else {
+		team = rawHost
+		if len(entries) > 0 {
+			tokenA = entries[0]
+		}
+		if len(entries) > 1 {
+			tokenB = entries[1]
+		}
+		if len(entries) > 2 {
+			tokenC = entries[2]
+		}
+		if len(entries) > 3 {
+			tokenD = entries[3]
+		}
 	}
 
 	version := 1
@@ -58,17 +88,32 @@ func NewMSTeamsTarget(target *ParsedURL) (*MSTeamsTarget, error) {
 			return nil, fmt.Errorf("invalid version: %s", rawVersion)
 		}
 	}
+	if team == "" && version > 1 {
+		return nil, fmt.Errorf("missing team")
+	}
 
 	includeImage := parseBool(target.Query["image"], true)
 
+	templatePath := strings.TrimSpace(target.Query["template"])
+	templateTokens := map[string]string{}
+	for key, value := range target.QueryPayload {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		templateTokens[key] = value
+	}
+
 	return &MSTeamsTarget{
-		team:         team,
-		tokenA:       tokenA,
-		tokenB:       tokenB,
-		tokenC:       tokenC,
-		tokenD:       tokenD,
-		version:      version,
-		includeImage: includeImage,
+		team:           team,
+		tokenA:         tokenA,
+		tokenB:         tokenB,
+		tokenC:         tokenC,
+		tokenD:         tokenD,
+		version:        version,
+		includeImage:   includeImage,
+		templatePath:   templatePath,
+		templateTokens: templateTokens,
 	}, nil
 }
 
@@ -86,25 +131,33 @@ func (m *MSTeamsTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		return RequestSpec{}, fmt.Errorf("missing tokens")
 	}
 
-	var imageURL any = nil
-	if m.includeImage {
-		imageURL = appriseImageURL(notifyType, "72x72")
-	}
-
-	payload := map[string]any{
-		"@type":    "MessageCard",
-		"@context": "https://schema.org/extensions",
-		"summary":  "Apprise Notifications",
-		"themeColor": appriseColor(
-			notifyType,
-		),
-		"sections": []any{
-			map[string]any{
-				"activityImage": imageURL,
-				"activityTitle": title,
-				"text":          body,
+	payload := map[string]any{}
+	if strings.TrimSpace(m.templatePath) != "" {
+		templatePayload, err := m.buildTemplatePayload(body, title, notifyType)
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		payload = templatePayload
+	} else {
+		var imageURL any = nil
+		if m.includeImage {
+			imageURL = appriseImageURL(notifyType, "72x72")
+		}
+		payload = map[string]any{
+			"@type":    "MessageCard",
+			"@context": "https://schema.org/extensions",
+			"summary":  "Apprise Notifications",
+			"themeColor": appriseColor(
+				notifyType,
+			),
+			"sections": []any{
+				map[string]any{
+					"activityImage": imageURL,
+					"activityTitle": title,
+					"text":          body,
+				},
 			},
-		},
+		}
 	}
 
 	data, err := json.Marshal(payload)
@@ -119,7 +172,11 @@ func (m *MSTeamsTarget) BuildRequest(body, title string, notifyType NotifyType) 
 	case 2:
 		url = fmt.Sprintf("https://%s.webhook.office.com/webhookb2/%s/IncomingWebhook/%s/%s", m.team, m.tokenA, m.tokenB, m.tokenC)
 	case 3:
-		url = fmt.Sprintf("https://%s.webhook.office.com/webhookb2/%s/IncomingWebhook/%s/%s/%s", m.team, m.tokenA, m.tokenB, m.tokenC, m.tokenD)
+		tokenD := m.tokenD
+		if tokenD == "" {
+			tokenD = "None"
+		}
+		url = fmt.Sprintf("https://%s.webhook.office.com/webhookb2/%s/IncomingWebhook/%s/%s/%s", m.team, m.tokenA, m.tokenB, m.tokenC, tokenD)
 	default:
 		return RequestSpec{}, fmt.Errorf("unsupported version: %d", m.version)
 	}
@@ -134,6 +191,44 @@ func (m *MSTeamsTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		},
 		Body: string(data),
 	}, nil
+}
+
+func (m *MSTeamsTarget) buildTemplatePayload(body, title string, notifyType NotifyType) (map[string]any, error) {
+	path := strings.TrimSpace(m.templatePath)
+	if strings.HasPrefix(path, "file://") {
+		path = strings.TrimPrefix(path, "file://")
+	}
+	if path != "" && !filepath.IsAbs(path) {
+		if moduleRoot, ok := findModuleRoot(); ok {
+			path = filepath.Join(moduleRoot, path)
+		}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	tokens := map[string]string{}
+	for key, value := range m.templateTokens {
+		tokens[key] = value
+	}
+	tokens["app_body"] = body
+	tokens["app_title"] = title
+	tokens["app_type"] = string(notifyType)
+	tokens["app_id"] = "Apprise"
+	tokens["app_desc"] = "Apprise Notifications"
+	tokens["app_color"] = appriseColor(notifyType)
+	tokens["app_image_url"] = appriseImageURL(notifyType, "72x72")
+	tokens["app_url"] = appriseAppURL
+	tokens["app_mode"] = "json"
+
+	rendered := applyTemplateTokens(string(data), tokens)
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(rendered), &payload); err != nil {
+		return nil, err
+	}
+	return payload, nil
 }
 
 func init() {

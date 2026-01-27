@@ -16,7 +16,7 @@ const (
 )
 
 var slackListDelims = regexp.MustCompile(`[ \t\r\n,#\\/]+`)
-var slackChannelRegex = regexp.MustCompile(`^([+#@]?[A-Z0-9_-]{1,32})(?::([0-9.]+))?$`)
+var slackChannelRegex = regexp.MustCompile(`(?i)^([+#@]?[A-Z0-9_-]{1,32})(?::([0-9.]+))?$`)
 
 type SlackTarget struct {
 	tokenA           string

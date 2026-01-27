@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -105,6 +106,75 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		contentType = "application/json"
 	} else if req.URL.Host == "api.twist.com" && strings.HasSuffix(req.URL.Path, "/channels/get") {
 		responseBody = `[{"id":123,"name":"general","workspace_id":12345}]`
+		contentType = "application/json"
+	} else if req.URL.Path == "/.well-known/matrix/client" {
+		scheme := req.URL.Scheme
+		if scheme == "" {
+			scheme = "https"
+		}
+		baseURL := fmt.Sprintf("%s://%s", scheme, req.URL.Host)
+		responseBody = fmt.Sprintf(`{"m.homeserver":{"base_url":"%s"}}`, baseURL)
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/_matrix/client/versions") {
+		responseBody = `{"versions":["r0"]}`
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.HasSuffix(req.URL.Path, "/login") {
+		host := req.URL.Hostname()
+		if host == "" {
+			host = req.URL.Host
+		}
+		responseBody = fmt.Sprintf(`{"access_token":"token","home_server":"%s","user_id":"@user:%s"}`, host, host)
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.HasSuffix(req.URL.Path, "/register") {
+		host := req.URL.Hostname()
+		if host == "" {
+			host = req.URL.Host
+		}
+		responseBody = fmt.Sprintf(`{"access_token":"token","home_server":"%s","user_id":"@user:%s"}`, host, host)
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.Contains(req.URL.Path, "/join/") {
+		host := req.URL.Hostname()
+		if host == "" {
+			host = req.URL.Host
+		}
+		responseBody = fmt.Sprintf(`{"room_id":"!room:%s"}`, host)
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.HasSuffix(req.URL.Path, "/createRoom") {
+		host := req.URL.Hostname()
+		if host == "" {
+			host = req.URL.Host
+		}
+		responseBody = fmt.Sprintf(`{"room_id":"!room:%s","room_alias":"#room:%s"}`, host, host)
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.Contains(req.URL.Path, "/directory/room/") {
+		host := req.URL.Hostname()
+		if host == "" {
+			host = req.URL.Host
+		}
+		responseBody = fmt.Sprintf(`{"room_id":"!room:%s"}`, host)
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.HasSuffix(req.URL.Path, "/joined_rooms") {
+		host := req.URL.Hostname()
+		if host == "" {
+			host = req.URL.Host
+		}
+		responseBody = fmt.Sprintf(`{"joined_rooms":["#room:%s"]}`, host)
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.HasSuffix(req.URL.Path, "/logout") {
+		responseBody = `{}`
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/_matrix/media/") && strings.HasSuffix(req.URL.Path, "/upload") {
+		host := req.URL.Hostname()
+		if host == "" {
+			host = req.URL.Host
+		}
+		responseBody = fmt.Sprintf(`{"content_uri":"mxc://%s/abc"}`, host)
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/api/v1/login") {
+		responseBody = `{"status":"success","data":{"authToken":"token","userId":"user-id"}}`
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/api/v1/logout") {
+		responseBody = `{}`
 		contentType = "application/json"
 	} else if strings.Contains(req.URL.Host, "sns.") && strings.Contains(body, "Action=CreateTopic") {
 		responseBody = `<CreateTopicResponse><CreateTopicResult><TopicArn>arn:aws:sns:us-east-1:000000000000:topic</TopicArn></CreateTopicResult></CreateTopicResponse>`

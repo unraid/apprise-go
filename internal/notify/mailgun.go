@@ -27,26 +27,29 @@ type MailgunTarget struct {
 	tokens   map[string]string
 	batch    bool
 	verify   bool
+	disabled bool
 }
 
 func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 	user := strings.TrimSpace(target.User)
 	host := strings.TrimSpace(target.Host)
+
+	pathEntries := splitPath(target.Path)
+	apiKey := ""
+	if len(pathEntries) > 0 {
+		apiKey = strings.TrimSpace(pathEntries[0])
+		pathEntries = pathEntries[1:]
+	}
+	if apiKey == "" {
+		return &MailgunTarget{disabled: true}, nil
+	}
+
 	if user == "" || host == "" {
 		return nil, fmt.Errorf("missing sender")
 	}
 	fromAddr := user + "@" + host
 	if !isSimpleEmail(fromAddr) {
 		return nil, fmt.Errorf("invalid sender")
-	}
-
-	pathEntries := splitPath(target.Path)
-	if len(pathEntries) == 0 {
-		return nil, fmt.Errorf("missing apikey")
-	}
-	apiKey := strings.TrimSpace(pathEntries[0])
-	if apiKey == "" {
-		return nil, fmt.Errorf("missing apikey")
 	}
 
 	fromName := mailgunDefaultName
@@ -71,7 +74,7 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 	}
 
 	targets := []emailEntry{}
-	for _, entry := range pathEntries[1:] {
+	for _, entry := range pathEntries {
 		if parsed, ok := parseEmailEntry(entry); ok {
 			targets = append(targets, parsed)
 		}
@@ -140,6 +143,9 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 }
 
 func (m *MailgunTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if m.disabled {
+		return RequestSpec{}, fmt.Errorf("missing apikey")
+	}
 	if len(m.targets) == 0 {
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
@@ -171,6 +177,9 @@ func (m *MailgunTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (m *MailgunTarget) Send(body, title string, notifyType NotifyType) error {
+	if m.disabled {
+		return nil
+	}
 	if len(m.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}

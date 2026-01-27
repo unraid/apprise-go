@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -121,8 +122,16 @@ func (s *SimplePushTarget) ensureEncryption() error {
 	}
 
 	iv := make([]byte, simplepushBlockSize)
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return err
+	override := strings.TrimSpace(os.Getenv("APPRISE_SIMPLEPUSH_TEST_IV"))
+	if override != "" {
+		if decoded, err := hex.DecodeString(override); err == nil && len(decoded) == simplepushBlockSize {
+			copy(iv, decoded)
+		}
+	}
+	if isZeroBlock(iv) {
+		if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+			return err
+		}
 	}
 
 	hash := sha1.Sum([]byte(s.password + s.user))
@@ -149,6 +158,15 @@ func pkcs7Pad(input []byte, blockSize int) []byte {
 		padded = append(padded, byte(pad))
 	}
 	return padded
+}
+
+func isZeroBlock(input []byte) bool {
+	for _, b := range input {
+		if b != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func init() {

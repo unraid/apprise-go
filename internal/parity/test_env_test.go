@@ -12,6 +12,7 @@ var defaultParityEnv = map[string]string{
 	"APPRISE_VAPID_TEST_JWT":        "parity.jwt.token",
 	"APPRISE_VAPID_TEST_PUBLIC_KEY": "parity-public-key",
 	"APPRISE_VAPID_TEST_ENCRYPTED":  "cGFyaXR5LXZhcGlk",
+	"APPRISE_SIMPLEPUSH_TEST_IV":    "00112233445566778899AABBCCDDEEFF",
 }
 
 func TestMain(m *testing.M) {

@@ -1,0 +1,13 @@
+{
+  "@type": "MessageCard",
+  "@context": "https://schema.org/extensions",
+  "summary": "{{app_desc}}",
+  "themeColor": "{{app_color}}",
+  "sections": [
+    {
+      "activityTitle": "{{app_title}}",
+      "text": "{{app_body}}",
+      "activityImage": "{{app_image_url}}"
+    }
+  ]
+}

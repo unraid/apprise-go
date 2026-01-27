@@ -96,7 +96,8 @@ func (z *ZulipTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 		),
 	}
 
-	url := fmt.Sprintf("https://%s.%s/api/v1/messages", z.organization, z.hostname)
+	urlHost := strings.ToLower(fmt.Sprintf("%s.%s", z.organization, z.hostname))
+	url := fmt.Sprintf("https://%s/api/v1/messages", urlHost)
 
 	return RequestSpec{
 		Method:  "POST",

@@ -1,0 +1,16 @@
+{
+  "user@example.com": {
+    "endpoint": "https://example.com/push/fixture",
+    "keys": {
+      "p256dh": "BM1QakJ2tOBgfK98viLNhcwtFwaQNredBKlC-jMB5a6nCMNMJF3W6KLBj2bL-LzZvf8w2g7ck0QUVOgoO8v5hZw",
+      "auth": "vzHTdwJzq2QJEDKFo-auvg"
+    }
+  },
+  "token": {
+    "endpoint": "https://example.com/push/fixture",
+    "keys": {
+      "p256dh": "BM1QakJ2tOBgfK98viLNhcwtFwaQNredBKlC-jMB5a6nCMNMJF3W6KLBj2bL-LzZvf8w2g7ck0QUVOgoO8v5hZw",
+      "auth": "vzHTdwJzq2QJEDKFo-auvg"
+    }
+  }
+}

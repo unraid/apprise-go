@@ -19,10 +19,12 @@ type telegramRecipient struct {
 }
 
 type TelegramTarget struct {
-	botToken string
-	targets  []telegramRecipient
-	silent   bool
-	preview  bool
+	botToken     string
+	targets      []telegramRecipient
+	silent       bool
+	preview      bool
+	detect       bool
+	includeImage bool
 }
 
 func NewTelegramTarget(target *ParsedURL) (*TelegramTarget, error) {
@@ -49,6 +51,9 @@ func NewTelegramTarget(target *ParsedURL) (*TelegramTarget, error) {
 		botToken = decodedHost + ":" + segments[0]
 		rawTargets = append(rawTargets, segments[1:]...)
 	}
+	if len(botToken) >= 3 && strings.EqualFold(botToken[:3], "bot") {
+		botToken = botToken[3:]
+	}
 
 	if toValue := strings.TrimSpace(target.Query["to"]); toValue != "" {
 		rawTargets = append(rawTargets, parseDelimitedList(toValue)...)
@@ -66,20 +71,23 @@ func NewTelegramTarget(target *ParsedURL) (*TelegramTarget, error) {
 		}
 	}
 
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
+	detect := parseBoolValue(target.Query["detect"], len(targets) == 0)
 
 	return &TelegramTarget{
-		botToken: botToken,
-		targets:  targets,
-		silent:   parseBoolValue(target.Query["silent"], false),
-		preview:  parseBoolValue(target.Query["preview"], false),
+		botToken:     botToken,
+		targets:      targets,
+		silent:       parseBoolValue(target.Query["silent"], false),
+		preview:      parseBoolValue(target.Query["preview"], false),
+		detect:       detect,
+		includeImage: parseBoolValue(target.Query["image"], false),
 	}, nil
 }
 
 func (t *TelegramTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
 	if len(t.targets) == 0 {
+		if t.detect {
+			return t.buildDetectSpec(), nil
+		}
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
 
@@ -96,11 +104,23 @@ func (t *TelegramTarget) BuildRequest(body, title string, notifyType NotifyType)
 
 func (t *TelegramTarget) Send(body, title string, notifyType NotifyType) error {
 	if len(t.targets) == 0 {
-		return fmt.Errorf("missing targets")
+		if t.detect {
+			return SendRequest(t.buildDetectSpec())
+		}
+		return nil
 	}
 
 	message := formatTelegramMessage(title, body)
 	for _, recipient := range t.targets {
+		if t.includeImage {
+			spec, err := t.buildImageSpec(recipient)
+			if err != nil {
+				return err
+			}
+			if err := SendRequest(spec); err != nil {
+				return err
+			}
+		}
 		spec, err := t.buildSpec(message, recipient)
 		if err != nil {
 			return err
@@ -145,6 +165,41 @@ func (t *TelegramTarget) buildSpec(body string, recipient telegramRecipient) (Re
 			"Content-Type": "application/json",
 		},
 		Body: string(data),
+	}, nil
+}
+
+func (t *TelegramTarget) buildDetectSpec() RequestSpec {
+	return RequestSpec{
+		Method: "POST",
+		URL:    telegramAPIBase + t.botToken + "/getUpdates",
+		Headers: map[string]string{
+			"User-Agent":   "Apprise",
+			"Content-Type": "application/json",
+			"Accept":       "*/*",
+		},
+		Body: "",
+	}
+}
+
+func (t *TelegramTarget) buildImageSpec(recipient telegramRecipient) (RequestSpec, error) {
+	values := url.Values{}
+	if recipient.isNumeric {
+		values.Set("chat_id", strconv.FormatInt(recipient.chatIDInt, 10))
+	} else {
+		values.Set("chat_id", recipient.chatID)
+	}
+	if recipient.messageTopic > 0 {
+		values.Set("message_thread_id", strconv.Itoa(recipient.messageTopic))
+	}
+
+	return RequestSpec{
+		Method: "POST",
+		URL:    telegramAPIBase + t.botToken + "/SendPhoto",
+		Headers: map[string]string{
+			"User-Agent":   "Apprise",
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+		Body: values.Encode(),
 	}, nil
 }
 

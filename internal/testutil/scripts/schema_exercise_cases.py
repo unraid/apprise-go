@@ -2,6 +2,7 @@ import json
 import re
 import sys
 import urllib.parse
+from pathlib import Path
 
 from apprise.plugins import N_MGR
 from apprise.plugins import details as plugin_details
@@ -29,6 +30,15 @@ CANDIDATES = [
     "ABC@DEF",
     "user@localhost",
 ]
+
+MATRIX_T2BOT_TOKEN = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+ROOT_DIR = Path(__file__).resolve().parents[3]
+FIXTURES_DIR = ROOT_DIR / "internal" / "testutil" / "fixtures"
+
+
+def fixture_path(name):
+    return str(FIXTURES_DIR / name)
 
 
 def is_simple_template(template):
@@ -113,8 +123,10 @@ def sample_for_name(name):
         return "us-west-2"
     if "uuid" in lowered:
         return "123e4567-e89b-12d3-a456-426614174000"
-    if "template" in lowered:
-        return "internal/testutil/fixtures/workflow_template.json"
+    if "keyfile" in lowered:
+        return fixture_path("vapid_test_key.pem")
+    if "subfile" in lowered:
+        return fixture_path("vapid_test_sub.json")
     if "phone" in lowered:
         return "15555550123"
     if (
@@ -284,17 +296,42 @@ def sample_for_spec(name, spec):
     value = sample_for_name(name)
     if isinstance(spec, dict):
         default = spec.get("default")
+        value_from_values = False
+        label = str(spec.get("name") or "")
+        lowered_name = name.lower()
+        label_lower = label.lower()
+        lock_value = False
+        if "template" in lowered_name and (
+            "path" in label_lower or "file" in label_lower
+        ):
+            value = fixture_path("workflow_template.json")
+            lock_value = True
+        if "keyfile" in lowered_name:
+            value = fixture_path("vapid_test_key.pem")
+            lock_value = True
+        if "subfile" in lowered_name:
+            value = fixture_path("vapid_test_sub.json")
+            lock_value = True
         if default is not None:
             default_value = query_value_from_default(default, spec)
             if default_value is not None:
                 value = default_value
+        values = spec.get("values")
+        if values and default is None:
+            if isinstance(values, (list, tuple)) and values:
+                value = str(values[0])
+                value_from_values = True
+            elif isinstance(values, (set, frozenset)) and values:
+                value = str(sorted(values)[0])
+                value_from_values = True
         arg_type = str(spec.get("type") or "").lower()
-        if arg_type.startswith("int") or arg_type.startswith("float"):
+        if (
+            arg_type.startswith("int") or arg_type.startswith("float")
+        ) and not value_from_values:
             value = "1"
         else:
-            label = str(spec.get("name") or "")
             suggested = sample_for_label(label)
-            if suggested and "subscriber" not in name.lower():
+            if suggested and not lock_value and "subscriber" not in lowered_name:
                 value = suggested
     regex = None
     flags = 0
@@ -337,12 +374,26 @@ def sample_for_token(name, spec, tokens):
     return sample_for_spec(name, spec)
 
 
+def is_matrix_t2bot_template(schema, template):
+    if schema.lower() != "matrix":
+        return False
+    if "{token}" not in template:
+        return False
+    if "{host}" in template or "{targets}" in template:
+        return False
+    return True
+
+
 def fill_template(template, schema, tokens):
     values = {"schema": schema}
+    t2bot_template = is_matrix_t2bot_template(schema, template)
     for name, spec in tokens.items():
         if name == "schema":
             continue
-        values[name] = sample_for_token(name, spec, tokens)
+        if t2bot_template and name == "token":
+            values[name] = MATRIX_T2BOT_TOKEN
+        else:
+            values[name] = sample_for_token(name, spec, tokens)
 
     url = template
     for name, value in values.items():
@@ -400,6 +451,11 @@ def sample_arg_value(name, spec):
     if arg_type.startswith("float"):
         return "1"
     if arg_type.startswith("list"):
+        values = spec.get("values")
+        if isinstance(values, (list, tuple)) and values:
+            return str(values[0])
+        if isinstance(values, (set, frozenset)) and values:
+            return str(sorted(values)[0])
         return "a,b"
     return sample_for_spec(name, spec)
 
@@ -431,6 +487,17 @@ def append_query(url, items):
     return url + sep + query
 
 
+def ensure_query_params(url, items):
+    if not items:
+        return url
+    parsed = urllib.parse.urlsplit(url)
+    existing = {
+        k for k, _ in urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+    }
+    missing = [(k, v) for k, v in items if k not in existing]
+    return append_query(url, missing) if missing else url
+
+
 def generate_cases(schema, plugin, details):
     cases = []
     templates = details.get("templates") or []
@@ -460,6 +527,16 @@ def generate_cases(schema, plugin, details):
             cases.append({"name": f"template-{len(cases) + 1}", "url": url})
 
     primary = valid_templates[0] if valid_templates else None
+
+    if schema.lower() == "vapid":
+        required = [
+            ("keyfile", fixture_path("vapid_test_key.pem")),
+            ("subfile", fixture_path("vapid_test_sub.json")),
+        ]
+        for entry in cases:
+            entry["url"] = ensure_query_params(entry["url"], required)
+        if primary:
+            primary = ensure_query_params(primary, required)
 
     if primary:
         default_items = []
@@ -497,6 +574,17 @@ def generate_cases(schema, plugin, details):
                                         if filled:
                                             template_url = filled
                                             break
+                        if (
+                            schema.lower() == "matrix"
+                            and name.lower() == "mode"
+                            and str(value).lower() == "t2bot"
+                        ):
+                            for candidate in ordered_templates:
+                                if is_matrix_t2bot_template(schema, candidate):
+                                    filled = fill_template(candidate, schema, tokens)
+                                    if filled:
+                                        template_url = filled
+                                        break
                         url = append_query(template_url, [(name, value)])
                         if can_parse(url):
                             cases.append({"name": f"choice-{name}-{value}", "url": url})
@@ -511,6 +599,8 @@ def generate_cases(schema, plugin, details):
             value = sample_arg_value(name, spec)
             if value is None:
                 continue
+            if schema.lower() == "msteams" and name.lower() == "template":
+                value = fixture_path("msteams_template.json")
             url = append_query(primary, [(name, value)])
             if can_parse(url):
                 cases.append({"name": f"arg-{name}", "url": url})
@@ -523,13 +613,15 @@ def generate_cases(schema, plugin, details):
                 prefix = ""
             key_name = "key"
             lowered = name.lower()
+            value = "value"
             if "mapping" in lowered:
                 if "template" in lowered:
                     key_name = "1"
                 else:
                     key_name = "info"
+                    value = "INFO"
             key = f"{prefix}{key_name}"
-            url = append_query(primary, [(key, "value")])
+            url = append_query(primary, [(key, value)])
             if can_parse(url):
                 cases.append({"name": f"kwargs-{name}", "url": url})
 

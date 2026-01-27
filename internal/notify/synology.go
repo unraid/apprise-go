@@ -98,7 +98,11 @@ func (s *SynologyTarget) BuildRequest(body, title string, notifyType NotifyType)
 		headers[key] = value
 	}
 	if s.user != "" {
-		headers["Authorization"] = basicAuthHeader(s.user, s.password)
+		pass := s.password
+		if pass == "" {
+			pass = "None"
+		}
+		headers["Authorization"] = basicAuthHeader(s.user, pass)
 	}
 
 	_ = notifyType

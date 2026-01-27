@@ -74,7 +74,11 @@ func (n *NoticaTarget) BuildRequest(body, title string, notifyType NotifyType) (
 			headers[key] = value
 		}
 		if n.user != "" {
-			headers["Authorization"] = basicAuthHeader(n.user, n.pass)
+			pass := n.pass
+			if pass == "" {
+				pass = "None"
+			}
+			headers["Authorization"] = basicAuthHeader(n.user, pass)
 		}
 	}
 
@@ -89,14 +93,14 @@ func (n *NoticaTarget) BuildRequest(body, title string, notifyType NotifyType) (
 		url = fmt.Sprintf("%s://%s%s?token=%s", n.scheme, host, n.path, n.token)
 	}
 
-	_ = title
+	message := mergeTitleBody(title, body)
 	_ = notifyType
 
 	return RequestSpec{
 		Method:  "POST",
 		URL:     url,
 		Headers: headers,
-		Body:    "d:" + body,
+		Body:    "d:" + message,
 	}, nil
 }
 

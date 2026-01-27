@@ -44,6 +44,18 @@ func NewThreemaTarget(target *ParsedURL) (*ThreemaTarget, error) {
 	if toRaw := strings.TrimSpace(target.Query["to"]); toRaw != "" {
 		targets = append(targets, parseDelimitedList(toRaw)...)
 	}
+	if toRaw := strings.TrimSpace(target.Query["targets"]); toRaw != "" {
+		targets = append(targets, parseDelimitedList(toRaw)...)
+	}
+	if toRaw := strings.TrimSpace(target.Query["target_threema_id"]); toRaw != "" {
+		targets = append(targets, parseDelimitedList(toRaw)...)
+	}
+	if toRaw := strings.TrimSpace(target.Query["target_email"]); toRaw != "" {
+		targets = append(targets, parseDelimitedList(toRaw)...)
+	}
+	if toRaw := strings.TrimSpace(target.Query["target_phone"]); toRaw != "" {
+		targets = append(targets, parseDelimitedList(toRaw)...)
+	}
 
 	recipients := make([]threemaRecipient, 0, len(targets))
 	for _, entry := range targets {
@@ -63,10 +75,6 @@ func NewThreemaTarget(target *ParsedURL) (*ThreemaTarget, error) {
 			recipients = append(recipients, threemaRecipient{key: "phone", value: normalized})
 			continue
 		}
-	}
-
-	if len(recipients) == 0 {
-		return nil, fmt.Errorf("missing targets")
 	}
 
 	sort.Slice(recipients, func(i, j int) bool {
@@ -96,7 +104,7 @@ func (t *ThreemaTarget) BuildRequest(body, title string, notifyType NotifyType) 
 
 func (t *ThreemaTarget) Send(body, title string, notifyType NotifyType) error {
 	if len(t.recipients) == 0 {
-		return fmt.Errorf("missing targets")
+		return nil
 	}
 
 	message := mergeTitleBody(title, body)

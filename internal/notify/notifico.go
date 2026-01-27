@@ -44,7 +44,8 @@ func NewNotificoTarget(target *ParsedURL) (*NotificoTarget, error) {
 }
 
 func (n *NotificoTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	payload := n.formatPayload(body, notifyType)
+	message := mergeTitleBody(title, body)
+	payload := n.formatPayload(message, notifyType)
 
 	values := url.Values{}
 	values.Set("payload", payload)

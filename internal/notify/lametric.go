@@ -204,7 +204,9 @@ func (l *LametricTarget) BuildRequest(body, title string, notifyType NotifyType)
 			l.appID,
 			l.appVer,
 		)
-		headers["X-Access-Token"] = l.appToken
+		if l.apiKey != "" {
+			headers["X-Access-Token"] = l.apiKey
+		}
 		payload = map[string]any{
 			"frames": []map[string]any{
 				{

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -226,6 +227,11 @@ func (w *WorkflowsTarget) buildTemplatePayload(body, title string, notifyType No
 	if strings.HasPrefix(path, "file://") {
 		path = strings.TrimPrefix(path, "file://")
 	}
+	if path != "" && !filepath.IsAbs(path) {
+		if moduleRoot, ok := findModuleRoot(); ok {
+			path = filepath.Join(moduleRoot, path)
+		}
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -241,7 +247,7 @@ func (w *WorkflowsTarget) buildTemplatePayload(body, title string, notifyType No
 	tokens["app_id"] = "Apprise"
 	tokens["app_desc"] = "Apprise Notifications"
 	tokens["app_color"] = appriseColor(notifyType)
-	tokens["app_image_url"] = appriseImageURL(notifyType, "72x72")
+	tokens["app_image_url"] = appriseImageURL(notifyType, "32x32")
 	tokens["app_url"] = appriseAppURL
 	tokens["app_mode"] = "json"
 
