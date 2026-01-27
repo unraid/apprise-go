@@ -104,10 +104,11 @@ func RunStorage(opts *cliOptions, args []string, stdout, stderr io.Writer) int {
 		return 0
 	}
 
+	pruneDays := opts.storagePruneDays
 	if action == storageActionClear {
-		opts.storagePruneDays = 0
+		pruneDays = 0
 	}
-	expiry := time.Duration(opts.storagePruneDays) * 24 * time.Hour
+	expiry := time.Duration(pruneDays) * 24 * time.Hour
 	if err := diskPrune(storagePath, filterUIDs, expiry, !opts.dryRun); err != nil {
 		fmt.Fprintln(stderr, err)
 		return 1
@@ -283,13 +284,17 @@ func printStorageList(w io.Writer, storagePath string, uids map[string]*storageE
 }
 
 func truncate(value string, max int) string {
-	if len(value) <= max {
+	if max <= 0 {
+		return ""
+	}
+	runes := []rune(value)
+	if len(runes) <= max {
 		return value
 	}
 	if max <= 3 {
-		return value[:max]
+		return string(runes[:max])
 	}
-	return value[:max-3] + "..."
+	return string(runes[:max-3]) + "..."
 }
 
 func bytesToString(value int64) string {

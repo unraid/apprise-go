@@ -67,6 +67,10 @@ func (c *countFlag) Set(value string) error {
 	return nil
 }
 
+func (c *countFlag) IsBoolFlag() bool {
+	return true
+}
+
 func Run(args []string, stdout, stderr io.Writer) int {
 	opts := defaultCliOptions()
 	args = normalizeArgs(args)
