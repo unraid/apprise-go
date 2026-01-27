@@ -86,6 +86,10 @@ def token_name(segment):
 
 def sample_for_name(name):
     lowered = name.lower()
+    if lowered in ("tz", "timezone"):
+        return "UTC"
+    if "subscriber" in lowered:
+        return "user@example.com"
     if lowered in ("host", "hostname", "domain"):
         return "example.com"
     if "host" in lowered:
@@ -98,7 +102,11 @@ def sample_for_name(name):
         return "user@example.com"
     if "from" in lowered and ("addr" in lowered or "email" in lowered):
         return "user@example.com"
-    if "webhook" in lowered or "url" in lowered:
+    if "reply" in lowered:
+        return "user@example.com"
+    if "url" in lowered:
+        return "https://example.com/hook"
+    if "webhook" in lowered:
         return "token"
     if "region" in lowered:
         return "us-west-2"
@@ -127,6 +135,39 @@ def sample_for_name(name):
     if "group" in lowered:
         return "group"
     return "token"
+
+
+def sample_for_label(label):
+    lowered = label.lower()
+    if "timezone" in lowered:
+        return "UTC"
+    if "channel id" in lowered or ("channel" in lowered and "id" in lowered):
+        return "123"
+    if "email" in lowered:
+        return "user@example.com"
+    if "reply" in lowered:
+        return "user@example.com"
+    if "phone" in lowered or "sms" in lowered:
+        return "15555550123"
+    if "callsign" in lowered or "call sign" in lowered:
+        return "AA1AA"
+    if "url" in lowered:
+        return "https://example.com/hook"
+    if "webhook" in lowered:
+        return "token"
+    if "region" in lowered:
+        return "us-west-2"
+    if "token" in lowered or "secret" in lowered or "key" in lowered:
+        return "token"
+    if "channel" in lowered:
+        return "channel"
+    if "topic" in lowered:
+        return "topic"
+    if "room" in lowered:
+        return "room"
+    if "group" in lowered:
+        return "group"
+    return None
 
 
 def match_regex(regex, flags, candidate):
@@ -161,14 +202,40 @@ def sample_for_regex(regex, flags):
         if match_regex(regex, flags, candidate):
             return candidate
 
+    if "at_" in regex.lower():
+        candidate = "AT_token"
+        if match_regex(regex, flags, candidate):
+            return candidate
+
+    if "uid_" in regex.lower():
+        candidate = "UID_token"
+        if match_regex(regex, flags, candidate):
+            return candidate
+
     for candidate in CANDIDATES:
         if match_regex(regex, flags, candidate):
             return candidate
 
-    length_match = re.match(r"^\\A?\\?\[([^\]]+)\]\\?\{(\d+)(?:,(\d+))?\}\\?\$?", regex)
+    length_match = re.search(r"\[([^\]]+)\]\{(\d+)(?:,(\d+))?\}", regex)
     if length_match:
         charset = length_match.group(1)
         size = int(length_match.group(2))
+        sample_char = "a"
+        if "0-9" in charset and "A-Z" in charset:
+            sample_char = "A"
+        elif "0-9" in charset:
+            sample_char = "1"
+        elif "A-Z" in charset:
+            sample_char = "A"
+        elif "a-z" in charset:
+            sample_char = "a"
+        return sample_char * size
+
+    range_match = re.search(r"\{(\d+)(?:,(\d+))?\}", regex)
+    class_match = re.search(r"\[([^\]]+)\]", regex)
+    if range_match and class_match:
+        size = int(range_match.group(1))
+        charset = class_match.group(1)
         sample_char = "a"
         if "0-9" in charset and "A-Z" in charset:
             sample_char = "A"
@@ -185,6 +252,11 @@ def sample_for_regex(regex, flags):
 
 def sample_for_spec(name, spec):
     value = sample_for_name(name)
+    if isinstance(spec, dict):
+        label = str(spec.get("name") or "")
+        suggested = sample_for_label(label)
+        if suggested and "subscriber" not in name.lower():
+            value = suggested
     regex = None
     flags = 0
     raw_regex = spec.get("regex") if isinstance(spec, dict) else None
@@ -207,11 +279,22 @@ def sample_for_spec(name, spec):
     return value
 
 
-def sample_for_token(name, spec):
+def sample_for_token(name, spec, tokens):
     if isinstance(spec, dict) and spec.get("group"):
         group = spec.get("group")
         if isinstance(group, (list, tuple, set)) and group:
-            name = str(list(group)[0])
+            group_list = [str(item) for item in group]
+            candidate = ""
+            for entry in group_list:
+                if "id" in entry.lower():
+                    candidate = entry
+                    break
+            if candidate == "" and group_list:
+                candidate = group_list[0]
+            group_spec = tokens.get(candidate) if isinstance(tokens, dict) else None
+            if isinstance(group_spec, dict):
+                return sample_for_spec(candidate, group_spec)
+            name = candidate
     return sample_for_spec(name, spec)
 
 
@@ -220,7 +303,7 @@ def fill_template(template, schema, tokens):
     for name, spec in tokens.items():
         if name == "schema":
             continue
-        values[name] = sample_for_token(name, spec)
+        values[name] = sample_for_token(name, spec, tokens)
 
     url = template
     for name, value in values.items():
@@ -262,6 +345,8 @@ def query_value_from_default(default, spec):
 
 def sample_arg_value(name, spec):
     arg_type = str(spec.get("type") or "").lower()
+    if name.lower() in ("tz", "timezone") or "timezone" in arg_type:
+        return "UTC"
     default = spec.get("default", None)
     if default is not None:
         return query_value_from_default(default, spec)

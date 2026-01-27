@@ -1,14 +1,20 @@
 package notify
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
+	"time"
 )
 
 type DingTalkTarget struct {
 	token   string
+	secret  string
 	targets []string
 }
 
@@ -17,8 +23,12 @@ func NewDingTalkTarget(target *ParsedURL) (*DingTalkTarget, error) {
 	if token == "" {
 		return nil, fmt.Errorf("missing token")
 	}
-	if target.User != "" {
-		return nil, fmt.Errorf("secret mode unsupported")
+	secret := strings.TrimSpace(target.User)
+	if rawSecret := strings.TrimSpace(target.Query["secret"]); rawSecret != "" {
+		secret = rawSecret
+	}
+	if secret != "" && !dingtalkSecretRegex.MatchString(secret) {
+		return nil, fmt.Errorf("invalid secret")
 	}
 
 	targets := splitPath(target.Path)
@@ -28,6 +38,7 @@ func NewDingTalkTarget(target *ParsedURL) (*DingTalkTarget, error) {
 
 	return &DingTalkTarget{
 		token:   token,
+		secret:  secret,
 		targets: targets,
 	}, nil
 }
@@ -72,6 +83,11 @@ func (d *DingTalkTarget) BuildRequest(body, title string, notifyType NotifyType)
 	}
 	q := url.Values{}
 	q.Set("access_token", d.token)
+	if d.secret != "" {
+		timestamp, signature := d.signature()
+		q.Set("timestamp", timestamp)
+		q.Set("sign", signature)
+	}
 	u.RawQuery = q.Encode()
 
 	return RequestSpec{
@@ -85,6 +101,17 @@ func (d *DingTalkTarget) BuildRequest(body, title string, notifyType NotifyType)
 		Body: string(data),
 	}, nil
 }
+
+func (d *DingTalkTarget) signature() (string, string) {
+	timestamp := fmt.Sprintf("%d", fixedTime().UnixNano()/int64(time.Millisecond))
+	seed := timestamp + "\n" + d.secret
+	mac := hmac.New(sha256.New, []byte(d.secret))
+	_, _ = mac.Write([]byte(seed))
+	signature := base64.StdEncoding.EncodeToString(mac.Sum(nil))
+	return timestamp, url.QueryEscape(signature)
+}
+
+var dingtalkSecretRegex = regexp.MustCompile(`^[a-z0-9]+$`)
 
 func init() {
 	RegisterSchemaEntryOrdered(15, SchemaEntry{

@@ -93,6 +93,9 @@ func (j *JSONTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 		Host:   host,
 		Path:   j.target.Path,
 	}
+	if u.Path == "" {
+		u.Path = "/"
+	}
 
 	if len(j.params) > 0 {
 		values := url.Values{}
@@ -111,7 +114,11 @@ func (j *JSONTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 		headers[key] = value
 	}
 	if j.target.User != "" {
-		headers["Authorization"] = basicAuthHeader(j.target.User, j.target.Password)
+		password := j.target.Password
+		if !j.target.HasPassword {
+			password = "None"
+		}
+		headers["Authorization"] = basicAuthHeader(j.target.User, password)
 	}
 
 	return RequestSpec{

@@ -106,6 +106,9 @@ func (f *FormTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 		Host:   host,
 		Path:   f.target.Path,
 	}
+	if u.Path == "" {
+		u.Path = "/"
+	}
 
 	if f.method == "GET" {
 		values := url.Values{}
@@ -146,7 +149,11 @@ func (f *FormTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 		headers[key] = value
 	}
 	if f.target.User != "" {
-		headers["Authorization"] = basicAuthHeader(f.target.User, f.target.Password)
+		password := f.target.Password
+		if !f.target.HasPassword {
+			password = "None"
+		}
+		headers["Authorization"] = basicAuthHeader(f.target.User, password)
 	}
 
 	return RequestSpec{

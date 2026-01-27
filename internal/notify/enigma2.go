@@ -16,6 +16,7 @@ type Enigma2Target struct {
 	secure   bool
 	user     string
 	password string
+	hasPass  bool
 	fullpath string
 	timeout  int
 	headers  map[string]string
@@ -55,6 +56,7 @@ func NewEnigma2Target(target *ParsedURL) (*Enigma2Target, error) {
 		secure:   secure,
 		user:     target.User,
 		password: target.Password,
+		hasPass:  target.HasPassword,
 		fullpath: fullpath,
 		timeout:  timeout,
 		headers:  headers,
@@ -77,7 +79,11 @@ func (e *Enigma2Target) BuildRequest(body, title string, notifyType NotifyType) 
 		headers[key] = value
 	}
 	if e.user != "" {
-		headers["Authorization"] = basicAuthHeader(e.user, e.password)
+		password := e.password
+		if !e.hasPass {
+			password = "None"
+		}
+		headers["Authorization"] = basicAuthHeader(e.user, password)
 	}
 
 	return RequestSpec{

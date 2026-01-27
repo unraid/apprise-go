@@ -3,6 +3,8 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -15,6 +17,9 @@ type DiscordTarget struct {
 	tts          bool
 	avatar       bool
 	avatarURL    string
+	threadID     string
+	flags        int
+	format       string
 }
 
 func NewDiscordTarget(target *ParsedURL) (*DiscordTarget, error) {
@@ -35,6 +40,25 @@ func NewDiscordTarget(target *ParsedURL) (*DiscordTarget, error) {
 		avatarURL = rawAvatarURL
 	}
 
+	threadID := strings.TrimSpace(target.Query["thread"])
+	format := normalizeDiscordFormat(target.Query["format"])
+	if format == "" {
+		if threadID != "" {
+			format = "markdown"
+		} else {
+			format = "text"
+		}
+	}
+
+	flags := 0
+	if rawFlags := strings.TrimSpace(target.Query["flags"]); rawFlags != "" {
+		value, err := strconv.Atoi(rawFlags)
+		if err != nil || value < 0 {
+			return nil, fmt.Errorf("invalid flags")
+		}
+		flags = value
+	}
+
 	return &DiscordTarget{
 		webhookID:    webhookID,
 		webhookToken: webhookToken,
@@ -42,6 +66,9 @@ func NewDiscordTarget(target *ParsedURL) (*DiscordTarget, error) {
 		tts:          tts,
 		avatar:       avatar,
 		avatarURL:    avatarURL,
+		threadID:     threadID,
+		flags:        flags,
+		format:       format,
 	}, nil
 }
 
@@ -49,6 +76,10 @@ func (d *DiscordTarget) BuildRequest(body, title string, notifyType NotifyType) 
 	payload := map[string]any{
 		"tts":  d.tts,
 		"wait": !d.tts,
+	}
+
+	if d.flags > 0 {
+		payload["flags"] = d.flags
 	}
 
 	if d.avatar {
@@ -63,7 +94,18 @@ func (d *DiscordTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		payload["username"] = d.username
 	}
 
-	if body != "" {
+	if d.format == "markdown" {
+		embed := map[string]any{
+			"author": map[string]any{
+				"name": "Apprise",
+				"url":  appriseAppURL,
+			},
+			"title":       title,
+			"description": body,
+			"color":       appriseColorInt(notifyType),
+		}
+		payload["embeds"] = []any{embed}
+	} else if body != "" {
 		if title == "" {
 			payload["content"] = body
 		} else {
@@ -82,11 +124,21 @@ func (d *DiscordTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		"Content-Type": "application/json; charset=utf-8",
 	}
 
-	url := fmt.Sprintf("%s/%s/%s", discordWebhookBase, d.webhookID, d.webhookToken)
+	targetURL := fmt.Sprintf("%s/%s/%s", discordWebhookBase, d.webhookID, d.webhookToken)
+	if d.threadID != "" {
+		parsed, err := url.Parse(targetURL)
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		query := parsed.Query()
+		query.Set("thread_id", d.threadID)
+		parsed.RawQuery = query.Encode()
+		targetURL = parsed.String()
+	}
 
 	return RequestSpec{
 		Method:  "POST",
-		URL:     url,
+		URL:     targetURL,
 		Headers: headers,
 		Body:    string(data),
 	}, nil
@@ -107,4 +159,20 @@ func defaultImageURL(notifyType NotifyType) string {
 	}
 
 	return appriseImageURL(notifyType, "256x256")
+}
+
+func normalizeDiscordFormat(raw string) string {
+	format := strings.ToLower(strings.TrimSpace(raw))
+	switch format {
+	case "":
+		return ""
+	case "markdown", "md", "notifyformat.markdown":
+		return "markdown"
+	case "html", "notifyformat.html":
+		return "html"
+	case "text", "notifyformat.text":
+		return "text"
+	default:
+		return ""
+	}
 }

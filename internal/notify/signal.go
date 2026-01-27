@@ -17,6 +17,7 @@ type SignalTarget struct {
 	secure   bool
 	user     string
 	password string
+	hasPass  bool
 	source   string
 	targets  []string
 	batch    bool
@@ -80,6 +81,7 @@ func NewSignalTarget(target *ParsedURL) (*SignalTarget, error) {
 		secure:   target.Scheme == "signals",
 		user:     strings.TrimSpace(target.User),
 		password: target.Password,
+		hasPass:  target.HasPassword,
 		source:   source,
 		targets:  targets,
 		batch:    parseBoolWithDefault(target.Query["batch"], false),
@@ -122,7 +124,11 @@ func (s *SignalTarget) BuildRequest(body, title string, notifyType NotifyType) (
 		"Content-Type": "application/json",
 	}
 	if s.user != "" {
-		headers["Authorization"] = basicAuthHeader(s.user, s.password)
+		password := s.password
+		if !s.hasPass {
+			password = "None"
+		}
+		headers["Authorization"] = basicAuthHeader(s.user, password)
 	}
 
 	return RequestSpec{
@@ -172,7 +178,11 @@ func (s *SignalTarget) Send(body, title string, notifyType NotifyType) error {
 			"Content-Type": "application/json",
 		}
 		if s.user != "" {
-			headers["Authorization"] = basicAuthHeader(s.user, s.password)
+			password := s.password
+			if !s.hasPass {
+				password = "None"
+			}
+			headers["Authorization"] = basicAuthHeader(s.user, password)
 		}
 
 		spec := RequestSpec{

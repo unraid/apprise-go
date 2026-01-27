@@ -10,3 +10,4 @@
 
 # Local tooling
 /.venv/
+/.gocache/

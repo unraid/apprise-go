@@ -114,6 +114,7 @@ func (o *Office365Target) BuildRequest(body, title string, notifyType NotifyType
 		URL:    o.authURL(),
 		Headers: map[string]string{
 			"User-Agent":   "Apprise",
+			"Accept":       "*/*",
 			"Content-Type": "application/x-www-form-urlencoded",
 		},
 		Body: form.Encode(),
@@ -130,6 +131,9 @@ func (o *Office365Target) Send(body, title string, notifyType NotifyType) error 
 			return err
 		}
 	}
+	if o.fromEmail == "" {
+		o.resolveFromEmail()
+	}
 
 	for _, target := range o.targets {
 		payload, err := o.mailPayload(body, title, target)
@@ -141,6 +145,7 @@ func (o *Office365Target) Send(body, title string, notifyType NotifyType) error 
 			URL:    fmt.Sprintf("%s/v1.0/users/%s/sendMail", office365GraphURL, o.source),
 			Headers: map[string]string{
 				"User-Agent":   "Apprise",
+				"Accept":       "*/*",
 				"Content-Type": "application/json",
 				"Authorization": fmt.Sprintf(
 					"Bearer %s",
@@ -185,6 +190,7 @@ func (o *Office365Target) authenticate() error {
 		URL:    o.authURL(),
 		Headers: map[string]string{
 			"User-Agent":   "Apprise",
+			"Accept":       "*/*",
 			"Content-Type": "application/x-www-form-urlencoded",
 		},
 		Body: payload,
@@ -238,4 +244,40 @@ func (o *Office365Target) mailPayload(body, title, target string) ([]byte, error
 		"saveToSentItems": "true",
 	}
 	return json.Marshal(payload)
+}
+
+func (o *Office365Target) resolveFromEmail() {
+	spec := RequestSpec{
+		Method: "GET",
+		URL:    fmt.Sprintf("%s/v1.0/users/%s", office365GraphURL, o.source),
+		Headers: map[string]string{
+			"User-Agent":    "Apprise",
+			"Accept":        "*/*",
+			"Content-Type":  "application/json",
+			"Authorization": fmt.Sprintf("Bearer %s", o.token),
+		},
+		Body: "null",
+	}
+
+	var response struct {
+		Mail              string `json:"mail"`
+		UserPrincipalName string `json:"userPrincipalName"`
+		DisplayName       string `json:"displayName"`
+	}
+	if err := doJSONRequest(spec, &response); err != nil {
+		return
+	}
+
+	email := strings.TrimSpace(response.Mail)
+	if email == "" {
+		email = strings.TrimSpace(response.UserPrincipalName)
+	}
+	if !isSimpleEmail(email) {
+		return
+	}
+
+	o.fromEmail = email
+	if response.DisplayName != "" {
+		o.fromName = response.DisplayName
+	}
 }

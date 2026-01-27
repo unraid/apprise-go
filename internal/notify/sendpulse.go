@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/mail"
 	"strconv"
 	"strings"
 )
@@ -23,13 +24,70 @@ type SendPulseTarget struct {
 	targets      []string
 	cc           map[string]struct{}
 	bcc          map[string]struct{}
+	names        map[string]string
+	notifyFormat string
 	templateID   int
 	templateData map[string]string
 }
 
 func NewSendPulseTarget(target *ParsedURL) (*SendPulseTarget, error) {
+	user := strings.TrimSpace(target.User)
+	host := strings.TrimSpace(target.Host)
+
+	rawTargets := []string{}
+	names := map[string]string{}
+	fromName := "Apprise"
+	fromAddr := ""
+
+	rawFrom := strings.TrimSpace(target.Query["from"])
+	fromEntry, fromIsEmail := parseSendPulseEmail(rawFrom)
+	userEntry, userIsEmail := parseSendPulseEmail(user)
+
+	if fromIsEmail || userIsEmail {
+		if host != "" {
+			rawTargets = append(rawTargets, host)
+			host = ""
+		}
+	}
+
+	if fromIsEmail {
+		fromAddr = fromEntry.email
+		if fromEntry.name != "" {
+			fromName = fromEntry.name
+		}
+	} else if rawFrom != "" {
+		fromName = rawFrom
+	}
+
+	if fromAddr == "" {
+		if user != "" && host != "" {
+			userPart := strings.FieldsFunc(user, func(r rune) bool {
+				return r == '@' || r == ' ' || r == '\t' || r == '\n'
+			})
+			if len(userPart) > 0 {
+				fromAddr = userPart[0] + "@" + host
+			}
+		} else if userIsEmail {
+			fromAddr = userEntry.email
+			if fromEntry.email == "" && userEntry.name != "" {
+				fromName = userEntry.name
+			}
+		}
+	}
+
+	if !isSimpleEmail(fromAddr) {
+		return nil, fmt.Errorf("invalid from address")
+	}
+	if fromName != "" {
+		names[fromAddr] = fromName
+	}
+
 	entries := splitPath(target.Path)
 	clientID := strings.TrimSpace(target.Query["id"])
+	if clientID == "" && len(rawTargets) > 0 {
+		clientID = strings.TrimSpace(rawTargets[0])
+		rawTargets = rawTargets[1:]
+	}
 	if clientID == "" && len(entries) > 0 {
 		clientID = strings.TrimSpace(entries[0])
 		entries = entries[1:]
@@ -39,6 +97,10 @@ func NewSendPulseTarget(target *ParsedURL) (*SendPulseTarget, error) {
 	}
 
 	clientSecret := strings.TrimSpace(target.Query["secret"])
+	if clientSecret == "" && len(rawTargets) > 0 {
+		clientSecret = strings.TrimSpace(rawTargets[0])
+		rawTargets = rawTargets[1:]
+	}
 	if clientSecret == "" && len(entries) > 0 {
 		clientSecret = strings.TrimSpace(entries[0])
 		entries = entries[1:]
@@ -47,40 +109,19 @@ func NewSendPulseTarget(target *ParsedURL) (*SendPulseTarget, error) {
 		return nil, fmt.Errorf("missing client secret")
 	}
 
-	user := strings.TrimSpace(target.User)
-	host := strings.TrimSpace(target.Host)
-	fromAddr := ""
-	if rawFrom := strings.TrimSpace(target.Query["from"]); rawFrom != "" {
-		if isSimpleEmail(rawFrom) {
-			fromAddr = rawFrom
-		}
-	} else if user != "" && host != "" {
-		userPart := strings.FieldsFunc(user, func(r rune) bool {
-			return r == '@' || r == ' ' || r == '\t' || r == '\n'
-		})
-		if len(userPart) > 0 {
-			fromAddr = userPart[0] + "@" + host
-		}
-	} else if user != "" && isSimpleEmail(user) {
-		fromAddr = user
-	}
-
-	if !isSimpleEmail(fromAddr) {
-		return nil, fmt.Errorf("invalid from address")
+	rawTargets = append(rawTargets, entries...)
+	if toValue := strings.TrimSpace(target.Query["to"]); toValue != "" {
+		rawTargets = append(rawTargets, toValue)
 	}
 
 	targets := []string{}
-	for _, entry := range entries {
-		entry = strings.TrimSpace(entry)
-		if isSimpleEmail(entry) {
-			targets = append(targets, entry)
-		}
-	}
-	if toValue := strings.TrimSpace(target.Query["to"]); toValue != "" {
-		for _, entry := range parseDelimitedList(toValue) {
-			entry = strings.TrimSpace(entry)
-			if isSimpleEmail(entry) {
-				targets = append(targets, entry)
+	for _, entry := range rawTargets {
+		for _, candidate := range parseDelimitedList(entry) {
+			if parsed, ok := parseSendPulseEmail(candidate); ok {
+				targets = append(targets, parsed.email)
+				if parsed.name != "" {
+					names[parsed.email] = parsed.name
+				}
 			}
 		}
 	}
@@ -91,9 +132,11 @@ func NewSendPulseTarget(target *ParsedURL) (*SendPulseTarget, error) {
 	cc := map[string]struct{}{}
 	if ccValue := strings.TrimSpace(target.Query["cc"]); ccValue != "" {
 		for _, entry := range parseDelimitedList(ccValue) {
-			entry = strings.TrimSpace(entry)
-			if isSimpleEmail(entry) {
-				cc[entry] = struct{}{}
+			if parsed, ok := parseSendPulseEmail(entry); ok {
+				cc[parsed.email] = struct{}{}
+				if parsed.name != "" {
+					names[parsed.email] = parsed.name
+				}
 			}
 		}
 	}
@@ -101,11 +144,23 @@ func NewSendPulseTarget(target *ParsedURL) (*SendPulseTarget, error) {
 	bcc := map[string]struct{}{}
 	if bccValue := strings.TrimSpace(target.Query["bcc"]); bccValue != "" {
 		for _, entry := range parseDelimitedList(bccValue) {
-			entry = strings.TrimSpace(entry)
-			if isSimpleEmail(entry) {
-				bcc[entry] = struct{}{}
+			if parsed, ok := parseSendPulseEmail(entry); ok {
+				bcc[parsed.email] = struct{}{}
+				if parsed.name != "" {
+					names[parsed.email] = parsed.name
+				}
 			}
 		}
+	}
+
+	format := strings.ToLower(strings.TrimSpace(target.Query["format"]))
+	if format == "" {
+		format = "html"
+	}
+	switch format {
+	case "html", "markdown", "text":
+	default:
+		return nil, fmt.Errorf("invalid format")
 	}
 
 	templateID := 0
@@ -130,10 +185,12 @@ func NewSendPulseTarget(target *ParsedURL) (*SendPulseTarget, error) {
 		clientID:     clientID,
 		clientSecret: clientSecret,
 		fromAddr:     fromAddr,
-		fromName:     "Apprise",
+		fromName:     fromName,
 		targets:      targets,
 		cc:           cc,
 		bcc:          bcc,
+		names:        names,
+		notifyFormat: format,
 		templateID:   templateID,
 		templateData: templateData,
 	}, nil
@@ -245,12 +302,21 @@ func (s *SendPulseTarget) buildEmailPayload(body, title, target string) map[stri
 			"name":  s.fromName,
 			"email": s.fromAddr,
 		},
-		"to": []map[string]any{{
-			"email": target,
-		}},
+		"to":      []map[string]any{},
 		"subject": subject,
 		"text":    body,
-		"html":    base64.StdEncoding.EncodeToString([]byte(body)),
+	}
+
+	to := map[string]any{
+		"email": target,
+	}
+	if name := s.names[target]; name != "" {
+		to["name"] = name
+	}
+	emailPayload["to"] = []map[string]any{to}
+
+	if s.notifyFormat == "html" {
+		emailPayload["html"] = base64.StdEncoding.EncodeToString([]byte(body))
 	}
 
 	if len(s.cc) > 0 {
@@ -259,9 +325,11 @@ func (s *SendPulseTarget) buildEmailPayload(body, title, target string) map[stri
 			if entry == target {
 				continue
 			}
-			ccList = append(ccList, map[string]any{
-				"email": entry,
-			})
+			item := map[string]any{"email": entry}
+			if name := s.names[entry]; name != "" {
+				item["name"] = name
+			}
+			ccList = append(ccList, item)
 		}
 		if len(ccList) > 0 {
 			emailPayload["cc"] = ccList
@@ -274,9 +342,11 @@ func (s *SendPulseTarget) buildEmailPayload(body, title, target string) map[stri
 			if entry == target {
 				continue
 			}
-			bccList = append(bccList, map[string]any{
-				"email": entry,
-			})
+			item := map[string]any{"email": entry}
+			if name := s.names[entry]; name != "" {
+				item["name"] = name
+			}
+			bccList = append(bccList, item)
 		}
 		if len(bccList) > 0 {
 			emailPayload["bcc"] = bccList
@@ -293,6 +363,29 @@ func (s *SendPulseTarget) buildEmailPayload(body, title, target string) map[stri
 	return map[string]any{
 		"email": emailPayload,
 	}
+}
+
+func parseSendPulseEmail(raw string) (emailEntry, bool) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return emailEntry{}, false
+	}
+
+	if parsed, ok := parseEmailEntry(trimmed); ok {
+		return parsed, true
+	}
+
+	if addr, err := mail.ParseAddress(trimmed); err == nil {
+		if isSimpleEmail(addr.Address) {
+			return emailEntry{name: strings.TrimSpace(addr.Name), email: addr.Address}, true
+		}
+	}
+
+	if isSimpleEmail(trimmed) {
+		return emailEntry{email: trimmed}, true
+	}
+
+	return emailEntry{}, false
 }
 
 func init() {

@@ -1,8 +1,10 @@
 package testutil
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -52,8 +54,39 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	} else if strings.Contains(req.URL.Host, "login.microsoftonline.com") && strings.HasSuffix(req.URL.Path, "/oauth2/v2.0/token") {
 		responseBody = `{"access_token":"token","expires_in":3600}`
 		contentType = "application/json"
+	} else if req.URL.Host == "graph.microsoft.com" && strings.HasPrefix(req.URL.Path, "/v1.0/users/") && req.Method == http.MethodGet {
+		responseBody = `{"mail":"user@example.com","userPrincipalName":"user@example.com","displayName":"Apprise"}`
+		contentType = "application/json"
+	} else if req.URL.Host == "api.twitter.com" && strings.HasSuffix(req.URL.Path, "/users/lookup.json") {
+		names := []string{}
+		if values, err := url.ParseQuery(body); err == nil {
+			names = values["screen_name"]
+			if len(names) == 0 {
+				if value := values.Get("screen_name"); value != "" {
+					names = []string{value}
+				}
+			}
+		}
+		if len(names) == 0 {
+			names = []string{"user"}
+		}
+		entries := make([]map[string]string, 0, len(names))
+		for _, name := range names {
+			entries = append(entries, map[string]string{
+				"screen_name": name,
+				"id":          "123",
+				"id_str":      "123",
+			})
+		}
+		if data, err := json.Marshal(entries); err == nil {
+			responseBody = string(data)
+			contentType = "application/json"
+		}
 	} else if req.URL.Host == "api.twitter.com" && strings.HasSuffix(req.URL.Path, "/account/verify_credentials.json") {
 		responseBody = `{"screen_name":"apprise","id":"123","id_str":"123"}`
+		contentType = "application/json"
+	} else if req.URL.Host == "slack.com" && req.URL.Path == "/api/users.lookupByEmail" {
+		responseBody = `{"ok":true,"user":{"id":"U123"}}`
 		contentType = "application/json"
 	} else if strings.HasSuffix(req.URL.Path, "/xrpc/com.atproto.server.createSession") {
 		responseBody = `{"accessJwt":"token","refreshJwt":"refresh"}`

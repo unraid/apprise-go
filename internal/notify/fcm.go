@@ -10,10 +10,17 @@ import (
 const fcmLegacyURL = "https://fcm.googleapis.com/fcm/send"
 
 type FCMTarget struct {
-	apiKey   string
-	targets  []string
-	color    string
-	hasColor bool
+	apiKey       string
+	project      string
+	keyfile      string
+	mode         string
+	targets      []string
+	color        string
+	hasColor     bool
+	priority     string
+	includeImage bool
+	imageURL     string
+	data         map[string]string
 }
 
 func NewFCMTarget(target *ParsedURL) (*FCMTarget, error) {
@@ -21,7 +28,22 @@ func NewFCMTarget(target *ParsedURL) (*FCMTarget, error) {
 	if apiKey == "" {
 		apiKey = strings.TrimSpace(target.User)
 	}
-	if apiKey == "" {
+	project := apiKey
+	keyfile := strings.TrimSpace(target.Query["keyfile"])
+	mode := strings.ToLower(strings.TrimSpace(target.Query["mode"]))
+	if mode == "" {
+		if keyfile != "" {
+			mode = "oauth2"
+		} else {
+			mode = "legacy"
+		}
+	}
+	switch mode {
+	case "legacy", "oauth2":
+	default:
+		return nil, fmt.Errorf("invalid mode")
+	}
+	if mode == "legacy" && apiKey == "" {
 		return nil, fmt.Errorf("missing api key")
 	}
 
@@ -45,17 +67,51 @@ func NewFCMTarget(target *ParsedURL) (*FCMTarget, error) {
 		hasColor = true
 	}
 
+	priority := ""
+	if raw := strings.TrimSpace(target.Query["priority"]); raw != "" {
+		priority = normalizeFCMPriority(raw)
+		if priority == "" {
+			return nil, fmt.Errorf("invalid priority")
+		}
+	}
+
+	includeImage := parseBoolWithDefault(target.Query["image"], false)
+	imageURL := strings.TrimSpace(target.Query["image_url"])
+	if imageURL != "" {
+		if _, ok := target.Query["image"]; !ok {
+			includeImage = true
+		}
+	}
+
+	data := map[string]string{}
+	for key, value := range target.QueryAdd {
+		if strings.TrimSpace(key) == "" {
+			continue
+		}
+		data[key] = value
+	}
+
 	return &FCMTarget{
-		apiKey:   apiKey,
-		targets:  targets,
-		color:    color,
-		hasColor: hasColor,
+		apiKey:       apiKey,
+		project:      project,
+		keyfile:      keyfile,
+		mode:         mode,
+		targets:      targets,
+		color:        color,
+		hasColor:     hasColor,
+		priority:     priority,
+		includeImage: includeImage,
+		imageURL:     imageURL,
+		data:         data,
 	}, nil
 }
 
 func (f *FCMTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
 	if len(f.targets) == 0 {
 		return RequestSpec{}, fmt.Errorf("missing targets")
+	}
+	if f.mode == "oauth2" {
+		return RequestSpec{}, fmt.Errorf("oauth2 unsupported")
 	}
 
 	spec, err := f.buildSpec(body, title, notifyType, f.targets[0])
@@ -68,6 +124,9 @@ func (f *FCMTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 func (f *FCMTarget) Send(body, title string, notifyType NotifyType) error {
 	if len(f.targets) == 0 {
 		return fmt.Errorf("missing targets")
+	}
+	if f.mode == "oauth2" {
+		return nil
 	}
 
 	for _, recipient := range f.targets {
@@ -95,6 +154,24 @@ func (f *FCMTarget) buildSpec(body, title string, notifyType NotifyType, recipie
 
 	if color, ok := f.resolveColor(notifyType); ok {
 		payload["notification"].(map[string]any)["notification"].(map[string]string)["color"] = color
+	}
+
+	image := ""
+	if f.imageURL != "" {
+		image = f.imageURL
+	} else if f.includeImage {
+		image = appriseImageURL(notifyType, "256x256")
+	}
+	if f.includeImage && image != "" {
+		payload["notification"].(map[string]any)["notification"].(map[string]string)["image"] = image
+	}
+
+	if len(f.data) > 0 {
+		payload["data"] = f.data
+	}
+
+	if priority := f.priorityPayload(); priority != "" {
+		payload["priority"] = priority
 	}
 
 	if strings.HasPrefix(recipient, "#") {
@@ -164,6 +241,45 @@ func normalizeHexColor(raw string) (string, bool) {
 	}
 
 	return "#" + strings.ToLower(value), true
+}
+
+func normalizeFCMPriority(raw string) string {
+	trimmed := strings.ToLower(strings.TrimSpace(raw))
+	if trimmed == "" {
+		return ""
+	}
+	key := trimmed
+	if len(key) > 2 {
+		key = key[:2]
+	}
+	switch {
+	case strings.HasPrefix("min", key):
+		return "min"
+	case strings.HasPrefix("low", key):
+		return "low"
+	case strings.HasPrefix("normal", key):
+		return "normal"
+	case strings.HasPrefix("high", key):
+		return "high"
+	case strings.HasPrefix("max", key):
+		return "max"
+	default:
+		return ""
+	}
+}
+
+func (f *FCMTarget) priorityPayload() string {
+	if f.priority == "" {
+		return ""
+	}
+	switch f.priority {
+	case "min", "low", "normal":
+		return "normal"
+	case "high", "max":
+		return "high"
+	default:
+		return ""
+	}
 }
 
 func init() {

@@ -123,7 +123,7 @@ func (n *NtfyTarget) notifyURL() (string, error) {
 		host = fmt.Sprintf("%s:%d", host, n.target.Port)
 	}
 
-	u := url.URL{Scheme: scheme, Host: host}
+	u := url.URL{Scheme: scheme, Host: host, Path: "/"}
 	return u.String(), nil
 }
 

@@ -3,22 +3,26 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
-	"time"
 )
 
 const (
 	slackModeWebhook = "hook"
 	slackModeGov     = "gov-hook"
+	slackModeBot     = "bot"
 )
 
 var slackListDelims = regexp.MustCompile(`[ \t\r\n,#\\/]+`)
+var slackChannelRegex = regexp.MustCompile(`^([+#@]?[A-Z0-9_-]{1,32})(?::([0-9.]+))?$`)
 
 type SlackTarget struct {
 	tokenA           string
 	tokenB           string
 	tokenC           string
+	accessToken      string
 	mode             string
 	username         string
 	includeImage     bool
@@ -46,33 +50,42 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 	tokenA := token
 	tokenB := ""
 	tokenC := ""
+	accessToken := ""
 
 	override := strings.TrimSpace(target.Query["token"])
 	if override != "" {
 		tokenEntries := splitSlackList(override)
 		if len(tokenEntries) > 0 {
 			if strings.HasPrefix(tokenEntries[0], "xo") {
-				return nil, fmt.Errorf("bot mode unsupported")
+				accessToken = tokenEntries[0]
 			}
-			tokenA = tokenEntries[0]
-			if len(tokenEntries) > 1 {
-				tokenB = tokenEntries[1]
-			}
-			if len(tokenEntries) > 2 {
-				tokenC = tokenEntries[2]
+			if accessToken == "" {
+				tokenA = tokenEntries[0]
+				if len(tokenEntries) > 1 {
+					tokenB = tokenEntries[1]
+				}
+				if len(tokenEntries) > 2 {
+					tokenC = tokenEntries[2]
+				}
 			}
 		}
 	} else {
 		if strings.HasPrefix(tokenA, "xo") {
-			return nil, fmt.Errorf("bot mode unsupported")
+			accessToken = tokenA
 		}
-		if len(entries) > 0 {
-			tokenB = entries[0]
+		if accessToken == "" {
+			if len(entries) > 0 {
+				tokenB = entries[0]
+			}
+			if len(entries) > 1 {
+				tokenC = entries[1]
+			}
 		}
-		if len(entries) > 1 {
-			tokenC = entries[1]
+		if len(entries) > 2 {
+			entries = entries[2:]
+		} else {
+			entries = nil
 		}
-		entries = entries[2:]
 	}
 
 	targets := entries
@@ -85,14 +98,24 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 	includeTimestamp := parseBool(target.Query["timestamp"], true)
 	useBlocks := parseBool(target.Query["blocks"], false)
 
+	if accessToken != "" && mode == "" {
+		mode = slackModeBot
+	}
 	if mode == "" {
 		mode = slackModeWebhook
+	}
+	if mode == slackModeBot && accessToken == "" {
+		return nil, fmt.Errorf("missing bot token")
+	}
+	if mode != slackModeBot && (tokenB == "" || tokenC == "") {
+		return nil, fmt.Errorf("missing webhook credentials")
 	}
 
 	return &SlackTarget{
 		tokenA:           tokenA,
 		tokenB:           tokenB,
 		tokenC:           tokenC,
+		accessToken:      accessToken,
 		mode:             mode,
 		username:         strings.TrimSpace(target.User),
 		includeImage:     includeImage,
@@ -104,15 +127,85 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 }
 
 func (s *SlackTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := s.BuildRequest(body, title, notifyType)
-	if err != nil {
-		return err
+	channels := s.targets
+	if len(channels) == 0 {
+		channels = []string{""}
 	}
 
-	return SendRequest(spec)
+	for _, rawChannel := range channels {
+		payload, err := s.buildPayload(body, title, notifyType)
+		if err != nil {
+			return err
+		}
+
+		channel := strings.TrimSpace(rawChannel)
+		if channel == "" {
+			if s.mode == slackModeBot {
+				payload["channel"] = "#general"
+			}
+		} else if isSimpleEmail(channel) {
+			if s.mode != slackModeBot {
+				continue
+			}
+			userID := s.lookupUserID(channel)
+			if userID == "" {
+				continue
+			}
+			payload["channel"] = userID
+		} else {
+			normalized, thread, ok := parseSlackTarget(channel)
+			if !ok {
+				continue
+			}
+			payload["channel"] = normalized
+			if thread != "" {
+				payload["thread_ts"] = thread
+			}
+		}
+
+		spec, err := s.buildRequestSpec(payload)
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *SlackTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	payload, err := s.buildPayload(body, title, notifyType)
+	if err != nil {
+		return RequestSpec{}, err
+	}
+
+	if len(s.targets) > 0 {
+		channel := strings.TrimSpace(s.targets[0])
+		if channel != "" {
+			if isSimpleEmail(channel) {
+				if s.mode == slackModeBot {
+					userID := s.lookupUserID(channel)
+					if userID != "" {
+						payload["channel"] = userID
+					}
+				}
+			} else if normalized, thread, ok := parseSlackTarget(channel); ok {
+				payload["channel"] = normalized
+				if thread != "" {
+					payload["thread_ts"] = thread
+				}
+			}
+		}
+	} else if s.mode == slackModeBot {
+		payload["channel"] = "#general"
+	}
+
+	return s.buildRequestSpec(payload)
+}
+
+func (s *SlackTarget) buildPayload(body, title string, notifyType NotifyType) (map[string]any, error) {
 	username := s.username
 	if username == "" {
 		username = "Apprise"
@@ -193,35 +286,43 @@ func (s *SlackTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 				attachment["footer_icon"] = imageURL
 			}
 			if s.includeTimestamp {
-				attachment["ts"] = time.Now().Unix()
+				attachment["ts"] = json.Number(fmt.Sprintf("%.1f", float64(fixedTime().Unix())))
 			}
 		}
 		payload["attachments"] = []any{attachment}
 	}
 
-	if len(s.targets) > 0 {
-		payload["channel"] = s.targets[0]
-	}
+	return payload, nil
+}
 
+func (s *SlackTarget) buildRequestSpec(payload map[string]any) (RequestSpec, error) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
 	}
 
-	url := fmt.Sprintf("https://hooks.slack.com/services/%s/%s/%s", s.tokenA, s.tokenB, s.tokenC)
-	if s.mode == slackModeGov {
+	headers := map[string]string{
+		"User-Agent":   "Apprise",
+		"Accept":       "application/json",
+		"Content-Type": "application/json; charset=utf-8",
+	}
+
+	url := ""
+	switch s.mode {
+	case slackModeGov:
 		url = fmt.Sprintf("https://hooks.slack-gov.com/services/%s/%s/%s", s.tokenA, s.tokenB, s.tokenC)
+	case slackModeBot:
+		url = "https://slack.com/api/chat.postMessage"
+		headers["Authorization"] = "Bearer " + s.accessToken
+	default:
+		url = fmt.Sprintf("https://hooks.slack.com/services/%s/%s/%s", s.tokenA, s.tokenB, s.tokenC)
 	}
 
 	return RequestSpec{
-		Method: "POST",
-		URL:    url,
-		Headers: map[string]string{
-			"User-Agent":   "Apprise",
-			"Accept":       "application/json",
-			"Content-Type": "application/json; charset=utf-8",
-		},
-		Body: string(data),
+		Method:  "POST",
+		URL:     url,
+		Headers: headers,
+		Body:    string(data),
 	}, nil
 }
 
@@ -230,11 +331,38 @@ func slackNormalizeMode(mode string) string {
 	switch {
 	case strings.HasPrefix(lower, "gov"):
 		return slackModeGov
+	case strings.HasPrefix(lower, "bot"):
+		return slackModeBot
 	case strings.HasPrefix(lower, "hook"):
 		return slackModeWebhook
 	default:
 		return ""
 	}
+}
+
+func parseSlackTarget(raw string) (string, string, bool) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return "", "", false
+	}
+	match := slackChannelRegex.FindStringSubmatch(trimmed)
+	if match == nil {
+		return "", "", false
+	}
+	channel := match[1]
+	thread := ""
+	if len(match) > 2 {
+		thread = match[2]
+	}
+	if channel == "" {
+		return "", thread, false
+	}
+	if strings.HasPrefix(channel, "+") {
+		channel = channel[1:]
+	} else if !strings.HasPrefix(channel, "#") && !strings.HasPrefix(channel, "@") {
+		channel = "#" + channel
+	}
+	return channel, thread, true
 }
 
 func splitSlackList(raw string) []string {
@@ -255,6 +383,48 @@ func splitSlackList(raw string) []string {
 		return nil
 	}
 	return values
+}
+
+func (s *SlackTarget) lookupUserID(email string) string {
+	if s.accessToken == "" {
+		return ""
+	}
+
+	endpoint := "https://slack.com/api/users.lookupByEmail"
+	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+	if err != nil {
+		return ""
+	}
+
+	query := url.Values{}
+	query.Set("email", email)
+	req.URL.RawQuery = query.Encode()
+	req.Header.Set("User-Agent", "Apprise")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Authorization", "Bearer "+s.accessToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+
+	var payload struct {
+		OK   bool `json:"ok"`
+		User struct {
+			ID string `json:"id"`
+		} `json:"user"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return ""
+	}
+	if !payload.OK {
+		return ""
+	}
+	return payload.User.ID
 }
 
 func init() {

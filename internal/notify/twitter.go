@@ -10,6 +10,7 @@ import (
 
 const twitterTweetURL = "https://api.twitter.com/1.1/statuses/update.json"
 const twitterWhoamiURL = "https://api.twitter.com/1.1/account/verify_credentials.json"
+const twitterLookupURL = "https://api.twitter.com/1.1/users/lookup.json"
 const twitterDMURL = "https://api.twitter.com/1.1/direct_messages/events/new.json"
 
 type TwitterTarget struct {
@@ -79,26 +80,27 @@ func (t *TwitterTarget) BuildRequest(body, title string, notifyType NotifyType) 
 	if t.mode != "tweet" {
 		return RequestSpec{}, fmt.Errorf("unsupported mode")
 	}
-	return t.tweetRequest(body)
+	return t.tweetRequest(body, title)
 }
 
 func (t *TwitterTarget) Send(body, title string, notifyType NotifyType) error {
 	if t.mode == "tweet" {
-		spec, err := t.tweetRequest(body)
+		spec, err := t.tweetRequest(body, title)
 		if err != nil {
 			return err
 		}
 		return SendRequest(spec)
 	}
 	if t.mode == "dm" {
-		return t.sendDM(body)
+		return t.sendDM(body, title)
 	}
 	return fmt.Errorf("unsupported mode")
 }
 
-func (t *TwitterTarget) tweetRequest(body string) (RequestSpec, error) {
+func (t *TwitterTarget) tweetRequest(body, title string) (RequestSpec, error) {
+	message := mergeTitleBody(title, body)
 	payload := url.Values{}
-	payload.Set("status", body)
+	payload.Set("status", message)
 
 	auth, err := buildOAuth1Header(
 		"POST",
@@ -118,6 +120,7 @@ func (t *TwitterTarget) tweetRequest(body string) (RequestSpec, error) {
 		URL:    twitterTweetURL,
 		Headers: map[string]string{
 			"User-Agent":    "Apprise",
+			"Accept":        "*/*",
 			"Content-Type":  "application/x-www-form-urlencoded",
 			"Authorization": auth,
 		},
@@ -126,8 +129,9 @@ func (t *TwitterTarget) tweetRequest(body string) (RequestSpec, error) {
 }
 
 type twitterWhoamiResponse struct {
-	ID    json.Number `json:"id"`
-	IDStr string      `json:"id_str"`
+	ScreenName string      `json:"screen_name"`
+	ID         json.Number `json:"id"`
+	IDStr      string      `json:"id_str"`
 }
 
 type twitterDMRequest struct {
@@ -166,23 +170,51 @@ func normalizeTwitterTarget(raw string) (string, bool) {
 	return trimmed, true
 }
 
-func (t *TwitterTarget) sendDM(body string) error {
-	targets := t.targets
-	if len(targets) == 0 {
-		id := t.resolveWhoami()
-		if id == "" {
-			return nil
-		}
-		targets = []string{id}
+func uniqueStrings(values []string) []string {
+	if len(values) == 0 {
+		return nil
 	}
 
-	for _, targetID := range targets {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	return out
+}
+
+type twitterLookupEntry struct {
+	ScreenName string      `json:"screen_name"`
+	ID         json.Number `json:"id"`
+	IDStr      string      `json:"id_str"`
+}
+
+type twitterRecipient struct {
+	ScreenName string
+	ID         string
+}
+
+func (t *TwitterTarget) sendDM(body, title string) error {
+	message := mergeTitleBody(title, body)
+	recipients := t.resolveRecipients()
+	if len(recipients) == 0 {
+		return nil
+	}
+
+	for _, recipient := range recipients {
 		payload := twitterDMRequest{
 			Event: twitterDMEvent{
 				Type: "message_create",
 				MessageCreate: twitterDMMessageBody{
-					Target:      twitterDMTarget{RecipientID: targetID},
-					MessageData: twitterDMText{Text: body},
+					Target:      twitterDMTarget{RecipientID: recipient.ID},
+					MessageData: twitterDMText{Text: message},
 				},
 			},
 		}
@@ -209,6 +241,7 @@ func (t *TwitterTarget) sendDM(body string) error {
 			URL:    twitterDMURL,
 			Headers: map[string]string{
 				"User-Agent":    "Apprise",
+				"Accept":        "*/*",
 				"Authorization": auth,
 				"Content-Type":  "application/json",
 			},
@@ -223,7 +256,14 @@ func (t *TwitterTarget) sendDM(body string) error {
 	return nil
 }
 
-func (t *TwitterTarget) resolveWhoami() string {
+func (t *TwitterTarget) resolveRecipients() []twitterRecipient {
+	if len(t.targets) == 0 {
+		return t.resolveWhoami()
+	}
+	return t.lookupUsers(t.targets)
+}
+
+func (t *TwitterTarget) resolveWhoami() []twitterRecipient {
 	auth, err := buildOAuth1Header(
 		"GET",
 		twitterWhoamiURL,
@@ -234,7 +274,7 @@ func (t *TwitterTarget) resolveWhoami() string {
 		t.accessSecret,
 	)
 	if err != nil {
-		return ""
+		return nil
 	}
 
 	spec := RequestSpec{
@@ -242,21 +282,93 @@ func (t *TwitterTarget) resolveWhoami() string {
 		URL:    twitterWhoamiURL,
 		Headers: map[string]string{
 			"User-Agent":    "Apprise",
+			"Accept":        "*/*",
 			"Authorization": auth,
 		},
 	}
 
 	var response twitterWhoamiResponse
 	if err := doJSONRequest(spec, &response); err != nil {
-		return ""
+		return nil
 	}
-	if response.IDStr != "" {
-		return response.IDStr
+	id := response.IDStr
+	if id == "" {
+		id = response.ID.String()
 	}
-	if response.ID.String() != "" {
-		return response.ID.String()
+	if id == "" || response.ScreenName == "" {
+		return nil
 	}
-	return ""
+	return []twitterRecipient{{ScreenName: response.ScreenName, ID: id}}
+}
+
+func (t *TwitterTarget) lookupUsers(targets []string) []twitterRecipient {
+	names := uniqueStrings(targets)
+	if len(names) == 0 {
+		return nil
+	}
+
+	results := map[string]string{}
+	for i := 0; i < len(names); i += 100 {
+		end := i + 100
+		if end > len(names) {
+			end = len(names)
+		}
+		payload := url.Values{}
+		for _, name := range names[i:end] {
+			payload.Add("screen_name", name)
+		}
+
+		auth, err := buildOAuth1Header(
+			"POST",
+			twitterLookupURL,
+			payload,
+			t.consumerKey,
+			t.consumerSecret,
+			t.accessKey,
+			t.accessSecret,
+		)
+		if err != nil {
+			continue
+		}
+
+		spec := RequestSpec{
+			Method: "POST",
+			URL:    twitterLookupURL,
+			Headers: map[string]string{
+				"User-Agent":    "Apprise",
+				"Accept":        "*/*",
+				"Content-Type":  "application/x-www-form-urlencoded",
+				"Authorization": auth,
+			},
+			Body: payload.Encode(),
+		}
+
+		var response []twitterLookupEntry
+		if err := doJSONRequest(spec, &response); err != nil {
+			continue
+		}
+		for _, entry := range response {
+			if entry.ScreenName == "" {
+				continue
+			}
+			id := entry.IDStr
+			if id == "" {
+				id = entry.ID.String()
+			}
+			if id == "" {
+				continue
+			}
+			results[entry.ScreenName] = id
+		}
+	}
+
+	recipients := make([]twitterRecipient, 0, len(results))
+	for _, name := range names {
+		if id, ok := results[name]; ok {
+			recipients = append(recipients, twitterRecipient{ScreenName: name, ID: id})
+		}
+	}
+	return recipients
 }
 
 func init() {

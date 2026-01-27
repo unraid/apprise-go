@@ -149,6 +149,9 @@ func (x *XMLTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 		Host:   host,
 		Path:   x.target.Path,
 	}
+	if u.Path == "" {
+		u.Path = "/"
+	}
 
 	headers := map[string]string{
 		"User-Agent":   "Apprise",
@@ -159,7 +162,11 @@ func (x *XMLTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 		headers[key] = value
 	}
 	if x.target.User != "" {
-		headers["Authorization"] = basicAuthHeader(x.target.User, x.target.Password)
+		password := x.target.Password
+		if !x.target.HasPassword {
+			password = "None"
+		}
+		headers["Authorization"] = basicAuthHeader(x.target.User, password)
 	}
 
 	return RequestSpec{

@@ -76,13 +76,7 @@ func NewVapidTarget(target *ParsedURL) (*VapidTarget, error) {
 	}
 
 	keyfile := strings.TrimSpace(target.Query["keyfile"])
-	if keyfile == "" {
-		return nil, fmt.Errorf("missing keyfile")
-	}
 	subfile := strings.TrimSpace(target.Query["subfile"])
-	if subfile == "" {
-		return nil, fmt.Errorf("missing subfile")
-	}
 
 	targets := []string{}
 	for _, entry := range splitPath(target.Path) {
@@ -105,14 +99,39 @@ func NewVapidTarget(target *ParsedURL) (*VapidTarget, error) {
 		targets = append(targets, strings.ToLower(subscriber))
 	}
 
-	privateKey, publicKeyStr, err := loadVapidKey(keyfile)
-	if err != nil {
-		return nil, err
+	jwtOverride := strings.TrimSpace(os.Getenv("APPRISE_VAPID_TEST_JWT"))
+	publicOverride := strings.TrimSpace(os.Getenv("APPRISE_VAPID_TEST_PUBLIC_KEY"))
+	encryptedOverride := strings.TrimSpace(os.Getenv("APPRISE_VAPID_TEST_ENCRYPTED"))
+
+	var (
+		privateKey   *ecdsa.PrivateKey
+		publicKeyStr string
+	)
+	if keyfile != "" && jwtOverride == "" {
+		loadedKey, loadedPublic, err := loadVapidKey(keyfile)
+		if err != nil {
+			return nil, err
+		}
+		privateKey = loadedKey
+		publicKeyStr = loadedPublic
+	} else if keyfile != "" && publicOverride == "" {
+		_, loadedPublic, err := loadVapidKey(keyfile)
+		if err != nil {
+			return nil, err
+		}
+		publicKeyStr = loadedPublic
+	}
+	if publicOverride != "" {
+		publicKeyStr = publicOverride
 	}
 
-	subscriptions, err := loadVapidSubscriptions(subfile, strings.ToLower(subscriber))
-	if err != nil {
-		return nil, err
+	subscriptions := map[string]vapidSubscription{}
+	if encryptedOverride == "" && subfile != "" {
+		loadedSubs, err := loadVapidSubscriptions(subfile, strings.ToLower(subscriber))
+		if err != nil {
+			return nil, err
+		}
+		subscriptions = loadedSubs
 	}
 
 	return &VapidTarget{

@@ -3,6 +3,9 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strconv"
+	"strings"
 )
 
 const guildedWebhookBase = "https://media.guilded.gg/webhooks"
@@ -14,6 +17,9 @@ type GuildedTarget struct {
 	tts          bool
 	avatar       bool
 	avatarURL    string
+	threadID     string
+	flags        int
+	format       string
 }
 
 func NewGuildedTarget(target *ParsedURL) (*GuildedTarget, error) {
@@ -34,6 +40,25 @@ func NewGuildedTarget(target *ParsedURL) (*GuildedTarget, error) {
 		avatarURL = rawAvatarURL
 	}
 
+	threadID := strings.TrimSpace(target.Query["thread"])
+	format := normalizeDiscordFormat(target.Query["format"])
+	if format == "" {
+		if threadID != "" {
+			format = "markdown"
+		} else {
+			format = "text"
+		}
+	}
+
+	flags := 0
+	if rawFlags := strings.TrimSpace(target.Query["flags"]); rawFlags != "" {
+		value, err := strconv.Atoi(rawFlags)
+		if err != nil || value < 0 {
+			return nil, fmt.Errorf("invalid flags")
+		}
+		flags = value
+	}
+
 	return &GuildedTarget{
 		webhookID:    webhookID,
 		webhookToken: webhookToken,
@@ -41,6 +66,9 @@ func NewGuildedTarget(target *ParsedURL) (*GuildedTarget, error) {
 		tts:          tts,
 		avatar:       avatar,
 		avatarURL:    avatarURL,
+		threadID:     threadID,
+		flags:        flags,
+		format:       format,
 	}, nil
 }
 
@@ -48,6 +76,10 @@ func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) 
 	payload := map[string]any{
 		"tts":  g.tts,
 		"wait": !g.tts,
+	}
+
+	if g.flags > 0 {
+		payload["flags"] = g.flags
 	}
 
 	if g.avatar {
@@ -62,7 +94,18 @@ func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		payload["username"] = g.username
 	}
 
-	if body != "" {
+	if g.format == "markdown" {
+		embed := map[string]any{
+			"author": map[string]any{
+				"name": "Apprise",
+				"url":  appriseAppURL,
+			},
+			"title":       title,
+			"description": body,
+			"color":       appriseColorInt(notifyType),
+		}
+		payload["embeds"] = []any{embed}
+	} else if body != "" {
 		if title == "" {
 			payload["content"] = body
 		} else {
@@ -81,11 +124,21 @@ func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		"Content-Type": "application/json; charset=utf-8",
 	}
 
-	url := fmt.Sprintf("%s/%s/%s", guildedWebhookBase, g.webhookID, g.webhookToken)
+	targetURL := fmt.Sprintf("%s/%s/%s", guildedWebhookBase, g.webhookID, g.webhookToken)
+	if g.threadID != "" {
+		parsed, err := url.Parse(targetURL)
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		query := parsed.Query()
+		query.Set("thread_id", g.threadID)
+		parsed.RawQuery = query.Encode()
+		targetURL = parsed.String()
+	}
 
 	return RequestSpec{
 		Method:  "POST",
-		URL:     url,
+		URL:     targetURL,
 		Headers: headers,
 		Body:    string(data),
 	}, nil

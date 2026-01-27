@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -87,6 +88,14 @@ func (a *AppriseTarget) BuildRequest(body, title string, notifyType NotifyType) 
 	headers := cloneMap(a.headers)
 	headers["User-Agent"] = "Apprise"
 	headers["Accept"] = "application/json"
+	if a.target.HasUser {
+		password := a.target.Password
+		if !a.target.HasPassword {
+			password = "None"
+		}
+		credentials := a.target.User + ":" + password
+		headers["Authorization"] = "Basic " + base64.StdEncoding.EncodeToString([]byte(credentials))
+	}
 
 	if a.method == appriseMethodForm {
 		values := url.Values{}

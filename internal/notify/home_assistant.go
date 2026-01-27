@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 )
 
@@ -82,7 +83,11 @@ func (h *HomeAssistantTarget) BuildRequest(body, title string, notifyType Notify
 		"Authorization": "Bearer " + h.accessToken,
 	}
 	if h.user != "" {
-		headers["Authorization"] = basicAuthHeader(h.user, h.password)
+		password := h.password
+		if password == "" {
+			password = "None"
+		}
+		headers["Authorization"] = basicAuthHeader(h.user, password)
 	}
 
 	_ = notifyType
@@ -127,6 +132,10 @@ func (h *HomeAssistantTarget) notificationID() string {
 }
 
 func newUUIDv4() string {
+	if strings.TrimSpace(os.Getenv("APPRISE_FIXED_TIME")) != "" {
+		return "00000000-0000-4000-8000-000000000000"
+	}
+
 	buf := make([]byte, 16)
 	_, err := rand.Read(buf)
 	if err != nil {

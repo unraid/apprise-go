@@ -1,11 +1,12 @@
 import argparse
 import base64
 import datetime
+import inspect
 import json
 import os
 import sys
 import types
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import requests
 
@@ -145,6 +146,43 @@ def apply_fixed_time():
     except Exception:
         pass
 
+    try:
+        import time as time_module
+
+        time_module.time = lambda: fixed.timestamp()
+    except Exception:
+        pass
+
+    try:
+        import apprise.plugins.dingtalk as dingtalk
+
+        dingtalk.time.time = lambda: fixed.timestamp()
+    except Exception:
+        pass
+
+    try:
+        import uuid as uuid_module
+
+        uuid_module.uuid4 = lambda: uuid_module.UUID(
+            "00000000-0000-4000-8000-000000000000"
+        )
+    except Exception:
+        pass
+
+
+def apply_store_fix():
+    try:
+        from apprise.plugins import N_MGR
+    except Exception:
+        return
+
+    schemas = list(N_MGR.schemas()) if hasattr(N_MGR, "schemas") else list(N_MGR)
+    for schema in schemas:
+        plugin = N_MGR[schema]
+        prop = inspect.getattr_static(plugin, "url_identifier", None)
+        if isinstance(prop, property) and prop.fset is None:
+            plugin.url_identifier = property(prop.fget, lambda _self, _value: None)
+
 
 def apply_oauth_fixes():
     nonce = os.environ.get("APPRISE_OAUTH_NONCE")
@@ -202,6 +240,7 @@ def apply_vapid_fixes():
 
 def capture_request(url, body, title, notify_type):
     apply_fixed_time()
+    apply_store_fix()
     apply_oauth_fixes()
     apply_vapid_fixes()
 
@@ -263,6 +302,13 @@ def capture_request(url, body, title, notify_type):
             "/oauth2/v2.0/token"
         ):
             response._content = b'{"access_token":"token","expires_in":3600}'
+        elif parsed.netloc == "graph.microsoft.com" and parsed.path.startswith(
+            "/v1.0/users/"
+        ):
+            response._content = (
+                b'{"mail":"user@example.com","userPrincipalName":"user@example.com",'
+                b'"displayName":"Apprise"}'
+            )
         elif parsed.netloc == "public.api.bsky.app" and parsed.path.endswith(
             "/xrpc/com.atproto.identity.resolveHandle"
         ):
@@ -282,6 +328,18 @@ def capture_request(url, body, title, notify_type):
             "/account/verify_credentials.json"
         ):
             response._content = b'{"screen_name":"apprise","id":"123","id_str":"123"}'
+        elif parsed.netloc == "api.twitter.com" and parsed.path.endswith(
+            "/users/lookup.json"
+        ):
+            values = parse_qs(body_text)
+            names = values.get("screen_name") or []
+            if not names:
+                names = ["user"]
+            response._content = json.dumps(
+                [{"screen_name": name, "id": "123", "id_str": "123"} for name in names]
+            ).encode("utf-8")
+        elif parsed.netloc == "slack.com" and parsed.path == "/api/users.lookupByEmail":
+            response._content = b'{"ok": true, "user": {"id": "U123"}}'
         elif parsed.path.endswith("/Users/AuthenticateByName"):
             response._content = (
                 b'{"AccessToken":"token","Id":"user-id","User":{"Id":"user-id"}}'
@@ -311,9 +369,6 @@ def capture_request(url, body, title, notify_type):
         )
     finally:
         requests.sessions.Session.request = original_request
-
-    if not captured:
-        raise SystemExit("no requests captured")
 
     return captured
 

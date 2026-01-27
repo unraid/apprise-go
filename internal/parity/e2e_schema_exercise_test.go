@@ -88,12 +88,10 @@ func TestE2ERequestParitySchemaExercise(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parse url: %v", err)
 			}
-
 			target, err := builder(parsedURL)
 			if err != nil {
 				t.Fatalf("build target: %v", err)
 			}
-
 			goSpecs := testutil.CaptureGoRequests(t, func() error {
 				return target.Send("apprise parity body", "apprise parity title", notify.NotifyInfo)
 			})
