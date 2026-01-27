@@ -151,6 +151,11 @@ def sample_for_regex(regex, flags):
         if match_regex(regex, flags, candidate):
             return candidate
 
+    if "bot" in regex.lower() and ":" in regex:
+        for candidate in ("bot12345:abcdef", "12345:abcdef"):
+            if match_regex(regex, flags, candidate):
+                return candidate
+
     if "xox" in regex.lower():
         candidate = "xoxb-12345-ABCDE"
         if match_regex(regex, flags, candidate):
@@ -315,12 +320,18 @@ def generate_cases(schema, plugin, details):
         reverse=True,
     )
 
+    def can_parse(url):
+        try:
+            return bool(plugin.parse_url(url))
+        except Exception:
+            return False
+
     valid_templates = []
     for template in ordered_templates:
         url = fill_template(template, schema, tokens)
         if not url:
             continue
-        if plugin.parse_url(url):
+        if can_parse(url):
             valid_templates.append(url)
             cases.append({"name": f"template-{len(cases) + 1}", "url": url})
 
@@ -337,7 +348,7 @@ def generate_cases(schema, plugin, details):
             default_items.append((name, value))
         if default_items:
             url = append_query(primary, default_items)
-            if plugin.parse_url(url):
+            if can_parse(url):
                 cases.append({"name": "defaults", "url": url})
 
         for name, spec in args.items():
@@ -349,13 +360,13 @@ def generate_cases(schema, plugin, details):
                 if isinstance(values, (list, tuple)):
                     for value in values:
                         url = append_query(primary, [(name, value)])
-                        if plugin.parse_url(url):
+                        if can_parse(url):
                             cases.append({"name": f"choice-{name}-{value}", "url": url})
                 continue
             if arg_type.startswith("bool"):
                 for value in ("yes", "no"):
                     url = append_query(primary, [(name, value)])
-                    if plugin.parse_url(url):
+                    if can_parse(url):
                         cases.append({"name": f"bool-{name}-{value}", "url": url})
                 continue
 
@@ -363,7 +374,7 @@ def generate_cases(schema, plugin, details):
             if value is None:
                 continue
             url = append_query(primary, [(name, value)])
-            if plugin.parse_url(url):
+            if can_parse(url):
                 cases.append({"name": f"arg-{name}", "url": url})
 
         for name, spec in kwargs.items():
@@ -374,7 +385,7 @@ def generate_cases(schema, plugin, details):
                 prefix = ""
             key = f"{prefix}key"
             url = append_query(primary, [(key, "value")])
-            if plugin.parse_url(url):
+            if can_parse(url):
                 cases.append({"name": f"kwargs-{name}", "url": url})
 
     if not cases:
@@ -384,7 +395,7 @@ def generate_cases(schema, plugin, details):
             f"{schema}://user:pass@example.com",
             f"{schema}://user:pass@example.com/target",
         ):
-            if plugin.parse_url(fallback):
+            if can_parse(fallback):
                 cases.append({"name": "fallback", "url": fallback})
                 break
 

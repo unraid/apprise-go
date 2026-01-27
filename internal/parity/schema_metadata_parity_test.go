@@ -19,7 +19,7 @@ func loadPythonSchemaDetails(t *testing.T, schemas []string) map[string]pythonSc
 	appriseRoot := testutil.AppriseSourceRoot(t)
 	t.Setenv("PYTHONPATH", appriseRoot)
 
-	script := filepath.Join(testutil.RepoRoot(t), "internal", "testutil", "scripts", "schema_details.py")
+	script := filepath.Join(testutil.RepoRoot(t), "internal", "testutil", "scripts", "schema_metadata.py")
 	stdout, stderr, err := testutil.RunPythonScript(t, script, schemas...)
 	if err != nil {
 		t.Fatalf("schema details failed: %v (stderr: %s)", err, strings.TrimSpace(stderr))
