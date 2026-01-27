@@ -1,12 +1,16 @@
 package notify
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
 const twitterTweetURL = "https://api.twitter.com/1.1/statuses/update.json"
+const twitterWhoamiURL = "https://api.twitter.com/1.1/account/verify_credentials.json"
+const twitterDMURL = "https://api.twitter.com/1.1/direct_messages/events/new.json"
 
 type TwitterTarget struct {
 	consumerKey    string
@@ -14,6 +18,7 @@ type TwitterTarget struct {
 	accessKey      string
 	accessSecret   string
 	mode           string
+	targets        []string
 }
 
 func NewTwitterTarget(target *ParsedURL) (*TwitterTarget, error) {
@@ -30,9 +35,30 @@ func NewTwitterTarget(target *ParsedURL) (*TwitterTarget, error) {
 		return nil, fmt.Errorf("missing credentials")
 	}
 
+	targets := []string{}
+	if len(entries) > 3 {
+		for _, entry := range entries[3:] {
+			if normalized, ok := normalizeTwitterTarget(entry); ok {
+				targets = append(targets, normalized)
+			}
+		}
+	}
+	if target.User != "" {
+		if normalized, ok := normalizeTwitterTarget(target.User); ok {
+			targets = append(targets, normalized)
+		}
+	}
+	if toValue := strings.TrimSpace(target.Query["to"]); toValue != "" {
+		for _, entry := range parseDelimitedList(toValue) {
+			if normalized, ok := normalizeTwitterTarget(entry); ok {
+				targets = append(targets, normalized)
+			}
+		}
+	}
+
 	mode := strings.TrimSpace(target.Query["mode"])
 	if mode == "" {
-		if strings.HasPrefix(target.Scheme, "tweet") {
+		if strings.HasPrefix(strings.ToLower(target.Scheme), "tweet") {
 			mode = "tweet"
 		} else {
 			mode = "dm"
@@ -45,6 +71,7 @@ func NewTwitterTarget(target *ParsedURL) (*TwitterTarget, error) {
 		accessKey:      accessKey,
 		accessSecret:   accessSecret,
 		mode:           strings.ToLower(mode),
+		targets:        targets,
 	}, nil
 }
 
@@ -56,14 +83,17 @@ func (t *TwitterTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (t *TwitterTarget) Send(body, title string, notifyType NotifyType) error {
-	if t.mode != "tweet" {
-		return fmt.Errorf("unsupported mode")
+	if t.mode == "tweet" {
+		spec, err := t.tweetRequest(body)
+		if err != nil {
+			return err
+		}
+		return SendRequest(spec)
 	}
-	spec, err := t.tweetRequest(body)
-	if err != nil {
-		return err
+	if t.mode == "dm" {
+		return t.sendDM(body)
 	}
-	return SendRequest(spec)
+	return fmt.Errorf("unsupported mode")
 }
 
 func (t *TwitterTarget) tweetRequest(body string) (RequestSpec, error) {
@@ -93,6 +123,140 @@ func (t *TwitterTarget) tweetRequest(body string) (RequestSpec, error) {
 		},
 		Body: payload.Encode(),
 	}, nil
+}
+
+type twitterWhoamiResponse struct {
+	ID    json.Number `json:"id"`
+	IDStr string      `json:"id_str"`
+}
+
+type twitterDMRequest struct {
+	Event twitterDMEvent `json:"event"`
+}
+
+type twitterDMEvent struct {
+	Type          string               `json:"type"`
+	MessageCreate twitterDMMessageBody `json:"message_create"`
+}
+
+type twitterDMMessageBody struct {
+	Target      twitterDMTarget `json:"target"`
+	MessageData twitterDMText   `json:"message_data"`
+}
+
+type twitterDMTarget struct {
+	RecipientID string `json:"recipient_id"`
+}
+
+type twitterDMText struct {
+	Text string `json:"text"`
+}
+
+var twitterUserPattern = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
+
+func normalizeTwitterTarget(raw string) (string, bool) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return "", false
+	}
+	trimmed = strings.TrimPrefix(trimmed, "@")
+	if trimmed == "" || !twitterUserPattern.MatchString(trimmed) {
+		return "", false
+	}
+	return trimmed, true
+}
+
+func (t *TwitterTarget) sendDM(body string) error {
+	targets := t.targets
+	if len(targets) == 0 {
+		id := t.resolveWhoami()
+		if id == "" {
+			return nil
+		}
+		targets = []string{id}
+	}
+
+	for _, targetID := range targets {
+		payload := twitterDMRequest{
+			Event: twitterDMEvent{
+				Type: "message_create",
+				MessageCreate: twitterDMMessageBody{
+					Target:      twitterDMTarget{RecipientID: targetID},
+					MessageData: twitterDMText{Text: body},
+				},
+			},
+		}
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
+
+		auth, err := buildOAuth1Header(
+			"POST",
+			twitterDMURL,
+			nil,
+			t.consumerKey,
+			t.consumerSecret,
+			t.accessKey,
+			t.accessSecret,
+		)
+		if err != nil {
+			return err
+		}
+
+		spec := RequestSpec{
+			Method: "POST",
+			URL:    twitterDMURL,
+			Headers: map[string]string{
+				"User-Agent":    "Apprise",
+				"Authorization": auth,
+				"Content-Type":  "application/json",
+			},
+			Body: string(data),
+		}
+
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (t *TwitterTarget) resolveWhoami() string {
+	auth, err := buildOAuth1Header(
+		"GET",
+		twitterWhoamiURL,
+		nil,
+		t.consumerKey,
+		t.consumerSecret,
+		t.accessKey,
+		t.accessSecret,
+	)
+	if err != nil {
+		return ""
+	}
+
+	spec := RequestSpec{
+		Method: "GET",
+		URL:    twitterWhoamiURL,
+		Headers: map[string]string{
+			"User-Agent":    "Apprise",
+			"Authorization": auth,
+		},
+	}
+
+	var response twitterWhoamiResponse
+	if err := doJSONRequest(spec, &response); err != nil {
+		return ""
+	}
+	if response.IDStr != "" {
+		return response.IDStr
+	}
+	if response.ID.String() != "" {
+		return response.ID.String()
+	}
+	return ""
 }
 
 func init() {

@@ -38,7 +38,7 @@ func SchemaInputsForParsed(schema string, target *ParsedURL) (SchemaInputs, erro
 	kwargs := map[string]map[string]string{}
 
 	tokenValues := matchSchemaTemplates(specs.templates, specs.tokens, target)
-	applyTokenDefaults(specs.tokens, tokenValues, target)
+	applyTokenDefaults(specs.tokens, specs.templates, tokenValues, target)
 
 	for name, spec := range specs.tokens {
 		if alias := specAlias(spec); alias != "" {
@@ -95,11 +95,11 @@ func SchemaInputsForParsed(schema string, target *ParsedURL) (SchemaInputs, erro
 		}
 	}
 
-	ensureEmptyKwargs(schema, specs, kwargs)
+	ensureEmptyKwargs(specs, kwargs)
 
 	ensureListDefaults(specs, values)
 
-	adjustSchemaValues(target, values)
+	adjustSchemaValues(specs, target, values)
 
 	ApplySchemaOverrides(schema, target, values)
 
@@ -110,7 +110,7 @@ func SchemaInputsForParsed(schema string, target *ParsedURL) (SchemaInputs, erro
 	}, nil
 }
 
-func adjustSchemaValues(target *ParsedURL, values map[string]SchemaValue) {
+func adjustSchemaValues(specs schemaSpecs, target *ParsedURL, values map[string]SchemaValue) {
 	if target == nil {
 		return
 	}
@@ -144,6 +144,53 @@ func adjustSchemaValues(target *ParsedURL, values map[string]SchemaValue) {
 			}
 		}
 	}
+	if _, ok := values["project"]; !ok {
+		if specHasMapTo(specs, "project") && target.Host != "" {
+			values["project"] = schemaValueAny(target.Host)
+		}
+	}
+
+	if needsApikeyFromTargets(specs, values) {
+		if targetsValue, ok := values["targets"]; ok {
+			if targets, ok := targetsValue.Value.([]string); ok && len(targets) > 0 {
+				values["apikey"] = schemaValueAny(targets[0])
+				values["targets"] = schemaValueList(append([]string{}, targets[1:]...))
+			}
+		}
+	}
+
+	if fpValue, ok := values["fullpath"]; ok {
+		pathSpec, hasPath := specs.tokens["path"]
+		if hasPath && specMapTo(pathSpec, "path") == "fullpath" {
+			if tokenValue, ok := values["token"]; ok {
+				fpStr, fpOk := fpValue.Value.(string)
+				tokenStr, tokenOk := tokenValue.Value.(string)
+				if fpOk && tokenOk && fpStr != "" && tokenStr != "" {
+					if !strings.HasSuffix(fpStr, "/") && strings.HasSuffix(target.Path, "/"+tokenStr) {
+						values["fullpath"] = schemaValueAny(fpStr + "/")
+					}
+				}
+			}
+		}
+	}
+
+	if needsEmailRebuild(specs, values) {
+		email := strings.TrimSpace(target.Password)
+		host := strings.TrimSpace(target.Host)
+		if email != "" && host != "" && strings.Contains(host, ".") {
+			values["email"] = schemaValueAny(email + "@" + host)
+		}
+	}
+
+	baseURL := baseURLFromParsed(target)
+	if baseURL != "" {
+		if shouldSetBaseURL(specs, "url") {
+			mapTo := specMapTo(specs.args["url"], "url")
+			if _, ok := values[mapTo]; !ok {
+				values[mapTo] = schemaValueAny(baseURL)
+			}
+		}
+	}
 
 	switch strings.ToLower(strings.TrimSpace(target.Scheme)) {
 	case "mailto", "mailtos":
@@ -156,6 +203,52 @@ func adjustSchemaValues(target *ParsedURL, values map[string]SchemaValue) {
 	case "gotify", "gotifys":
 		if _, ok := values["fullpath"]; !ok {
 			values["fullpath"] = schemaValueAny("/")
+		}
+	case "mmost", "mmosts":
+		if _, ok := values["channels"]; !ok {
+			values["channels"] = schemaValueList([]string{})
+		}
+	case "msteams":
+		if _, ok := values["version"]; !ok {
+			if spec, ok := specs.args["version"]; ok {
+				if def, ok := specDefault(spec); ok {
+					values["version"] = schemaValueInt(coerceInt(def))
+				}
+			}
+		}
+	case "napi", "notificationapi", "sendpulse":
+		if _, ok := values["from_addr"]; !ok {
+			values["from_addr"] = schemaValueAny(nil)
+		}
+	case "ses":
+		if _, ok := target.Query["from"]; !ok {
+			delete(values, "from_addr")
+		}
+	case "seven":
+		if _, ok := values["label"]; !ok {
+			values["label"] = schemaValueAny(nil)
+		}
+	case "sfr":
+		if _, ok := values["sender"]; !ok {
+			values["sender"] = schemaValueAny("")
+		}
+		if _, ok := values["timeout"]; !ok {
+			values["timeout"] = schemaValueAny("")
+		}
+		if _, ok := values["lang"]; !ok {
+			values["lang"] = schemaValueAny("")
+		}
+		if _, ok := values["media"]; !ok {
+			values["media"] = schemaValueAny("")
+		}
+		if _, ok := values["voice"]; !ok {
+			values["voice"] = schemaValueAny("")
+		}
+	case "revolt":
+		if _, ok := values["link"]; !ok {
+			if baseURL := baseURLFromParsed(target); baseURL != "" {
+				values["link"] = schemaValueAny(baseURL)
+			}
 		}
 	}
 }
@@ -659,7 +752,7 @@ func matchSchemaTemplates(templates []string, specs map[string]map[string]any, t
 	return map[string]any{}
 }
 
-func applyTokenDefaults(specs map[string]map[string]any, values map[string]any, target *ParsedURL) {
+func applyTokenDefaults(specs map[string]map[string]any, templates []string, values map[string]any, target *ParsedURL) {
 	for name, spec := range specs {
 		mapTo := specMapTo(spec, name)
 		if _, ok := values[name]; ok {
@@ -693,13 +786,31 @@ func applyTokenDefaults(specs map[string]map[string]any, values map[string]any, 
 				values[name] = nil
 			}
 		}
+		if _, ok := values[name]; ok {
+			continue
+		}
+		if tokenInTemplates(templates, name) {
+			continue
+		}
+		if _, ok := specDefault(spec); ok {
+			continue
+		}
+		if specRequired(spec) {
+			continue
+		}
+		if isListType(spec) {
+			continue
+		}
+		if mapTo == "targets" || mapTo == "channels" {
+			continue
+		}
+		values[name] = nil
 	}
 }
 
 func ensureListDefaults(specs schemaSpecs, values map[string]SchemaValue) {
 	listDefaultMapTos := map[string]struct{}{
-		"channels": {},
-		"targets":  {},
+		"targets": {},
 	}
 	listMapTos := map[string]struct{}{}
 	for name, spec := range specs.tokens {
@@ -757,32 +868,32 @@ func ensureListDefaults(specs schemaSpecs, values map[string]SchemaValue) {
 	}
 }
 
-func ensureEmptyKwargs(schema string, specs schemaSpecs, kwargs map[string]map[string]string) {
-	switch strings.ToLower(strings.TrimSpace(schema)) {
-	case "json", "jsons", "xml", "xmls", "form", "forms",
-		"apprise", "apprises",
-		"mailgun", "smtp2go", "sparkpost", "sendgrid", "msg91",
-		"ncloud", "nclouds", "nctalk", "nctalks",
-		"opsgenie", "pagertree", "onesignal",
-		"synology", "synologys":
-		for name, spec := range specs.kwargs {
-			mapTo := specMapTo(spec, name)
-			if mapTo == "" {
-				continue
-			}
-			if _, ok := kwargs[mapTo]; !ok {
-				kwargs[mapTo] = map[string]string{}
-			}
+func ensureEmptyKwargs(specs schemaSpecs, kwargs map[string]map[string]string) {
+	defaultMapTos := map[string]struct{}{
+		"custom":           {},
+		"data_kwargs":      {},
+		"details":          {},
+		"headers":          {},
+		"mapping":          {},
+		"meta_extras":      {},
+		"params":           {},
+		"payload":          {},
+		"payload_extras":   {},
+		"postback":         {},
+		"template_data":    {},
+		"template_mapping": {},
+		"tokens":           {},
+	}
+	for name, spec := range specs.kwargs {
+		mapTo := specMapTo(spec, name)
+		if mapTo == "" {
+			continue
 		}
-	case "workflow", "workflows":
-		for name, spec := range specs.kwargs {
-			mapTo := specMapTo(spec, name)
-			if mapTo == "" {
-				continue
-			}
-			if _, ok := kwargs[mapTo]; !ok {
-				kwargs[mapTo] = map[string]string{}
-			}
+		if _, ok := defaultMapTos[mapTo]; !ok {
+			continue
+		}
+		if _, ok := kwargs[mapTo]; !ok {
+			kwargs[mapTo] = map[string]string{}
 		}
 	}
 }
@@ -954,31 +1065,6 @@ func matchTemplateAuthority(template string, specs map[string]map[string]any, ta
 	if idx := strings.LastIndex(hostTemplate, ":"); idx != -1 {
 		hostPart = hostTemplate[:idx]
 		portTemplate = hostTemplate[idx+1:]
-	}
-
-	if !target.HasPort && strings.Contains(target.Host, ":") && portTemplate != "" {
-		rawHost := target.Host
-		hostValue := rawHost
-		portValue := ""
-		if idx := strings.LastIndex(rawHost, ":"); idx != -1 {
-			hostValue = rawHost[:idx]
-			portValue = rawHost[idx+1:]
-		}
-		if hostToken, ok := exactToken(hostPart); ok {
-			values[hostToken] = hostValue
-			if hostValue != "" {
-				score++
-			}
-		}
-		if portToken, ok := exactToken(portTemplate); ok {
-			if portValue != "" {
-				values[portToken] = portValue
-				score++
-			} else {
-				missing++
-			}
-		}
-		return score, missing, true
 	}
 
 	if token, ok := exactToken(hostPart); ok {
@@ -1363,6 +1449,165 @@ func exactToken(value string) (string, bool) {
 		return inner, true
 	}
 	return "", false
+}
+
+func tokenInTemplates(templates []string, token string) bool {
+	if token == "" {
+		return false
+	}
+	needle := "{" + token + "}"
+	for _, template := range templates {
+		if strings.Contains(template, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+func needsApikeyFromTargets(specs schemaSpecs, values map[string]SchemaValue) bool {
+	apikeyValue, ok := values["apikey"]
+	if ok && apikeyValue.Value != nil {
+		if str, ok := apikeyValue.Value.(string); ok && str != "" {
+			return false
+		}
+		if _, ok := apikeyValue.Value.(string); !ok {
+			return false
+		}
+	}
+	if !specHasMapTo(specs, "apikey") {
+		return false
+	}
+	if !templateHasAuthorityPortToken(specs.templates, "apikey") {
+		return false
+	}
+	return true
+}
+
+func needsEmailRebuild(specs schemaSpecs, values map[string]SchemaValue) bool {
+	if !specHasToken(specs.tokens, "email") {
+		return false
+	}
+	if !specHasToken(specs.tokens, "password") {
+		return false
+	}
+	if !specHasToken(specs.tokens, "from_phone") && !specHasMapToTokens(specs.tokens, "source") {
+		return false
+	}
+	if emailValue, ok := values["email"]; ok {
+		if emailStr, ok := emailValue.Value.(string); ok {
+			return !strings.Contains(emailStr, "@")
+		}
+		return true
+	}
+	return true
+}
+
+func specHasToken(specs map[string]map[string]any, name string) bool {
+	_, ok := specs[name]
+	return ok
+}
+
+func specHasMapTo(specs schemaSpecs, mapTo string) bool {
+	for name, spec := range specs.tokens {
+		if specMapTo(spec, name) == mapTo {
+			return true
+		}
+	}
+	for name, spec := range specs.args {
+		if specMapTo(spec, name) == mapTo {
+			return true
+		}
+	}
+	return false
+}
+
+func specHasMapToTokens(specs map[string]map[string]any, mapTo string) bool {
+	for name, spec := range specs {
+		if specMapTo(spec, name) == mapTo {
+			return true
+		}
+	}
+	return false
+}
+
+func templateHasAuthorityPortToken(templates []string, token string) bool {
+	needle := "{" + token + "}"
+	for _, template := range templates {
+		parts := strings.SplitN(template, "://", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		rest := parts[1]
+		authority := rest
+		if idx := strings.Index(rest, "/"); idx != -1 {
+			authority = rest[:idx]
+		}
+		if idx := strings.LastIndex(authority, ":"); idx != -1 {
+			portPart := authority[idx+1:]
+			if strings.Contains(portPart, needle) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func baseURLFromParsed(target *ParsedURL) string {
+	if target == nil || target.Scheme == "" {
+		return ""
+	}
+	var builder strings.Builder
+	builder.WriteString(target.Scheme)
+	builder.WriteString("://")
+	if target.HasUser {
+		builder.WriteString(target.User)
+		if target.HasPassword {
+			builder.WriteString(":")
+			builder.WriteString(target.Password)
+		}
+		builder.WriteString("@")
+	}
+	builder.WriteString(target.Host)
+	if target.HasPort {
+		builder.WriteString(":")
+		builder.WriteString(strconv.Itoa(target.Port))
+	}
+	if target.Path != "" {
+		builder.WriteString(target.Path)
+	}
+	return builder.String()
+}
+
+func shouldSetBaseURL(specs schemaSpecs, argName string) bool {
+	if argName == "" {
+		return false
+	}
+	spec, ok := specs.args[argName]
+	if !ok {
+		return false
+	}
+	if specAlias(spec) != "" {
+		return false
+	}
+	mapTo := specMapTo(spec, argName)
+	return mapTo != ""
+}
+
+func shouldSetBaseURLForMapTo(specs schemaSpecs, mapTo string) bool {
+	if mapTo == "" {
+		return false
+	}
+	for name, spec := range specs.args {
+		if specMapTo(spec, name) == mapTo {
+			return true
+		}
+	}
+	for name, spec := range specs.tokens {
+		if specMapTo(spec, name) == mapTo {
+			return true
+		}
+	}
+	return false
 }
 
 func delimContains(spec map[string]any, delim string) bool {

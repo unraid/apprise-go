@@ -9,20 +9,23 @@ import (
 
 const mastodonStatusPath = "/api/v1/statuses"
 const mastodonDefaultVisibility = "default"
+const tootDefaultVisibility = "public"
 
 var mastodonUserPattern = regexp.MustCompile(`^[A-Za-z0-9_]+(@[A-Za-z0-9_.-]+)?$`)
 
 type MastodonTarget struct {
-	host           string
-	port           int
-	secure         bool
-	token          string
-	targets        []string
-	visibility     string
-	sensitive      bool
-	spoiler        string
-	language       string
-	idempotencyKey string
+	host                     string
+	port                     int
+	secure                   bool
+	token                    string
+	targets                  []string
+	visibility               string
+	visibilityDefault        string
+	includeDefaultVisibility bool
+	sensitive                bool
+	spoiler                  string
+	language                 string
+	idempotencyKey           string
 }
 
 func NewMastodonTarget(target *ParsedURL) (*MastodonTarget, error) {
@@ -47,23 +50,31 @@ func NewMastodonTarget(target *ParsedURL) (*MastodonTarget, error) {
 	}
 
 	visibility := strings.ToLower(strings.TrimSpace(target.Query["visibility"]))
+	visibilityDefault := mastodonDefaultVisibility
+	includeDefaultVisibility := false
+	if strings.HasPrefix(strings.ToLower(target.Scheme), "toot") {
+		visibilityDefault = tootDefaultVisibility
+		includeDefaultVisibility = true
+	}
 	if visibility == "" {
-		visibility = mastodonDefaultVisibility
+		visibility = visibilityDefault
 	}
 
 	sensitive := parseBoolValue(target.Query["sensitive"], false)
 
 	return &MastodonTarget{
-		host:           host,
-		port:           target.Port,
-		secure:         strings.EqualFold(target.Scheme, "mastodons") || strings.EqualFold(target.Scheme, "toots"),
-		token:          token,
-		targets:        targets,
-		visibility:     visibility,
-		sensitive:      sensitive,
-		spoiler:        strings.TrimSpace(target.Query["spoiler"]),
-		language:       strings.TrimSpace(target.Query["language"]),
-		idempotencyKey: strings.TrimSpace(target.Query["key"]),
+		host:                     host,
+		port:                     target.Port,
+		secure:                   strings.EqualFold(target.Scheme, "mastodons") || strings.EqualFold(target.Scheme, "toots"),
+		token:                    token,
+		targets:                  targets,
+		visibility:               visibility,
+		visibilityDefault:        visibilityDefault,
+		includeDefaultVisibility: includeDefaultVisibility,
+		sensitive:                sensitive,
+		spoiler:                  strings.TrimSpace(target.Query["spoiler"]),
+		language:                 strings.TrimSpace(target.Query["language"]),
+		idempotencyKey:           strings.TrimSpace(target.Query["key"]),
 	}, nil
 }
 
@@ -78,7 +89,7 @@ func (m *MastodonTarget) BuildRequest(body, title string, notifyType NotifyType)
 		"status":    status,
 		"sensitive": m.sensitive,
 	}
-	if m.visibility != "" && m.visibility != mastodonDefaultVisibility {
+	if m.visibility != "" && (m.includeDefaultVisibility || m.visibility != m.visibilityDefault) {
 		payload["visibility"] = m.visibility
 	}
 	if m.spoiler != "" {

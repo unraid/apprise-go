@@ -96,6 +96,8 @@ def sample_for_name(name):
         return "443"
     if "email" in lowered:
         return "user@example.com"
+    if "from" in lowered and ("addr" in lowered or "email" in lowered):
+        return "user@example.com"
     if "webhook" in lowered or "url" in lowered:
         return "token"
     if "region" in lowered:
@@ -265,6 +267,8 @@ def build_query(details):
             continue
         if arg_type.startswith("choice:int") or arg_type.startswith("choice:float"):
             continue
+        if arg_type == "string":
+            continue
         default = spec.get("default", None)
         value = query_value_from_default(default, spec)
         if value is None:
@@ -284,7 +288,7 @@ def generate_url(schema, plugin, info):
 
     ordered_templates = sorted(
         (t for t in templates if isinstance(t, str)),
-        key=template_token_count,
+        key=lambda value: (is_simple_template(value), template_token_count(value)),
         reverse=True,
     )
 
