@@ -1,7 +1,11 @@
+import hashlib
 import json
+import os
 import re
+import subprocess
 import sys
 import urllib.parse
+from pathlib import Path
 
 from apprise.plugins import N_MGR
 from apprise.plugins import details as plugin_details
@@ -28,6 +32,120 @@ CANDIDATES = [
     "ABC@DEF",
     "user@localhost",
 ]
+
+CACHE_VERSION = 1
+CACHE_ENV = "APPRISE_CASES_CACHE"
+CACHE_DIR_ENV = "APPRISE_CASES_CACHE_DIR"
+CACHE_SUBDIR = ".tmp/pycases"
+
+
+def cache_enabled():
+    value = os.environ.get(CACHE_ENV, "").strip().lower()
+    if value in {"0", "false", "no", "off"}:
+        return False
+    return True
+
+
+def find_repo_root(start):
+    current = start
+    while True:
+        if (current / "go.mod").exists() and (current / "internal").is_dir():
+            return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+
+
+def cache_dir():
+    explicit = os.environ.get(CACHE_DIR_ENV, "").strip()
+    if explicit:
+        return Path(explicit)
+    here = Path(__file__).resolve()
+    root = find_repo_root(here)
+    if root is None:
+        return Path.cwd() / CACHE_SUBDIR
+    return root / CACHE_SUBDIR
+
+
+def apprise_repo_root():
+    try:
+        import apprise as apprise_module
+
+        path = Path(apprise_module.__file__).resolve()
+    except Exception:
+        return None
+
+    current = path.parent
+    while True:
+        if (current / ".git").exists():
+            return current
+        if (current / "pyproject.toml").exists() and (current / "apprise").is_dir():
+            return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+
+
+def apprise_git_sha():
+    root = apprise_repo_root()
+    if root is None:
+        return ""
+    try:
+        output = subprocess.check_output(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        return ""
+    return output.decode("utf-8", "replace").strip()
+
+
+def cache_key():
+    try:
+        import apprise as apprise_module
+
+        apprise_version = getattr(apprise_module, "__version__", "")
+    except Exception:
+        apprise_version = ""
+    payload = {
+        "version": CACHE_VERSION,
+        "script": "schema_parity_cases",
+        "apprise_version": apprise_version,
+        "apprise_sha": apprise_git_sha(),
+        "python_version": sys.version,
+    }
+    digest = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return digest
+
+
+def load_cache():
+    if not cache_enabled():
+        return None, None
+    digest = cache_key()
+    root = cache_dir()
+    path = root / f"{digest}.json"
+    if not path.exists():
+        return None, path
+    try:
+        return json.loads(path.read_text(encoding="utf-8")), path
+    except Exception:
+        return None, path
+
+
+def store_cache(path, cases):
+    if path is None:
+        return
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(path.suffix + f".tmp.{os.getpid()}")
+        tmp.write_text(json.dumps(cases, separators=(",", ":")), encoding="utf-8")
+        os.replace(tmp, path)
+    except Exception:
+        return
 
 
 def is_simple_template(template):
@@ -329,6 +447,11 @@ def main():
     failures = []
     cases = []
 
+    cached, cache_path = load_cache()
+    if cached is not None:
+        print(json.dumps(cached, ensure_ascii=True, sort_keys=True))
+        return
+
     schemas = list(N_MGR.schemas()) if hasattr(N_MGR, "schemas") else list(N_MGR)
     for schema in sorted(schemas):
         plugin = N_MGR[schema]
@@ -345,6 +468,7 @@ def main():
         )
         raise SystemExit(1)
 
+    store_cache(cache_path, cases)
     print(json.dumps(cases, ensure_ascii=True, sort_keys=True))
 
 

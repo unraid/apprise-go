@@ -66,6 +66,7 @@ func TestE2ERequestParitySchemaExercise(t *testing.T) {
 		}
 
 		t.Run(schema+"/"+name, func(t *testing.T) {
+			maybeParallel(t)
 			provider, ok := providerBySchema[schema]
 			if !ok {
 				t.Fatalf("no provider manifest for schema %s", schema)

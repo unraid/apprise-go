@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/unraid/apprise-go/internal/notify"
@@ -15,6 +16,8 @@ import (
 type captureTransport struct {
 	requests []notify.RequestSpec
 }
+
+var captureMu sync.Mutex
 
 func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	body := ""
@@ -194,6 +197,9 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 
 func CaptureGoRequests(t *testing.T, send func() error) []notify.RequestSpec {
 	t.Helper()
+
+	captureMu.Lock()
+	defer captureMu.Unlock()
 
 	capture := &captureTransport{}
 	previous := http.DefaultTransport

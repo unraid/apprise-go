@@ -21,6 +21,7 @@ func TestProviderRequestParity(t *testing.T) {
 		for _, c := range def.Cases {
 			c := c
 			t.Run(name+"/"+c.Name, func(t *testing.T) {
+				maybeParallel(t)
 				logProgress(t, "python-vs-go "+name+"/"+c.Name)
 				notifyType := notify.NotifyInfo
 				if strings.TrimSpace(c.Type) != "" {

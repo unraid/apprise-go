@@ -105,11 +105,14 @@ Test notes
 - Parity test runs fix time/nonce/JWT inputs via env defaults to keep AWS/OAuth/VAPID fixtures deterministic.
 - Parity tests compare full request sequences by running Go `Send` implementations and capturing all outgoing HTTP requests; request comparisons include method, URL (including query), headers, and body (JSON/form bodies are normalized). Use `-v` to see per-case progress output.
 - Capture stubs return canned responses for multi-request providers (e.g., SendPulse OAuth, Emby login/sessions); parity focuses on outbound request shape, not response payloads.
+- Python capture caching uses `.tmp/pycapture` by default; set `APPRISE_CAPTURE_CACHE=0` to disable or `APPRISE_CAPTURE_CACHE_DIR` to override.
+- Schema case caching uses `.tmp/pycases` by default; set `APPRISE_CASES_CACHE=0` to disable or `APPRISE_CASES_CACHE_DIR` to override.
 - Golden fixtures (`internal/parity/providers/<provider>/golden.json`) enable Python-free parity checks; regenerate with `internal/testutil/scripts/update_golden.py`.
 - Golden refresh example: `.venv/bin/python internal/testutil/scripts/update_golden.py`.
 - CI parity setup uses `scripts/ci/setup_parity_env.sh` and `scripts/ci/run_parity_tests.sh`.
 - Always run `go` commands with `GOCACHE=$PWD/.gocache` in this repo to avoid sandboxed cache permission errors.
 - Running `go test` in sandboxed environments may require `GOCACHE` set to a writable path and capture-server tests may need local listen permissions.
+- Parity subtests run in parallel by default; set `APPRISE_PARITY_SERIAL=1` to force serial execution.
 
 Notes
 - Version updates: edit `internal/version/version.go` or override at build time with:
