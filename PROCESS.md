@@ -108,6 +108,7 @@ Test notes
 - Golden fixtures (`internal/parity/providers/<provider>/golden.json`) enable Python-free parity checks; regenerate with `internal/testutil/scripts/update_golden.py`.
 - Golden refresh example: `.venv/bin/python internal/testutil/scripts/update_golden.py`.
 - CI parity setup uses `scripts/ci/setup_parity_env.sh` and `scripts/ci/run_parity_tests.sh`.
+- Always run `go` commands with `GOCACHE=$PWD/.gocache` in this repo to avoid sandboxed cache permission errors.
 - Running `go test` in sandboxed environments may require `GOCACHE` set to a writable path and capture-server tests may need local listen permissions.
 
 Notes

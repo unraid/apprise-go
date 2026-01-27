@@ -237,6 +237,17 @@ def apply_vapid_fixes():
         except Exception:
             pass
 
+    try:
+        import apprise.plugins.vapid as vapid
+
+        vapid.NotifyVapid.enabled = True
+        if hasattr(vapid, "subscription"):
+            vapid.subscription.CRYPTOGRAPHY_SUPPORT = True
+        if hasattr(vapid, "_pem"):
+            vapid._pem.PEM_SUPPORT = True
+    except Exception:
+        pass
+
 
 def capture_request(url, body, title, notify_type):
     apply_fixed_time()
@@ -346,6 +357,8 @@ def capture_request(url, body, title, notify_type):
             )
         elif parsed.path == "/Sessions":
             response._content = b'[{"Id":"session-id"}]'
+        elif parsed.netloc == "api.twist.com" and parsed.path.endswith("/channels/get"):
+            response._content = b'[{"id":123,"name":"general","workspace_id":12345}]'
         elif parsed.netloc.startswith("sns.") and "Action=CreateTopic" in body_text:
             response._content = (
                 b"<CreateTopicResponse><CreateTopicResult><TopicArn>"

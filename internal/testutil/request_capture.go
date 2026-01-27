@@ -103,6 +103,9 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	} else if req.URL.Host == "api.twist.com" && strings.HasSuffix(req.URL.Path, "/users/login") {
 		responseBody = `{"token":"token","default_workspace":12345}`
 		contentType = "application/json"
+	} else if req.URL.Host == "api.twist.com" && strings.HasSuffix(req.URL.Path, "/channels/get") {
+		responseBody = `[{"id":123,"name":"general","workspace_id":12345}]`
+		contentType = "application/json"
 	} else if strings.Contains(req.URL.Host, "sns.") && strings.Contains(body, "Action=CreateTopic") {
 		responseBody = `<CreateTopicResponse><CreateTopicResult><TopicArn>arn:aws:sns:us-east-1:000000000000:topic</TopicArn></CreateTopicResult></CreateTopicResponse>`
 		contentType = "application/xml"

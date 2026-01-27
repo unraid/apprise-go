@@ -11,3 +11,4 @@
 # Local tooling
 /.venv/
 /.gocache/
+__pycache__/

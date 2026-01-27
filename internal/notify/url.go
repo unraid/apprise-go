@@ -45,10 +45,19 @@ func ParseURL(raw string) (*ParsedURL, error) {
 		sanitized = sanitizeTelegramAuthority(sanitized)
 	}
 
+	authority := urlAuthority(sanitized)
+	useFirstAt := strings.Count(authority, "@") > 1
+	if useFirstAt {
+		parsed, parseErr := parseLenientURL(sanitized, schemeCandidate, true)
+		if parseErr == nil {
+			return parsed, nil
+		}
+	}
+
 	u, err := url.Parse(sanitized)
 	if err != nil {
 		if strings.Contains(err.Error(), "invalid port") {
-			parsed, parseErr := parseLenientURL(sanitized, schemeCandidate)
+			parsed, parseErr := parseLenientURL(sanitized, schemeCandidate, useFirstAt)
 			if parseErr == nil {
 				return parsed, nil
 			}
@@ -138,7 +147,7 @@ func ParseURL(raw string) (*ParsedURL, error) {
 	}, nil
 }
 
-func parseLenientURL(raw string, scheme string) (*ParsedURL, error) {
+func parseLenientURL(raw string, scheme string, splitFirstAt bool) (*ParsedURL, error) {
 	parts := strings.SplitN(raw, "://", 2)
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid url")
@@ -164,9 +173,13 @@ func parseLenientURL(raw string, scheme string) (*ParsedURL, error) {
 	hasUser := false
 	hasPassword := false
 	host := authority
-	if idx := strings.LastIndex(authority, "@"); idx != -1 {
-		userinfo := authority[:idx]
-		host = authority[idx+1:]
+	splitIdx := strings.LastIndex(authority, "@")
+	if splitFirstAt {
+		splitIdx = strings.Index(authority, "@")
+	}
+	if splitIdx != -1 {
+		userinfo := authority[:splitIdx]
+		host = strings.TrimLeft(authority[splitIdx+1:], "@")
 		hasUser = true
 		if parts := strings.SplitN(userinfo, ":", 2); len(parts) == 2 {
 			user = parts[0]
@@ -195,6 +208,20 @@ func parseLenientURL(raw string, scheme string) (*ParsedURL, error) {
 		QueryDel:     qsd.del,
 		QueryPayload: qsd.payload,
 	}, nil
+}
+
+func urlAuthority(raw string) string {
+	parts := strings.SplitN(raw, "://", 2)
+	if len(parts) != 2 {
+		return ""
+	}
+	rest := parts[1]
+	for i, ch := range rest {
+		if ch == '/' || ch == '?' || ch == '#' {
+			return rest[:i]
+		}
+	}
+	return rest
 }
 
 type qsdResult struct {

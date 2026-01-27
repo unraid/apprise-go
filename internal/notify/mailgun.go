@@ -26,6 +26,7 @@ type MailgunTarget struct {
 	headers  map[string]string
 	tokens   map[string]string
 	batch    bool
+	verify   bool
 }
 
 func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
@@ -83,7 +84,7 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 		}
 	}
 	if len(targets) == 0 {
-		targets = []emailEntry{{name: fromName, email: fromAddr}}
+		targets = []emailEntry{{name: "", email: fromAddr}}
 	}
 
 	cc := map[string]struct{}{}
@@ -134,6 +135,7 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 		headers:  headers,
 		tokens:   tokens,
 		batch:    parseBoolWithDefault(target.Query["batch"], false),
+		verify:   parseBoolWithDefault(target.Query["verify"], true),
 	}, nil
 }
 
@@ -211,7 +213,11 @@ func (m *MailgunTarget) Send(body, title string, notifyType NotifyType) error {
 
 func (m *MailgunTarget) buildPayload(body, title string, recipients []emailEntry) url.Values {
 	values := url.Values{}
-	values.Set("o:skip-verification", "False")
+	if m.verify {
+		values.Set("o:skip-verification", "False")
+	} else {
+		values.Set("o:skip-verification", "True")
+	}
 	values.Set("from", formatEmail(m.fromName, m.fromAddr))
 	values.Set("subject", title)
 	values.Set("html", body)

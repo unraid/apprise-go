@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -12,10 +13,12 @@ const twistAPIBase = "https://api.twist.com/api/v3/"
 var twistChannelIDPattern = regexp.MustCompile(`^(?:\d+:)?\d+$`)
 
 type TwistTarget struct {
-	email      string
-	password   string
-	channelIDs []string
-	token      string
+	email            string
+	password         string
+	channelIDs       []string
+	channels         []string
+	token            string
+	defaultWorkspace int
 }
 
 func NewTwistTarget(target *ParsedURL) (*TwistTarget, error) {
@@ -60,6 +63,7 @@ func NewTwistTarget(target *ParsedURL) (*TwistTarget, error) {
 	}
 
 	channelIDs := []string{}
+	channels := []string{}
 	for _, entry := range entries {
 		entry = strings.TrimSpace(entry)
 		if entry == "" {
@@ -67,16 +71,23 @@ func NewTwistTarget(target *ParsedURL) (*TwistTarget, error) {
 		}
 		if twistChannelIDPattern.MatchString(entry) {
 			channelIDs = append(channelIDs, entry)
+			continue
+		}
+		entry = strings.TrimPrefix(entry, "#")
+		entry = strings.TrimSpace(entry)
+		if entry != "" {
+			channels = append(channels, entry)
 		}
 	}
-	if len(channelIDs) == 0 {
-		return nil, fmt.Errorf("missing channel ids")
+	if len(channelIDs) == 0 && len(channels) == 0 {
+		channels = append(channels, "general")
 	}
 
 	return &TwistTarget{
 		email:      email,
 		password:   password,
 		channelIDs: channelIDs,
+		channels:   channels,
 	}, nil
 }
 
@@ -100,6 +111,16 @@ func (t *TwistTarget) Send(body, title string, notifyType NotifyType) error {
 		if err := t.login(); err != nil {
 			return err
 		}
+	}
+
+	if len(t.channels) > 0 {
+		if err := t.resolveChannels(); err != nil {
+			return err
+		}
+	}
+
+	if len(t.channelIDs) == 0 {
+		return fmt.Errorf("missing channel ids")
 	}
 
 	for _, channelID := range t.channelIDs {
@@ -148,7 +169,8 @@ func (t *TwistTarget) login() error {
 	}
 
 	var response struct {
-		Token string `json:"token"`
+		Token            string `json:"token"`
+		DefaultWorkspace int    `json:"default_workspace"`
 	}
 	if err := doJSONRequest(spec, &response); err != nil {
 		return err
@@ -157,6 +179,78 @@ func (t *TwistTarget) login() error {
 		return fmt.Errorf("missing token")
 	}
 	t.token = response.Token
+	if response.DefaultWorkspace != 0 {
+		t.defaultWorkspace = response.DefaultWorkspace
+	}
+	return nil
+}
+
+func (t *TwistTarget) resolveChannels() error {
+	if t.defaultWorkspace == 0 {
+		return fmt.Errorf("missing workspace")
+	}
+
+	payload := url.Values{}
+	payload.Set("workspace_id", strconv.Itoa(t.defaultWorkspace))
+	spec := RequestSpec{
+		Method: "POST",
+		URL:    twistAPIBase + "channels/get",
+		Headers: map[string]string{
+			"User-Agent":   "Apprise",
+			"Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+			"Authorization": fmt.Sprintf(
+				"Bearer %s",
+				t.token,
+			),
+		},
+		Body: payload.Encode(),
+	}
+
+	var response []struct {
+		ID   int    `json:"id"`
+		Name string `json:"name"`
+	}
+	if err := doJSONRequest(spec, &response); err != nil {
+		return err
+	}
+	if len(response) == 0 {
+		return nil
+	}
+
+	lookup := map[string]int{}
+	for _, entry := range response {
+		name := strings.TrimSpace(entry.Name)
+		if name == "" || entry.ID == 0 {
+			continue
+		}
+		lookup[strings.ToLower(name)] = entry.ID
+	}
+
+	if len(lookup) == 0 {
+		return nil
+	}
+
+	seen := map[string]struct{}{}
+	for _, id := range t.channelIDs {
+		seen[id] = struct{}{}
+	}
+	for _, channel := range t.channels {
+		channel = strings.ToLower(strings.TrimSpace(channel))
+		if channel == "" {
+			continue
+		}
+		id, ok := lookup[channel]
+		if !ok {
+			continue
+		}
+		value := fmt.Sprintf("%d:%d", t.defaultWorkspace, id)
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		t.channelIDs = append(t.channelIDs, value)
+	}
+
 	return nil
 }
 

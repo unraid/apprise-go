@@ -21,6 +21,7 @@ CANDIDATES = [
     "us-west-2",
     "dG9rZW4=",
     "123e4567-e89b-12d3-a456-426614174000",
+    "123e4567-e89b-42d3-a456-426614174000",
     "+15555550123",
     "15555550123",
     "topic",
@@ -112,6 +113,8 @@ def sample_for_name(name):
         return "us-west-2"
     if "uuid" in lowered:
         return "123e4567-e89b-12d3-a456-426614174000"
+    if "template" in lowered:
+        return "internal/testutil/fixtures/workflow_template.json"
     if "phone" in lowered:
         return "15555550123"
     if (
@@ -212,6 +215,25 @@ def sample_for_regex(regex, flags):
         if match_regex(regex, flags, candidate):
             return candidate
 
+    plus_match = re.search(r"^\^?([A-Za-z0-9]*)(\[[^\]]+\])\+([^$]*)\$?$", regex)
+    if plus_match:
+        prefix = plus_match.group(1) or ""
+        class_group = plus_match.group(2).strip("[]")
+        suffix = plus_match.group(3) or ""
+        sample_char = "a"
+        lowered = class_group.lower()
+        if "0-9" in lowered and ("a-z" in lowered or "a-f" in lowered):
+            sample_char = "a"
+        elif "0-9" in lowered and "a-z" not in lowered and "a-f" not in lowered:
+            sample_char = "1"
+        elif "a-z" in lowered or "a-f" in lowered:
+            sample_char = "a"
+        elif "A-Z" in class_group:
+            sample_char = "A"
+        candidate = prefix + (sample_char * 8) + suffix
+        if match_regex(regex, flags, candidate):
+            return candidate
+
     for candidate in CANDIDATES:
         if match_regex(regex, flags, candidate):
             return candidate
@@ -229,9 +251,14 @@ def sample_for_regex(regex, flags):
             sample_char = "A"
         elif "a-z" in charset:
             sample_char = "a"
-        return sample_char * size
+        candidate = sample_char * size
+        if regex.rstrip("$").endswith("=="):
+            candidate += "=="
+        return candidate
 
     range_match = re.search(r"\{(\d+)(?:,(\d+))?\}", regex)
+    if not range_match:
+        range_match = re.search(r"\{(\d+),\}", regex)
     class_match = re.search(r"\[([^\]]+)\]", regex)
     if range_match and class_match:
         size = int(range_match.group(1))
@@ -245,7 +272,10 @@ def sample_for_regex(regex, flags):
             sample_char = "A"
         elif "a-z" in charset:
             sample_char = "a"
-        return sample_char * size
+        candidate = sample_char * size
+        if regex.rstrip("$").endswith("=="):
+            candidate += "=="
+        return candidate
 
     return "token"
 
@@ -253,10 +283,19 @@ def sample_for_regex(regex, flags):
 def sample_for_spec(name, spec):
     value = sample_for_name(name)
     if isinstance(spec, dict):
-        label = str(spec.get("name") or "")
-        suggested = sample_for_label(label)
-        if suggested and "subscriber" not in name.lower():
-            value = suggested
+        default = spec.get("default")
+        if default is not None:
+            default_value = query_value_from_default(default, spec)
+            if default_value is not None:
+                value = default_value
+        arg_type = str(spec.get("type") or "").lower()
+        if arg_type.startswith("int") or arg_type.startswith("float"):
+            value = "1"
+        else:
+            label = str(spec.get("name") or "")
+            suggested = sample_for_label(label)
+            if suggested and "subscriber" not in name.lower():
+                value = suggested
     regex = None
     flags = 0
     raw_regex = spec.get("regex") if isinstance(spec, dict) else None
@@ -283,7 +322,7 @@ def sample_for_token(name, spec, tokens):
     if isinstance(spec, dict) and spec.get("group"):
         group = spec.get("group")
         if isinstance(group, (list, tuple, set)) and group:
-            group_list = [str(item) for item in group]
+            group_list = sorted(str(item) for item in group)
             candidate = ""
             for entry in group_list:
                 if "id" in entry.lower():
@@ -444,7 +483,21 @@ def generate_cases(schema, plugin, details):
                 values = spec.get("values") or []
                 if isinstance(values, (list, tuple)):
                     for value in values:
-                        url = append_query(primary, [(name, value)])
+                        template_url = primary
+                        if name.lower() == "mode" and str(value).lower() == "cloud":
+                            if isinstance(tokens, dict) and "app_token" in tokens:
+                                for candidate in ordered_templates:
+                                    if (
+                                        "{app_token}" in candidate
+                                        or "{app_id}" in candidate
+                                    ):
+                                        filled = fill_template(
+                                            candidate, schema, tokens
+                                        )
+                                        if filled:
+                                            template_url = filled
+                                            break
+                        url = append_query(template_url, [(name, value)])
                         if can_parse(url):
                             cases.append({"name": f"choice-{name}-{value}", "url": url})
                 continue
@@ -468,7 +521,14 @@ def generate_cases(schema, plugin, details):
             prefix = spec.get("prefix")
             if prefix not in ("+", "-", ":"):
                 prefix = ""
-            key = f"{prefix}key"
+            key_name = "key"
+            lowered = name.lower()
+            if "mapping" in lowered:
+                if "template" in lowered:
+                    key_name = "1"
+                else:
+                    key_name = "info"
+            key = f"{prefix}{key_name}"
             url = append_query(primary, [(key, "value")])
             if can_parse(url):
                 cases.append({"name": f"kwargs-{name}", "url": url})
