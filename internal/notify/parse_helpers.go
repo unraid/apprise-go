@@ -80,3 +80,19 @@ func mergeTitleBody(title, body string) string {
 	}
 	return title + "\r\n" + body
 }
+
+func normalizeNotifyFormat(raw string) string {
+	format := strings.TrimSpace(strings.ToLower(raw))
+	if format == "" {
+		return ""
+	}
+	if strings.HasPrefix(format, "notifyformat.") {
+		format = strings.TrimPrefix(format, "notifyformat.")
+	}
+	switch format {
+	case "md":
+		return "markdown"
+	default:
+		return format
+	}
+}

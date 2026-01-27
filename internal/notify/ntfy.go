@@ -67,21 +67,21 @@ func NewNtfyTarget(target *ParsedURL) (*NtfyTarget, error) {
 	token := strings.TrimSpace(target.Query["token"])
 	authType := strings.ToLower(strings.TrimSpace(target.Query["auth"]))
 	if authType == "" {
-		if token != "" || (user != "" && password == "") {
+		if token != "" {
 			authType = "token"
-		} else {
+		} else if user != "" {
 			authType = "basic"
 		}
 	}
 	if authType == "token" && token == "" {
-		if user != "" {
+		if password != "" {
+			token = password
+		} else if user != "" {
 			token = user
-			user = ""
-			password = ""
 		}
 	}
 
-	notifyFormat := strings.ToLower(strings.TrimSpace(target.Query["format"]))
+	notifyFormat := normalizeNotifyFormat(target.Query["format"])
 	if notifyFormat == "" {
 		notifyFormat = "text"
 	}
@@ -143,7 +143,11 @@ func (n *NtfyTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 
 	if n.mode == NtfyModePrivate {
 		if n.authType == "basic" && n.user != "" {
-			encoded := base64.StdEncoding.EncodeToString([]byte(n.user + ":" + n.password))
+			pass := n.password
+			if pass == "" {
+				pass = "None"
+			}
+			encoded := base64.StdEncoding.EncodeToString([]byte(n.user + ":" + pass))
 			headers["Authorization"] = "Basic " + encoded
 		} else if n.authType == "token" && n.token != "" {
 			headers["Authorization"] = "Bearer " + n.token
@@ -161,7 +165,7 @@ func (n *NtfyTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 	if n.notifyFormat == "markdown" {
 		headers["X-Markdown"] = "yes"
 	}
-	if n.priority != "" {
+	if n.priority != "" && strings.ToLower(n.priority) != "default" {
 		headers["X-Priority"] = n.priority
 	}
 	if n.delay != "" {

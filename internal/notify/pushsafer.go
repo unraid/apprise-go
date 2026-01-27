@@ -9,6 +9,168 @@ import (
 
 const pushSaferDefaultIcon = 25
 
+var pushSaferSoundMap = map[string]int{
+	"ahem":             1,
+	"alarmarmed":       51,
+	"alarmdisarmed":    52,
+	"applause":         2,
+	"armed":            51,
+	"arrow":            3,
+	"baby":             4,
+	"backupready":      53,
+	"beep":             38,
+	"beep1":            38,
+	"beep2":            48,
+	"beep3":            49,
+	"beep4":            50,
+	"bell":             5,
+	"bicycle":          6,
+	"bike":             6,
+	"boing":            7,
+	"buzzer":           8,
+	"camera":           9,
+	"carhorn":          10,
+	"cashregister":     11,
+	"chime":            12,
+	"creakydoor":       13,
+	"cuckoo":           14,
+	"cuckooclock":      14,
+	"cutinout":         40,
+	"dclosed":          54,
+	"disarmed":         52,
+	"disconnect":       15,
+	"dog":              16,
+	"doorbell":         17,
+	"doorbellrang":     60,
+	"doorclosed":       54,
+	"dooropen":         55,
+	"dopen":            55,
+	"echo":             45,
+	"electric":         23,
+	"fanfare":          18,
+	"flickglass":       41,
+	"goodye":           29,
+	"gunshot":          19,
+	"hello":            30,
+	"hihat":            47,
+	"honk":             20,
+	"horn":             10,
+	"jawharp":          21,
+	"laser":            43,
+	"lightoff":         59,
+	"lighton":          58,
+	"loff":             59,
+	"lon":              58,
+	"military":         26,
+	"militarytrumpets": 26,
+	"morse":            22,
+	"no":               31,
+	"ok":               32,
+	"okay":             32,
+	"ooohhhweee":       33,
+	"radiotuner":       24,
+	"silent":           0,
+	"sirens":           25,
+	"trumpets":         26,
+	"ufo":              27,
+	"warn":             34,
+	"warning":          34,
+	"wclosed":          56,
+	"wee":              39,
+	"weee":             39,
+	"welcome":          35,
+	"whah":             42,
+	"whahwhah":         28,
+	"windchime":        44,
+	"windowclosed":     56,
+	"windowopen":       57,
+	"wopen":            57,
+	"yeah":             36,
+	"yes":              37,
+	"zipper":           46,
+}
+
+var pushSaferSoundOrder = []string{
+	"silent",
+	"ahem",
+	"applause",
+	"arrow",
+	"baby",
+	"bell",
+	"bicycle",
+	"bike",
+	"boing",
+	"buzzer",
+	"camera",
+	"carhorn",
+	"horn",
+	"cashregister",
+	"chime",
+	"creakydoor",
+	"cuckooclock",
+	"cuckoo",
+	"disconnect",
+	"dog",
+	"doorbell",
+	"fanfare",
+	"gunshot",
+	"honk",
+	"jawharp",
+	"morse",
+	"electric",
+	"radiotuner",
+	"sirens",
+	"militarytrumpets",
+	"military",
+	"trumpets",
+	"ufo",
+	"whahwhah",
+	"whah",
+	"goodye",
+	"hello",
+	"no",
+	"okay",
+	"ok",
+	"ooohhhweee",
+	"warn",
+	"warning",
+	"welcome",
+	"yeah",
+	"yes",
+	"beep",
+	"beep1",
+	"weee",
+	"wee",
+	"cutinout",
+	"flickglass",
+	"laser",
+	"windchime",
+	"echo",
+	"zipper",
+	"hihat",
+	"beep2",
+	"beep3",
+	"beep4",
+	"alarmarmed",
+	"armed",
+	"alarmdisarmed",
+	"disarmed",
+	"backupready",
+	"dooropen",
+	"dopen",
+	"doorclosed",
+	"dclosed",
+	"windowopen",
+	"wopen",
+	"windowclosed",
+	"wclosed",
+	"lighton",
+	"lon",
+	"lightoff",
+	"loff",
+	"doorbellrang",
+}
+
 type PushSaferTarget struct {
 	privateKey string
 	targets    []string
@@ -31,7 +193,7 @@ func NewPushSaferTarget(target *ParsedURL) (*PushSaferTarget, error) {
 		targets = []string{"a"}
 	}
 
-	sound := parseOptionalInt(target.Query["sound"])
+	sound := parsePushSaferSound(target.Query["sound"])
 	vibration := parseOptionalInt(target.Query["vibration"])
 
 	return &PushSaferTarget{
@@ -109,6 +271,28 @@ func parseOptionalInt(raw string) *int {
 		return nil
 	}
 	return &value
+}
+
+func parsePushSaferSound(raw string) *int {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	if value, err := strconv.Atoi(raw); err == nil {
+		return &value
+	}
+	normalized := strings.ToLower(raw)
+	normalized = strings.ReplaceAll(normalized, "-", "")
+	normalized = strings.ReplaceAll(normalized, "_", "")
+	normalized = strings.ReplaceAll(normalized, " ", "")
+	for _, key := range pushSaferSoundOrder {
+		if strings.HasPrefix(key, normalized) {
+			if value, ok := pushSaferSoundMap[key]; ok {
+				return &value
+			}
+		}
+	}
+	return nil
 }
 
 func init() {

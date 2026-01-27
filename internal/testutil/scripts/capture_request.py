@@ -1,11 +1,14 @@
 import argparse
 import base64
 import datetime
+import hashlib
 import inspect
 import json
 import os
+import subprocess
 import sys
 import types
+from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -91,6 +94,139 @@ DROP_HEADERS = {"x-apprise-id", "x-apprise-recursion-count"}
 KEEP_HEADERS = {"content-type", "accept", "accepts", "authorization"}
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
+CACHE_VERSION = 1
+CACHE_ENV = "APPRISE_CAPTURE_CACHE"
+CACHE_DIR_ENV = "APPRISE_CAPTURE_CACHE_DIR"
+CACHE_SUBDIR = ".tmp/pycapture"
+
+
+def cache_enabled():
+    value = os.environ.get(CACHE_ENV, "").strip().lower()
+    if value in {"0", "false", "no", "off"}:
+        return False
+    return True
+
+
+def find_repo_root(start):
+    current = start
+    while True:
+        if (current / "go.mod").exists() and (current / "internal").is_dir():
+            return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+
+
+def cache_dir():
+    explicit = os.environ.get(CACHE_DIR_ENV, "").strip()
+    if explicit:
+        return Path(explicit)
+    here = Path(__file__).resolve()
+    root = find_repo_root(here)
+    if root is None:
+        return Path.cwd() / CACHE_SUBDIR
+    return root / CACHE_SUBDIR
+
+
+def apprise_repo_root():
+    try:
+        import apprise as apprise_module
+
+        path = Path(apprise_module.__file__).resolve()
+    except Exception:
+        return None
+
+    current = path.parent
+    while True:
+        if (current / ".git").exists():
+            return current
+        if (current / "pyproject.toml").exists() and (current / "apprise").is_dir():
+            return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+
+
+def apprise_git_sha():
+    root = apprise_repo_root()
+    if root is None:
+        return ""
+    try:
+        output = subprocess.check_output(
+            ["git", "-C", str(root), "rev-parse", "HEAD"],
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        return ""
+    return output.decode("utf-8", "replace").strip()
+
+
+def cache_key(url, body, title, notify_type):
+    notify_name = notify_type.name if hasattr(notify_type, "name") else str(notify_type)
+    try:
+        import apprise as apprise_module
+
+        apprise_version = getattr(apprise_module, "__version__", "")
+    except Exception:
+        apprise_version = ""
+    key = {
+        "version": CACHE_VERSION,
+        "url": url,
+        "body": body,
+        "title": title,
+        "notify_type": notify_name,
+        "apprise_version": apprise_version,
+        "apprise_sha": apprise_git_sha(),
+        "python_version": sys.version,
+        "requests_version": getattr(requests, "__version__", ""),
+        "env": {
+            "APPRISE_FIXED_TIME": os.environ.get("APPRISE_FIXED_TIME", ""),
+            "APPRISE_OAUTH_NONCE": os.environ.get("APPRISE_OAUTH_NONCE", ""),
+            "APPRISE_OAUTH_TIMESTAMP": os.environ.get("APPRISE_OAUTH_TIMESTAMP", ""),
+            "APPRISE_VAPID_TEST_JWT": os.environ.get("APPRISE_VAPID_TEST_JWT", ""),
+            "APPRISE_VAPID_TEST_PUBLIC_KEY": os.environ.get(
+                "APPRISE_VAPID_TEST_PUBLIC_KEY", ""
+            ),
+            "APPRISE_VAPID_TEST_ENCRYPTED": os.environ.get(
+                "APPRISE_VAPID_TEST_ENCRYPTED", ""
+            ),
+            "APPRISE_SIMPLEPUSH_TEST_IV": os.environ.get(
+                "APPRISE_SIMPLEPUSH_TEST_IV", ""
+            ),
+        },
+    }
+    payload = json.dumps(key, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    digest = hashlib.sha256(payload).hexdigest()
+    return digest
+
+
+def load_cache(url, body, title, notify_type):
+    if not cache_enabled():
+        return None, None
+    digest = cache_key(url, body, title, notify_type)
+    root = cache_dir()
+    path = root / f"{digest}.json"
+    if not path.exists():
+        return None, path
+    try:
+        raw = path.read_text(encoding="utf-8")
+        return json.loads(raw), path
+    except Exception:
+        return None, path
+
+
+def store_cache(path, specs):
+    if path is None:
+        return
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(path.suffix + f".tmp.{os.getpid()}")
+        tmp.write_text(json.dumps(specs, separators=(",", ":")), encoding="utf-8")
+        os.replace(tmp, path)
+    except Exception:
+        return
 
 
 def normalize_headers(headers, keep_user_agent):
@@ -266,6 +402,10 @@ def apply_simplepush_fixes():
 
 
 def capture_request(url, body, title, notify_type):
+    cached, cache_path = load_cache(url, body, title, notify_type)
+    if cached is not None:
+        return cached
+
     apply_fixed_time()
     apply_store_fix()
     apply_oauth_fixes()
@@ -459,6 +599,7 @@ def capture_request(url, body, title, notify_type):
     finally:
         requests.sessions.Session.request = original_request
 
+    store_cache(cache_path, captured)
     return captured
 
 

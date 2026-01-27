@@ -102,9 +102,10 @@ func (s *SNSTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
 
+	message := mergeTitleBody(title, body)
 	payload := ""
 	if len(s.phones) > 0 {
-		payload = s.publishPhonePayload(body, s.phones[0])
+		payload = s.publishPhonePayload(message, s.phones[0])
 	} else {
 		payload = s.createTopicPayload(s.topics[0])
 	}
@@ -118,8 +119,9 @@ func (s *SNSTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 }
 
 func (s *SNSTarget) Send(body, title string, notifyType NotifyType) error {
+	message := mergeTitleBody(title, body)
 	for _, phone := range s.phones {
-		payload := s.publishPhonePayload(body, phone)
+		payload := s.publishPhonePayload(message, phone)
 		spec := RequestSpec{
 			Method:  "POST",
 			URL:     s.notifyURL(),
@@ -139,7 +141,7 @@ func (s *SNSTarget) Send(body, title string, notifyType NotifyType) error {
 		if topicArn == "" {
 			return fmt.Errorf("missing topic arn")
 		}
-		payload := s.publishTopicPayload(body, topicArn)
+		payload := s.publishTopicPayload(message, topicArn)
 		spec := RequestSpec{
 			Method:  "POST",
 			URL:     s.notifyURL(),

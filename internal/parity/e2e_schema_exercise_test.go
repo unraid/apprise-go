@@ -90,6 +90,9 @@ func TestE2ERequestParitySchemaExercise(t *testing.T) {
 			}
 			target, err := builder(parsedURL)
 			if err != nil {
+				if len(pythonSpecs) == 0 {
+					return
+				}
 				t.Fatalf("build target: %v", err)
 			}
 			goSpecs := testutil.CaptureGoRequests(t, func() error {

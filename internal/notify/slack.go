@@ -80,11 +80,11 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 			if len(entries) > 1 {
 				tokenC = entries[1]
 			}
-		}
-		if len(entries) > 2 {
-			entries = entries[2:]
-		} else {
-			entries = nil
+			if len(entries) > 2 {
+				entries = entries[2:]
+			} else {
+				entries = nil
+			}
 		}
 	}
 

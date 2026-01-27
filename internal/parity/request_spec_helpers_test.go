@@ -38,6 +38,9 @@ func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpe
 		t.Fatalf("method mismatch: python=%s go=%s", pythonSpec.Method, goSpec.Method)
 	}
 
+	pythonBody := normalizeBody(pythonSpec)
+	goBody := normalizeBody(goSpec)
+
 	pythonURL, err := url.Parse(pythonSpec.URL)
 	if err != nil {
 		t.Fatalf("parse python url: %v", err)
@@ -61,17 +64,17 @@ func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpe
 		t.Fatalf("header mismatch: python=%v go=%v", pythonHeaders, goHeaders)
 	}
 
-	if shouldCompareJSON(pythonHeaders) && strings.TrimSpace(pythonSpec.Body) != "" && strings.TrimSpace(goSpec.Body) != "" {
-		assertJSONBodyEqual(t, pythonSpec.Body, goSpec.Body)
+	if shouldCompareJSON(pythonHeaders) && strings.TrimSpace(pythonBody) != "" && strings.TrimSpace(goBody) != "" {
+		assertJSONBodyEqual(t, pythonBody, goBody)
 		return
 	}
-	if shouldCompareForm(pythonHeaders, pythonSpec.Body) {
-		assertQueryEqual(t, pythonSpec.Body, goSpec.Body)
+	if shouldCompareForm(pythonHeaders, pythonBody) {
+		assertQueryEqual(t, pythonBody, goBody)
 		return
 	}
 
-	if pythonSpec.Body != goSpec.Body {
-		t.Fatalf("body mismatch: python=%s go=%s", pythonSpec.Body, goSpec.Body)
+	if pythonBody != goBody {
+		t.Fatalf("body mismatch: python=%s go=%s", pythonBody, goBody)
 	}
 }
 
@@ -100,7 +103,7 @@ func normalizeHeaders(headers map[string]string) map[string]string {
 			continue
 		}
 		if _, keep := headerKeep[lower]; keep || strings.HasPrefix(lower, "x-") {
-			normalized[lower] = value
+			normalized[lower] = normalizeAppriseURL(value)
 		}
 	}
 
@@ -116,6 +119,17 @@ func normalizeHeaders(headers map[string]string) map[string]string {
 	}
 
 	return ordered
+}
+
+func normalizeBody(spec notify.RequestSpec) string {
+	body := spec.Body
+	if strings.TrimSpace(body) == "" {
+		return ""
+	}
+	if strings.EqualFold(spec.Method, "GET") && strings.TrimSpace(body) == "null" {
+		return ""
+	}
+	return body
 }
 
 func shouldCompareJSON(headers map[string]string) bool {

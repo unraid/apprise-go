@@ -11,4 +11,5 @@
 # Local tooling
 /.venv/
 /.gocache/
+/.tmp/pycapture/
 __pycache__/

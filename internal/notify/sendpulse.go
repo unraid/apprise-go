@@ -153,7 +153,7 @@ func NewSendPulseTarget(target *ParsedURL) (*SendPulseTarget, error) {
 		}
 	}
 
-	format := strings.ToLower(strings.TrimSpace(target.Query["format"]))
+	format := normalizeNotifyFormat(target.Query["format"])
 	if format == "" {
 		format = "html"
 	}

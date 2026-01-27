@@ -43,7 +43,10 @@ func NewRocketChatTarget(target *ParsedURL) (*RocketChatTarget, error) {
 	user := strings.TrimSpace(target.User)
 	password := strings.TrimSpace(target.Password)
 	webhook := strings.TrimSpace(target.Query["webhook"])
-	if webhook == "" && user != "" && password == "" {
+	if webhook == "" && password != "" && strings.Contains(password, "/") {
+		webhook = password
+	}
+	if webhook == "" && user != "" && password == "" && strings.Contains(user, "/") {
 		webhook = user
 	}
 
@@ -58,9 +61,6 @@ func NewRocketChatTarget(target *ParsedURL) (*RocketChatTarget, error) {
 	}
 
 	if mode == rocketModeWebhook {
-		if webhook == "" && password != "" {
-			webhook = password
-		}
 		if webhook == "" {
 			return nil, fmt.Errorf("missing webhook")
 		}

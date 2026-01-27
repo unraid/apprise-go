@@ -29,7 +29,7 @@ var vapidURLByMode = map[string]string{
 	"firefox": "https://updates.push.services.mozilla.com/wpush/v1",
 	"edge":    "https://fcm.googleapis.com/fcm/send",
 	"opera":   "https://fcm.googleapis.com/fcm/send",
-	"apple":   "https://web.push.apple.com",
+	"apple":   "https://web.push.apple.com/",
 }
 
 type VapidTarget struct {

@@ -295,6 +295,11 @@ def sample_for_regex(regex, flags):
 def sample_for_spec(name, spec):
     value = sample_for_name(name)
     if isinstance(spec, dict):
+        mapped_name = spec.get("map_to")
+        if isinstance(mapped_name, str) and mapped_name and mapped_name != name:
+            mapped_value = sample_for_name(mapped_name)
+            if value == "token" and mapped_value != "token":
+                value = mapped_value
         default = spec.get("default")
         value_from_values = False
         label = str(spec.get("name") or "")
@@ -375,7 +380,7 @@ def sample_for_token(name, spec, tokens):
 
 
 def is_matrix_t2bot_template(schema, template):
-    if schema.lower() != "matrix":
+    if schema.lower() not in ("matrix", "matrixs"):
         return False
     if "{token}" not in template:
         return False
@@ -575,7 +580,7 @@ def generate_cases(schema, plugin, details):
                                             template_url = filled
                                             break
                         if (
-                            schema.lower() == "matrix"
+                            schema.lower() in ("matrix", "matrixs")
                             and name.lower() == "mode"
                             and str(value).lower() == "t2bot"
                         ):

@@ -11,6 +11,7 @@ type RevoltTarget struct {
 	targets  []string
 	iconURL  string
 	link     string
+	format   string
 }
 
 func NewRevoltTarget(target *ParsedURL) (*RevoltTarget, error) {
@@ -27,11 +28,17 @@ func NewRevoltTarget(target *ParsedURL) (*RevoltTarget, error) {
 		return nil, fmt.Errorf("missing targets")
 	}
 
+	format := normalizeNotifyFormat(target.Query["format"])
+	if format == "" {
+		format = "markdown"
+	}
+
 	return &RevoltTarget{
 		botToken: botToken,
 		targets:  targets,
 		iconURL:  strings.TrimSpace(target.Query["icon_url"]),
 		link:     strings.TrimSpace(target.Query["url"]),
+		format:   format,
 	}, nil
 }
 
@@ -54,27 +61,35 @@ func (r *RevoltTarget) BuildRequest(body, title string, notifyType NotifyType) (
 		iconURL = appriseImageURL(notifyType, "256x256")
 	}
 
-	embed := map[string]any{
-		"title":       nil,
-		"description": body,
-		"colour":      appriseColor(notifyType),
-		"replies":     nil,
-	}
+	content := body
 	if strings.TrimSpace(title) != "" {
-		if len(title) > 100 {
-			title = title[:100]
-		}
-		embed["title"] = title
+		content = title + "\n" + body
 	}
-	if iconURL != "" {
-		embed["icon_url"] = iconURL
-	}
-	if r.link != "" {
-		embed["url"] = r.link
-	}
-
 	payload := map[string]any{
-		"embeds": []any{embed},
+		"content": content,
+	}
+	if r.format == "markdown" {
+		embed := map[string]any{
+			"title":       nil,
+			"description": body,
+			"colour":      appriseColor(notifyType),
+			"replies":     nil,
+		}
+		if strings.TrimSpace(title) != "" {
+			if len(title) > 100 {
+				title = title[:100]
+			}
+			embed["title"] = title
+		}
+		if iconURL != "" {
+			embed["icon_url"] = iconURL
+		}
+		if r.link != "" {
+			embed["url"] = r.link
+		}
+		payload = map[string]any{
+			"embeds": []any{embed},
+		}
 	}
 
 	data, err := json.Marshal(payload)

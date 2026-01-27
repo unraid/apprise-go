@@ -130,8 +130,7 @@ func NewMatrixTarget(target *ParsedURL) (*MatrixTarget, error) {
 		return nil, fmt.Errorf("unsupported matrix message type")
 	}
 
-	notifyFormat := strings.TrimSpace(target.Query["format"])
-	notifyFormat = strings.ToLower(notifyFormat)
+	notifyFormat := normalizeNotifyFormat(target.Query["format"])
 	if notifyFormat == "" {
 		notifyFormat = "text"
 	}
