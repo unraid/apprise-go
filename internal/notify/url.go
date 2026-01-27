@@ -47,6 +47,12 @@ func ParseURL(raw string) (*ParsedURL, error) {
 
 	u, err := url.Parse(sanitized)
 	if err != nil {
+		if strings.Contains(err.Error(), "invalid port") {
+			parsed, parseErr := parseLenientURL(sanitized, schemeCandidate)
+			if parseErr == nil {
+				return parsed, nil
+			}
+		}
 		if schemeCandidate[0] < '0' || schemeCandidate[0] > '9' {
 			return nil, err
 		}
@@ -75,12 +81,8 @@ func ParseURL(raw string) (*ParsedURL, error) {
 		hasPort = true
 		value, err := strconv.Atoi(portRaw)
 		if err != nil {
-			if strings.EqualFold(u.Scheme, "tgram") {
-				host = u.Host
-				hasPort = false
-			} else {
-				return nil, fmt.Errorf("invalid port: %s", portRaw)
-			}
+			host = u.Host
+			hasPort = false
 		} else {
 			port = value
 		}
@@ -129,6 +131,65 @@ func ParseURL(raw string) (*ParsedURL, error) {
 		Password:     password,
 		HasPassword:  hasPassword,
 		Path:         parsedPath,
+		Query:        qsd.qsd,
+		QueryAdd:     qsd.add,
+		QueryDel:     qsd.del,
+		QueryPayload: qsd.payload,
+	}, nil
+}
+
+func parseLenientURL(raw string, scheme string) (*ParsedURL, error) {
+	parts := strings.SplitN(raw, "://", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid url")
+	}
+	rest := parts[1]
+	authority := rest
+	path := ""
+	if idx := strings.Index(rest, "/"); idx != -1 {
+		authority = rest[:idx]
+		path = rest[idx:]
+	}
+	query := ""
+	if idx := strings.Index(authority, "?"); idx != -1 {
+		query = authority[idx+1:]
+		authority = authority[:idx]
+	} else if idx := strings.Index(path, "?"); idx != -1 {
+		query = path[idx+1:]
+		path = path[:idx]
+	}
+
+	user := ""
+	password := ""
+	hasUser := false
+	hasPassword := false
+	host := authority
+	if idx := strings.LastIndex(authority, "@"); idx != -1 {
+		userinfo := authority[:idx]
+		host = authority[idx+1:]
+		hasUser = true
+		if parts := strings.SplitN(userinfo, ":", 2); len(parts) == 2 {
+			user = parts[0]
+			password = parts[1]
+			hasPassword = true
+		} else {
+			user = userinfo
+		}
+	}
+
+	qsd := parseQSD(query, false, true)
+
+	return &ParsedURL{
+		Raw:          raw,
+		Scheme:       strings.ToLower(scheme),
+		Host:         host,
+		Port:         0,
+		HasPort:      false,
+		User:         user,
+		HasUser:      hasUser,
+		Password:     password,
+		HasPassword:  hasPassword,
+		Path:         path,
 		Query:        qsd.qsd,
 		QueryAdd:     qsd.add,
 		QueryDel:     qsd.del,

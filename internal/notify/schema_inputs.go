@@ -47,7 +47,7 @@ func SchemaInputsForParsed(schema string, target *ParsedURL) (SchemaInputs, erro
 		}
 		mapTo := specMapTo(spec, name)
 		if raw, ok := tokenValues[name]; ok {
-			applySchemaValue(values, mapTo, raw, spec)
+			applySchemaValue(values, mapTo, raw, spec, false)
 		}
 	}
 
@@ -61,13 +61,7 @@ func SchemaInputsForParsed(schema string, target *ParsedURL) (SchemaInputs, erro
 		}
 		mapTo := specMapTo(spec, name)
 		if raw, ok := target.Query[strings.ToLower(name)]; ok {
-			applySchemaValue(values, mapTo, raw, spec)
-			continue
-		}
-		if def, ok := specDefault(spec); ok {
-			if _, exists := values[mapTo]; !exists {
-				applySchemaValue(values, mapTo, def, spec)
-			}
+			applySchemaValue(values, mapTo, raw, spec, true)
 		}
 	}
 
@@ -101,6 +95,12 @@ func SchemaInputsForParsed(schema string, target *ParsedURL) (SchemaInputs, erro
 		}
 	}
 
+	ensureEmptyKwargs(schema, specs, kwargs)
+
+	ensureListDefaults(specs, values)
+
+	adjustSchemaValues(target, values)
+
 	ApplySchemaOverrides(schema, target, values)
 
 	return SchemaInputs{
@@ -108,6 +108,56 @@ func SchemaInputsForParsed(schema string, target *ParsedURL) (SchemaInputs, erro
 		Kwargs:  kwargs,
 		Aliases: aliases,
 	}, nil
+}
+
+func adjustSchemaValues(target *ParsedURL, values map[string]SchemaValue) {
+	if target == nil {
+		return
+	}
+	if target.Host == "" {
+		sourceValue, ok := values["source"]
+		if ok {
+			if sourceStr, ok := sourceValue.Value.(string); ok && sourceStr != "" {
+				if targetsValue, ok := values["targets"]; ok {
+					if targets, ok := targetsValue.Value.([]string); ok {
+						values["targets"] = schemaValueList(append([]string{sourceStr}, targets...))
+						delete(values, "source")
+					}
+				}
+			}
+		}
+	}
+
+	if subValue, ok := values["subscriber"]; ok {
+		subStr, ok := subValue.Value.(string)
+		if ok && target.Host != "" {
+			if subStr == target.Host || subStr == "" {
+				values["subscriber"] = schemaValueAny(target.User + "@" + target.Host)
+			}
+		}
+	}
+
+	if _, ok := values["apikey"]; !ok {
+		if projectValue, ok := values["project"]; ok {
+			if projectStr, ok := projectValue.Value.(string); ok && projectStr != "" {
+				values["apikey"] = schemaValueAny(projectStr)
+			}
+		}
+	}
+
+	switch strings.ToLower(strings.TrimSpace(target.Scheme)) {
+	case "mailto", "mailtos":
+		if _, ok := values["from_addr"]; !ok {
+			values["from_addr"] = schemaValueAny("")
+		}
+		if _, ok := values["smtp_host"]; !ok {
+			values["smtp_host"] = schemaValueAny("")
+		}
+	case "gotify", "gotifys":
+		if _, ok := values["fullpath"]; !ok {
+			values["fullpath"] = schemaValueAny("/")
+		}
+	}
 }
 
 func (s SchemaInputs) ValuesMap() map[string]any {
@@ -178,7 +228,10 @@ func specAlias(spec map[string]any) string {
 		return ""
 	}
 	if raw, ok := spec["alias_of"]; ok && raw != nil {
-		return strings.TrimSpace(fmt.Sprint(raw))
+		if alias, ok := raw.(string); ok {
+			return strings.TrimSpace(alias)
+		}
+		return ""
 	}
 	return ""
 }
@@ -223,13 +276,37 @@ func specDefault(spec map[string]any) (any, bool) {
 	if spec == nil {
 		return nil, false
 	}
-	if raw, ok := spec["default"]; ok {
-		if raw == nil {
-			return nil, false
-		}
-		return raw, true
+	raw, ok := spec["default"]
+	if !ok || raw == nil {
+		return nil, false
 	}
-	return nil, false
+	return raw, true
+}
+
+func specDefaultAllowNil(spec map[string]any) (any, bool) {
+	if spec == nil {
+		return nil, false
+	}
+	raw, ok := spec["default"]
+	return raw, ok
+}
+
+func specRequired(spec map[string]any) bool {
+	if spec == nil {
+		return false
+	}
+	raw, ok := spec["required"]
+	if !ok || raw == nil {
+		return false
+	}
+	switch value := raw.(type) {
+	case bool:
+		return value
+	case string:
+		return parseBool(value, false)
+	default:
+		return parseBool(fmt.Sprint(value), false)
+	}
 }
 
 func applySchemaAliasValue(values map[string]SchemaValue, specs schemaSpecs, alias string, raw string) {
@@ -237,24 +314,56 @@ func applySchemaAliasValue(values map[string]SchemaValue, specs schemaSpecs, ali
 		return
 	}
 	if spec, ok := specs.args[alias]; ok {
-		applySchemaValue(values, specMapTo(spec, alias), raw, spec)
+		applySchemaValue(values, specMapTo(spec, alias), raw, spec, true)
 		return
 	}
 	if spec, ok := specs.tokens[alias]; ok {
-		applySchemaValue(values, specMapTo(spec, alias), raw, spec)
+		applySchemaValue(values, specMapTo(spec, alias), raw, spec, false)
 	}
 }
 
-func applySchemaValue(values map[string]SchemaValue, mapTo string, raw any, spec map[string]any) {
+var queryBoolRawMapTos = map[string]struct{}{
+	"store": {},
+}
+
+var queryNumberMapTos = map[string]struct{}{
+	"border":   {},
+	"duration": {},
+}
+
+var queryListMapTos = map[string]struct{}{
+	"txgroups": {},
+}
+
+func applySchemaValue(values map[string]SchemaValue, mapTo string, raw any, spec map[string]any, fromQuery bool) {
 	if mapTo == "" {
 		return
 	}
 
-	if isListType(spec) {
-		list := coerceList(raw, spec)
-		if len(list) == 0 {
-			return
+	if isListType(spec) && raw == nil {
+		return
+	}
+	if raw == nil {
+		values[mapTo] = schemaValueAny(nil)
+		return
+	}
+
+	if !fromQuery {
+		if rawStr, ok := raw.(string); ok {
+			if shouldApplyChoiceDefault(mapTo) && !valueAllowed(spec, rawStr) {
+				if def, ok := specDefault(spec); ok {
+					raw = def
+					rawStr = coerceString(def)
+				}
+			}
+			if (mapTo == "fullpath" || mapTo == "entity_id") && rawStr != "" && !strings.HasPrefix(rawStr, "/") {
+				raw = "/" + rawStr
+			}
 		}
+	}
+
+	if isListType(spec) || (fromQuery && isQueryListMapTo(mapTo)) {
+		list := coerceList(raw, spec)
 		if existing, ok := values[mapTo]; ok {
 			if existingList, ok := existing.Value.([]string); ok {
 				values[mapTo] = schemaValueList(append(existingList, list...))
@@ -265,16 +374,81 @@ func applySchemaValue(values map[string]SchemaValue, mapTo string, raw any, spec
 		return
 	}
 
+	if fromQuery && isQueryBoolRawMapTo(mapTo) {
+		values[mapTo] = schemaValueAny(coerceString(raw))
+		return
+	}
+
 	switch normalizeType(specType(spec)) {
 	case "bool":
 		values[mapTo] = schemaValueBool(coerceBool(raw))
 	case "int":
-		values[mapTo] = schemaValueInt(coerceInt(raw))
+		if fromQuery && !isQueryNumberMapTo(mapTo) {
+			values[mapTo] = schemaValueAny(coerceString(raw))
+		} else {
+			values[mapTo] = schemaValueInt(coerceInt(raw))
+		}
 	case "float":
-		values[mapTo] = schemaValueFloat(coerceFloat(raw))
+		if fromQuery && !isQueryNumberMapTo(mapTo) {
+			values[mapTo] = schemaValueAny(coerceString(raw))
+		} else {
+			values[mapTo] = schemaValueFloat(coerceFloat(raw))
+		}
 	default:
 		values[mapTo] = schemaValueAny(coerceString(raw))
 	}
+}
+
+func isQueryBoolRawMapTo(mapTo string) bool {
+	_, ok := queryBoolRawMapTos[mapTo]
+	return ok
+}
+
+func isQueryNumberMapTo(mapTo string) bool {
+	_, ok := queryNumberMapTos[mapTo]
+	return ok
+}
+
+func isQueryListMapTo(mapTo string) bool {
+	_, ok := queryListMapTos[mapTo]
+	return ok
+}
+
+func valueAllowed(spec map[string]any, raw string) bool {
+	if spec == nil {
+		return true
+	}
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return true
+	}
+	values, ok := spec["values"]
+	if !ok || values == nil {
+		return true
+	}
+	switch typed := values.(type) {
+	case []string:
+		for _, entry := range typed {
+			if strings.EqualFold(entry, raw) {
+				return true
+			}
+		}
+	case []any:
+		for _, entry := range typed {
+			if strings.EqualFold(fmt.Sprint(entry), raw) {
+				return true
+			}
+		}
+	default:
+		if strings.EqualFold(fmt.Sprint(typed), raw) {
+			return true
+		}
+	}
+	return false
+}
+
+func shouldApplyChoiceDefault(mapTo string) bool {
+	return strings.Contains(strings.ToLower(mapTo), "mode")
 }
 
 func normalizeType(value string) string {
@@ -465,42 +639,150 @@ func buildDelimRegex(delims []string) string {
 }
 
 func matchSchemaTemplates(templates []string, specs map[string]map[string]any, target *ParsedURL) map[string]any {
+	bestScore := -1
+	bestMissing := int(^uint(0) >> 1)
+	var bestValues map[string]any
 	for _, template := range templates {
-		values, ok := matchSchemaTemplate(template, specs, target)
-		if ok {
-			return values
+		values, score, missing, ok := matchSchemaTemplate(template, specs, target)
+		if !ok {
+			continue
 		}
+		if score > bestScore || (score == bestScore && missing < bestMissing) {
+			bestScore = score
+			bestMissing = missing
+			bestValues = values
+		}
+	}
+	if bestValues != nil {
+		return bestValues
 	}
 	return map[string]any{}
 }
 
 func applyTokenDefaults(specs map[string]map[string]any, values map[string]any, target *ParsedURL) {
-	if _, ok := values["schema"]; !ok {
-		values["schema"] = target.Scheme
-	}
-	if _, ok := values["host"]; !ok && target.Host != "" {
-		values["host"] = target.Host
-	}
-	if _, ok := values["user"]; !ok && target.HasUser {
-		values["user"] = target.User
-	}
-	if _, ok := values["password"]; !ok && target.HasPassword {
-		values["password"] = target.Password
-	}
-	if _, ok := values["port"]; !ok && target.HasPort {
-		values["port"] = target.Port
-	}
-
 	for name, spec := range specs {
 		mapTo := specMapTo(spec, name)
 		if _, ok := values[name]; ok {
 			continue
 		}
-		if _, ok := values[mapTo]; ok {
+		switch mapTo {
+		case "schema":
+			values[name] = target.Scheme
+		case "host":
+			if target.Host != "" {
+				values[name] = target.Host
+			} else {
+				values[name] = nil
+			}
+		case "user":
+			if target.HasUser {
+				values[name] = target.User
+			} else {
+				values[name] = nil
+			}
+		case "password":
+			if target.HasPassword {
+				values[name] = target.Password
+			} else {
+				values[name] = nil
+			}
+		case "port":
+			if target.HasPort {
+				values[name] = target.Port
+			} else {
+				values[name] = nil
+			}
+		}
+	}
+}
+
+func ensureListDefaults(specs schemaSpecs, values map[string]SchemaValue) {
+	listDefaultMapTos := map[string]struct{}{
+		"channels": {},
+		"targets":  {},
+	}
+	listMapTos := map[string]struct{}{}
+	for name, spec := range specs.tokens {
+		if !isListType(spec) {
 			continue
 		}
-		if def, ok := specDefault(spec); ok {
-			values[name] = def
+		mapTo := specMapTo(spec, name)
+		if mapTo != "" {
+			if _, ok := listDefaultMapTos[mapTo]; !ok {
+				continue
+			}
+			listMapTos[mapTo] = struct{}{}
+		}
+	}
+	for name, spec := range specs.args {
+		if !isListType(spec) {
+			continue
+		}
+		mapTo := specMapTo(spec, name)
+		if mapTo != "" {
+			if _, ok := listDefaultMapTos[mapTo]; !ok {
+				continue
+			}
+			listMapTos[mapTo] = struct{}{}
+		}
+	}
+
+	for mapTo := range listMapTos {
+		existing, ok := values[mapTo]
+		if !ok || existing.Value == nil {
+			values[mapTo] = schemaValueList([]string{})
+			continue
+		}
+		switch typed := existing.Value.(type) {
+		case []string:
+			// already list
+		case []any:
+			out := make([]string, 0, len(typed))
+			for _, item := range typed {
+				if item == nil {
+					continue
+				}
+				out = append(out, fmt.Sprint(item))
+			}
+			values[mapTo] = schemaValueList(out)
+		case string:
+			if typed == "" {
+				values[mapTo] = schemaValueList([]string{})
+			} else {
+				values[mapTo] = schemaValueList([]string{typed})
+			}
+		default:
+			values[mapTo] = schemaValueList([]string{fmt.Sprint(typed)})
+		}
+	}
+}
+
+func ensureEmptyKwargs(schema string, specs schemaSpecs, kwargs map[string]map[string]string) {
+	switch strings.ToLower(strings.TrimSpace(schema)) {
+	case "json", "jsons", "xml", "xmls", "form", "forms",
+		"apprise", "apprises",
+		"mailgun", "smtp2go", "sparkpost", "sendgrid", "msg91",
+		"ncloud", "nclouds", "nctalk", "nctalks",
+		"opsgenie", "pagertree", "onesignal",
+		"synology", "synologys":
+		for name, spec := range specs.kwargs {
+			mapTo := specMapTo(spec, name)
+			if mapTo == "" {
+				continue
+			}
+			if _, ok := kwargs[mapTo]; !ok {
+				kwargs[mapTo] = map[string]string{}
+			}
+		}
+	case "workflow", "workflows":
+		for name, spec := range specs.kwargs {
+			mapTo := specMapTo(spec, name)
+			if mapTo == "" {
+				continue
+			}
+			if _, ok := kwargs[mapTo]; !ok {
+				kwargs[mapTo] = map[string]string{}
+			}
 		}
 	}
 }
@@ -510,42 +792,63 @@ type segmentPart struct {
 	value   string
 }
 
-func matchSchemaTemplate(template string, specs map[string]map[string]any, target *ParsedURL) (map[string]any, bool) {
+func matchSchemaTemplate(template string, specs map[string]map[string]any, target *ParsedURL) (map[string]any, int, int, bool) {
 	parts := strings.SplitN(template, "://", 2)
 	if len(parts) != 2 {
-		return nil, false
+		return nil, 0, 0, false
 	}
 
 	schemeTemplate := parts[0]
 	rest := parts[1]
 
 	values := map[string]any{}
+	score := 0
+	missing := 0
 
 	if token, ok := exactToken(schemeTemplate); ok {
 		values[token] = target.Scheme
+		if target.Scheme != "" {
+			score++
+		}
 	} else if !strings.EqualFold(schemeTemplate, target.Scheme) {
-		return nil, false
+		return nil, 0, 0, false
 	}
 
 	authority := rest
 	pathTemplate := ""
-	if idx := strings.Index(rest, "/"); idx != -1 {
+	queryTemplate := ""
+	if idx := strings.Index(rest, "?"); idx != -1 {
 		authority = rest[:idx]
-		pathTemplate = rest[idx+1:]
+		queryTemplate = rest[idx+1:]
+	}
+	if idx := strings.Index(authority, "/"); idx != -1 {
+		pathTemplate = authority[idx+1:]
+		authority = authority[:idx]
 	}
 
-	if !matchTemplateAuthority(authority, specs, target, values) {
-		return nil, false
+	authorityScore, authorityMissing, ok := matchTemplateAuthority(authority, specs, target, values)
+	if !ok {
+		return nil, 0, 0, false
 	}
 
-	if !matchTemplatePath(pathTemplate, specs, target, values) {
-		return nil, false
+	pathScore, pathMissing, ok := matchTemplatePath(pathTemplate, specs, target, values)
+	if !ok {
+		return nil, 0, 0, false
 	}
 
-	return values, true
+	queryScore, queryMissing, ok := matchTemplateQuery(queryTemplate, specs, target, values)
+	if !ok {
+		return nil, 0, 0, false
+	}
+
+	score += authorityScore + pathScore + queryScore
+	missing += authorityMissing + pathMissing + queryMissing
+	return values, score, missing, true
 }
 
-func matchTemplateAuthority(template string, specs map[string]map[string]any, target *ParsedURL, values map[string]any) bool {
+func matchTemplateAuthority(template string, specs map[string]map[string]any, target *ParsedURL, values map[string]any) (int, int, bool) {
+	score := 0
+	missing := 0
 	userinfoTemplate := ""
 	hostTemplate := template
 	if idx := strings.LastIndex(template, "@"); idx != -1 {
@@ -553,11 +856,38 @@ func matchTemplateAuthority(template string, specs map[string]map[string]any, ta
 		hostTemplate = template[idx+1:]
 	}
 
-	if userinfoTemplate == "" && target.HasUser {
-		return false
-	}
-	if userinfoTemplate != "" && !target.HasUser {
-		return false
+	if userinfoTemplate == "" && target.HasUser && strings.Contains(hostTemplate, ":") {
+		hostPart := hostTemplate
+		portTemplate := ""
+		if idx := strings.LastIndex(hostTemplate, ":"); idx != -1 {
+			hostPart = hostTemplate[:idx]
+			portTemplate = hostTemplate[idx+1:]
+		}
+		if hostToken, ok := exactToken(hostPart); ok {
+			if portToken, ok := exactToken(portTemplate); ok {
+				hostMapTo := specMapTo(specs[hostToken], hostToken)
+				portMapTo := specMapTo(specs[portToken], portToken)
+				if hostMapTo != "host" && portMapTo != "port" {
+					values[hostToken] = target.User
+					if target.User != "" {
+						score++
+					}
+					portValue := target.Password
+					if wantsEmailValue(specs[portToken], portToken, portMapTo) {
+						if shouldSetEmailToken(portToken, portMapTo) && target.Host != "" {
+							portValue = portValue + "@" + target.Host
+						} else {
+							return score, missing, true
+						}
+					}
+					if portValue != "" {
+						values[portToken] = portValue
+						score++
+					}
+					return score, missing, true
+				}
+			}
+		}
 	}
 
 	if userinfoTemplate != "" {
@@ -569,27 +899,54 @@ func matchTemplateAuthority(template string, specs map[string]map[string]any, ta
 		}
 
 		if token, ok := exactToken(userTemplate); ok {
-			values[token] = target.User
+			if target.HasUser {
+				values[token] = target.User
+				if target.User != "" {
+					score++
+				}
+				if !tokenValueMatches(specs[token], values[token]) {
+					return 0, 0, false
+				}
+			} else {
+				missing++
+				mapTo := specMapTo(specs[token], token)
+				if wantsEmptyOnMissingUserinfo(mapTo, token) {
+					values[token] = ""
+				}
+			}
 		} else if userTemplate != "" && userTemplate != target.User {
-			return false
+			return 0, 0, false
+		} else if userTemplate != "" {
+			score++
 		}
 
 		if passTemplate != "" {
-			if !target.HasPassword {
-				return false
-			}
 			if token, ok := exactToken(passTemplate); ok {
-				values[token] = target.Password
+				if target.HasPassword {
+					values[token] = target.Password
+					if target.Password != "" {
+						score++
+					}
+					if !tokenValueMatches(specs[token], values[token]) {
+						return 0, 0, false
+					}
+				} else {
+					missing++
+					mapTo := specMapTo(specs[token], token)
+					if wantsEmptyOnMissingUserinfo(mapTo, token) {
+						values[token] = ""
+					}
+				}
 			} else if passTemplate != target.Password {
-				return false
+				return 0, 0, false
+			} else {
+				score++
 			}
-		} else if target.HasPassword {
-			return false
 		}
 	}
 
 	if hostTemplate == "" {
-		return target.Host == ""
+		return score, missing, true
 	}
 
 	portTemplate := ""
@@ -599,84 +956,187 @@ func matchTemplateAuthority(template string, specs map[string]map[string]any, ta
 		portTemplate = hostTemplate[idx+1:]
 	}
 
-	if portTemplate == "" && target.HasPort {
-		return false
-	}
-	if portTemplate != "" && !target.HasPort {
-		return false
+	if !target.HasPort && strings.Contains(target.Host, ":") && portTemplate != "" {
+		rawHost := target.Host
+		hostValue := rawHost
+		portValue := ""
+		if idx := strings.LastIndex(rawHost, ":"); idx != -1 {
+			hostValue = rawHost[:idx]
+			portValue = rawHost[idx+1:]
+		}
+		if hostToken, ok := exactToken(hostPart); ok {
+			values[hostToken] = hostValue
+			if hostValue != "" {
+				score++
+			}
+		}
+		if portToken, ok := exactToken(portTemplate); ok {
+			if portValue != "" {
+				values[portToken] = portValue
+				score++
+			} else {
+				missing++
+			}
+		}
+		return score, missing, true
 	}
 
 	if token, ok := exactToken(hostPart); ok {
-		values[token] = target.Host
+		if target.Host != "" {
+			values[token] = target.Host
+			score++
+			if !tokenValueMatches(specs[token], values[token]) {
+				return 0, 0, false
+			}
+		} else {
+			missing++
+		}
 	} else if hostPart != "" && !strings.EqualFold(hostPart, target.Host) {
-		return false
+		return 0, 0, false
+	} else if hostPart != "" {
+		score++
 	}
 
 	if portTemplate != "" {
-		portValue := strconv.Itoa(target.Port)
 		if token, ok := exactToken(portTemplate); ok {
-			values[token] = portValue
-		} else if portTemplate != portValue {
-			return false
+			if target.HasPort {
+				portValue := strconv.Itoa(target.Port)
+				values[token] = portValue
+				score++
+				if !tokenValueMatches(specs[token], values[token]) {
+					return 0, 0, false
+				}
+			} else {
+				missing++
+			}
+		} else if !target.HasPort {
+			return 0, 0, false
+		} else if portTemplate != strconv.Itoa(target.Port) {
+			return 0, 0, false
+		} else {
+			score++
 		}
 	}
 
-	return true
+	return score, missing, true
 }
 
-func matchTemplatePath(template string, specs map[string]map[string]any, target *ParsedURL, values map[string]any) bool {
+func matchTemplatePath(template string, specs map[string]map[string]any, target *ParsedURL, values map[string]any) (int, int, bool) {
 	segments := splitPathSegmentsLocal(target.Path)
 	if template == "" {
-		return len(segments) == 0
+		return 0, 0, true
 	}
 
 	patternSegments := splitTemplateSegments(template)
 	if len(patternSegments) == 0 {
-		return len(segments) == 0
+		return 0, 0, true
 	}
 
+	score := 0
+	missing := 0
 	idx := 0
 	for i, pattern := range patternSegments {
 		if idx > len(segments) {
-			return false
+			return score, missing, false
 		}
 		if len(pattern) == 1 && pattern[0].isToken {
 			token := pattern[0].value
 			spec := specs[token]
 			if isListType(spec) && (i == len(patternSegments)-1 || delimContains(spec, "/")) {
-				if idx >= len(segments) {
-					values[token] = []string{}
-					idx = len(segments)
-					continue
+				remaining := []string{}
+				if idx < len(segments) {
+					remaining = append([]string(nil), segments[idx:]...)
+					score += len(remaining)
 				}
-				remaining := append([]string(nil), segments[idx:]...)
 				values[token] = remaining
 				idx = len(segments)
 				continue
 			}
 			if idx >= len(segments) {
-				return false
+				missing++
+				continue
 			}
-			values[token] = segments[idx]
+			segment := segments[idx]
+			if !tokenValueMatches(spec, segment) {
+				return score, missing, false
+			}
+			values[token] = segment
+			if segment != "" {
+				score++
+			}
 			idx++
 			continue
 		}
 
 		if idx >= len(segments) {
-			return false
+			return score, missing, false
 		}
 		segment := segments[idx]
 		matched, ok := matchComplexSegment(pattern, segment, specs)
 		if !ok {
-			return false
+			return score, missing, false
 		}
 		for key, value := range matched {
 			values[key] = value
+			if value != "" {
+				score++
+			}
 		}
 		idx++
 	}
 
-	return idx == len(segments)
+	if idx != len(segments) {
+		return score, missing, false
+	}
+	return score, missing, true
+}
+
+func matchTemplateQuery(template string, specs map[string]map[string]any, target *ParsedURL, values map[string]any) (int, int, bool) {
+	if template == "" {
+		return 0, 0, true
+	}
+	score := 0
+	missing := 0
+	pairs := strings.FieldsFunc(template, func(r rune) bool {
+		return r == '&' || r == ';'
+	})
+	for _, pair := range pairs {
+		if pair == "" {
+			continue
+		}
+		parts := strings.SplitN(pair, "=", 2)
+		key := strings.TrimSpace(parts[0])
+		val := ""
+		if len(parts) == 2 {
+			val = strings.TrimSpace(parts[1])
+		}
+		if key == "" {
+			continue
+		}
+		queryKey := strings.ToLower(key)
+		if token, ok := exactToken(val); ok {
+			if raw, ok := target.Query[queryKey]; ok {
+				values[token] = raw
+				if raw != "" {
+					score++
+				}
+			} else {
+				missing++
+			}
+			continue
+		}
+		if raw, ok := target.Query[queryKey]; ok {
+			if val != "" && raw != val {
+				return 0, 0, false
+			}
+			if raw != "" {
+				score++
+			}
+		} else if val != "" {
+			missing++
+		}
+	}
+	return score, missing, true
 }
 
 func splitPathSegmentsLocal(rawPath string) []string {
@@ -826,6 +1286,72 @@ func tokenRegex(spec map[string]any, fallback string) (string, string) {
 		regex = fallback
 	}
 	return regex, flags
+}
+
+func tokenValueMatches(spec map[string]any, value any) bool {
+	_ = spec
+	_ = value
+	return true
+}
+
+func wantsEmailValue(spec map[string]any, token, mapTo string) bool {
+	lowerToken := strings.ToLower(strings.TrimSpace(token))
+	lowerMap := strings.ToLower(strings.TrimSpace(mapTo))
+	if strings.Contains(lowerToken, "email") || strings.Contains(lowerMap, "email") {
+		return true
+	}
+	if strings.Contains(lowerToken, "addr") || strings.Contains(lowerMap, "addr") {
+		return true
+	}
+	if spec != nil {
+		if raw, ok := spec["regex"]; ok && raw != nil {
+			switch typed := raw.(type) {
+			case []string:
+				if len(typed) > 0 && strings.Contains(typed[0], "@") {
+					return true
+				}
+			case []any:
+				if len(typed) > 0 && strings.Contains(fmt.Sprint(typed[0]), "@") {
+					return true
+				}
+			case string:
+				if strings.Contains(typed, "@") {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+func wantsEmptyOnMissingUserinfo(mapTo, token string) bool {
+	lower := strings.ToLower(strings.TrimSpace(mapTo))
+	lowerToken := strings.ToLower(strings.TrimSpace(token))
+	if lower == "user" || lower == "password" {
+		return false
+	}
+	if strings.Contains(lower, "key") || strings.Contains(lower, "secret") || strings.Contains(lower, "user") ||
+		strings.Contains(lower, "pass") || strings.Contains(lower, "auth") || strings.Contains(lower, "account") ||
+		strings.Contains(lowerToken, "key") || strings.Contains(lowerToken, "secret") || strings.Contains(lowerToken, "user") ||
+		strings.Contains(lowerToken, "pass") || strings.Contains(lowerToken, "auth") || strings.Contains(lowerToken, "account") {
+		return true
+	}
+	return false
+}
+
+func shouldSetEmailToken(token, mapTo string) bool {
+	lower := strings.ToLower(strings.TrimSpace(mapTo))
+	lowerToken := strings.ToLower(strings.TrimSpace(token))
+	if strings.Contains(lower, "from") || strings.Contains(lowerToken, "from") {
+		return true
+	}
+	if strings.Contains(lower, "addr") || strings.Contains(lowerToken, "addr") {
+		return true
+	}
+	if strings.Contains(lower, "email") && strings.Contains(lower, "from") {
+		return true
+	}
+	return false
 }
 
 func exactToken(value string) (string, bool) {

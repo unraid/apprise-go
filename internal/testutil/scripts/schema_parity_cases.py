@@ -1,6 +1,7 @@
 import json
 import re
 import sys
+import urllib.parse
 
 from apprise.plugins import N_MGR
 from apprise.plugins import details as plugin_details
@@ -24,6 +25,8 @@ CANDIDATES = [
     "15555550123",
     "topic",
     "channel",
+    "ABC@DEF",
+    "user@localhost",
 ]
 
 
@@ -71,7 +74,12 @@ def is_simple_template(template):
 
 
 def token_name(segment):
-    if segment.startswith("{") and segment.endswith("}") and segment.count("{") == 1 and segment.count("}") == 1:
+    if (
+        segment.startswith("{")
+        and segment.endswith("}")
+        and segment.count("{") == 1
+        and segment.count("}") == 1
+    ):
         return segment[1:-1]
     return None
 
@@ -88,8 +96,8 @@ def sample_for_name(name):
         return "443"
     if "email" in lowered:
         return "user@example.com"
-    if "url" in lowered or "webhook" in lowered:
-        return "https://example.com/hook"
+    if "webhook" in lowered or "url" in lowered:
+        return "token"
     if "region" in lowered:
         return "us-west-2"
     if "uuid" in lowered:
@@ -128,6 +136,24 @@ def match_regex(regex, flags, candidate):
 
 
 def sample_for_regex(regex, flags):
+    if "@@@" in regex:
+        return "user@example.com"
+
+    if "@" in regex:
+        for candidate in ("ABC@DEF", "user@localhost", "user@example.com"):
+            if match_regex(regex, flags, candidate):
+                return candidate
+
+    if regex.lstrip("^").startswith("V2"):
+        candidate = "V2ABC123"
+        if match_regex(regex, flags, candidate):
+            return candidate
+
+    if "xox" in regex.lower():
+        candidate = "xoxb-12345-ABCDE"
+        if match_regex(regex, flags, candidate):
+            return candidate
+
     for candidate in CANDIDATES:
         if match_regex(regex, flags, candidate):
             return candidate
@@ -152,6 +178,10 @@ def sample_for_regex(regex, flags):
 
 def sample_for_token(name, spec):
     value = sample_for_name(name)
+    if isinstance(spec, dict) and spec.get("group"):
+        group = spec.get("group")
+        if isinstance(group, (list, tuple, set)) and group:
+            value = sample_for_name(str(list(group)[0]))
     regex = None
     flags = 0
     raw_regex = spec.get("regex") if isinstance(spec, dict) else None
@@ -178,6 +208,8 @@ def sample_for_token(name, spec):
 def fill_template(template, schema, tokens):
     values = {"schema": schema}
     for name, spec in tokens.items():
+        if name == "schema":
+            continue
         values[name] = sample_for_token(name, spec)
 
     url = template
@@ -190,19 +222,81 @@ def fill_template(template, schema, tokens):
     return url
 
 
+def template_token_count(template):
+    if not isinstance(template, str):
+        return 0
+    return len(re.findall(r"{[^{}]+}", template))
+
+
+def query_value_from_default(default, spec):
+    if default is None:
+        return None
+    if isinstance(default, bool):
+        return "yes" if default else "no"
+    if isinstance(default, (int, float)):
+        return str(default)
+    if isinstance(default, (list, tuple)):
+        if not default:
+            return None
+        delim = ","
+        raw_delim = spec.get("delim") if isinstance(spec, dict) else None
+        if isinstance(raw_delim, (list, tuple)) and raw_delim:
+            delim = raw_delim[0]
+        elif isinstance(raw_delim, str) and raw_delim:
+            delim = raw_delim
+        return delim.join(str(item) for item in default)
+    if isinstance(default, str):
+        return default if default else None
+    return str(default)
+
+
+def build_query(details):
+    args = details.get("args") or {}
+    params = {}
+    for name, spec in args.items():
+        if not isinstance(spec, dict):
+            continue
+        if "alias_of" in spec:
+            continue
+        if name in ("cache",):
+            continue
+        arg_type = str(spec.get("type") or "").lower()
+        if arg_type.startswith("int") or arg_type.startswith("float"):
+            continue
+        if arg_type.startswith("choice:int") or arg_type.startswith("choice:float"):
+            continue
+        default = spec.get("default", None)
+        value = query_value_from_default(default, spec)
+        if value is None:
+            continue
+        params[name] = value
+
+    if not params:
+        return ""
+    return urllib.parse.urlencode(params, doseq=True)
+
+
 def generate_url(schema, plugin, info):
-    details = info.get("details", {}) if isinstance(info, dict) else {}
+    details = info if isinstance(info, dict) else {}
     templates = details.get("templates") or []
     tokens = details.get("tokens") or {}
+    query = build_query(details)
 
-    for template in templates:
+    ordered_templates = sorted(
+        (t for t in templates if isinstance(t, str)),
+        key=template_token_count,
+        reverse=True,
+    )
+
+    for template in ordered_templates:
         if not isinstance(template, str):
-            continue
-        if not is_simple_template(template):
             continue
         url = fill_template(template, schema, tokens)
         if not url:
             continue
+        if query:
+            sep = "&" if "?" in url else "?"
+            url = f"{url}{sep}{query}"
         results = plugin.parse_url(url)
         if results:
             return url
@@ -212,10 +306,17 @@ def generate_url(schema, plugin, info):
         f"{schema}://token",
         f"{schema}://user:pass@example.com",
         f"{schema}://user:pass@example.com/target",
+        f"{schema}://token:token@12345",
+        f"{schema}://token:token/12345",
+        f"{schema}://12345:ABC/12345",
     ):
-        results = plugin.parse_url(fallback)
+        url = fallback
+        if query:
+            sep = "&" if "?" in url else "?"
+            url = f"{url}{sep}{query}"
+        results = plugin.parse_url(url)
         if results:
-            return fallback
+            return url
 
     return None
 
@@ -224,7 +325,8 @@ def main():
     failures = []
     cases = []
 
-    for schema in sorted(N_MGR.keys()):
+    schemas = list(N_MGR.schemas()) if hasattr(N_MGR, "schemas") else list(N_MGR)
+    for schema in sorted(schemas):
         plugin = N_MGR[schema]
         info = plugin_details(plugin)
         url = generate_url(schema, plugin, info)
