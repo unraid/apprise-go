@@ -14,5 +14,53 @@
         "url": "https://mastodon.local/api/v1/statuses"
       }
     ]
+  },
+  {
+    "name": "mastodon-default",
+    "requests": [
+      {
+        "body": "{\"status\": \"apprise parity\\r\\nhello from python\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "toot-default",
+    "requests": [
+      {
+        "body": "{\"status\": \"apprise parity\\r\\nhello from python\", \"sensitive\": false, \"visibility\": \"public\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "toots-default",
+    "requests": [
+      {
+        "body": "{\"status\": \"apprise parity\\r\\nhello from python\", \"sensitive\": false, \"visibility\": \"public\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
   }
 ]

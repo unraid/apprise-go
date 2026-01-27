@@ -4,5 +4,11 @@
     "url": "psafer://privatekey/device1/device2?sound=5&vibration=2",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "psafers-default",
+    "url": "psafers://privatekey/device1/device2?sound=5&vibration=2",
+    "body": "hello from python",
+    "title": "apprise parity"
   }
 ]

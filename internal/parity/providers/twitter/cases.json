@@ -10,5 +10,11 @@
     "url": "twitter://ckey/csecret/akey/asecret?mode=tweet",
     "body": "hello",
     "title": ""
+  },
+  {
+    "name": "x-default",
+    "url": "x://ckey/csecret/akey/asecret",
+    "body": "hello",
+    "title": ""
   }
 ]

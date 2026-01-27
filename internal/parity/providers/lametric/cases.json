@@ -4,5 +4,11 @@
     "url": "lametrics://apikey@lametric.local",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "lametric-default",
+    "url": "lametric://apikey@lametric.local",
+    "body": "hello from python",
+    "title": "apprise parity"
   }
 ]

@@ -27,5 +27,34 @@
         "url": "http://talk.local/nextcloud/ocs/v2.php/apps/spreed/api/v1/chat/room2"
       }
     ]
+  },
+  {
+    "name": "nctalks-default",
+    "requests": [
+      {
+        "body": "{\"message\": \"apprise parity\\r\\nhello from python\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-test": "abc"
+        },
+        "method": "POST",
+        "url": "https://talk.local/nextcloud/ocs/v2.php/apps/spreed/api/v1/chat/room1"
+      },
+      {
+        "body": "{\"message\": \"apprise parity\\r\\nhello from python\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-test": "abc"
+        },
+        "method": "POST",
+        "url": "https://talk.local/nextcloud/ocs/v2.php/apps/spreed/api/v1/chat/room2"
+      }
+    ]
   }
 ]

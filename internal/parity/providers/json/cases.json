@@ -12,5 +12,12 @@
     "body": "hello",
     "title": "title",
     "type": "success"
+  },
+  {
+    "name": "jsons-default",
+    "url": "jsons://example.com/notify",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]

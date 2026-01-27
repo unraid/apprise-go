@@ -34,17 +34,6 @@ func caseScheme(t *testing.T, url string) string {
 	return parsed.Scheme
 }
 
-func rewriteCaseScheme(t *testing.T, c providerCase, schema string) providerCase {
-	t.Helper()
-
-	parts := strings.SplitN(c.URL, "://", 2)
-	if len(parts) != 2 {
-		t.Fatalf("case url missing scheme: %s", c.URL)
-	}
-	c.URL = schema + "://" + parts[1]
-	return c
-}
-
 func caseForSchema(t *testing.T, schema string, def providerDefinition) providerCase {
 	t.Helper()
 
@@ -58,8 +47,12 @@ func caseForSchema(t *testing.T, schema string, def providerDefinition) provider
 		t.Fatalf("provider %s has no cases", def.Name)
 	}
 
-	// Use a stable fallback case and rewrite the scheme to exercise every schema alias.
-	return rewriteCaseScheme(t, def.Cases[0], schema)
+	available := make([]string, 0, len(def.Cases))
+	for _, c := range def.Cases {
+		available = append(available, caseScheme(t, c.URL))
+	}
+	t.Fatalf("no case for schema %s in provider %s (available: %s)", schema, def.Name, strings.Join(available, ", "))
+	return providerCase{}
 }
 
 func TestE2ERequestParityAllSchemas(t *testing.T) {

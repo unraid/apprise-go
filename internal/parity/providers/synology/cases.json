@@ -4,5 +4,11 @@
     "url": "synology://user:pass@chat.local/token/prefix?file_url=https://example.com/file.txt&+X-Trace=abc",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "synologys-default",
+    "url": "synologys://user:pass@chat.local/token/prefix?file_url=https://example.com/file.txt&+X-Trace=abc",
+    "body": "hello from python",
+    "title": "apprise parity"
   }
 ]

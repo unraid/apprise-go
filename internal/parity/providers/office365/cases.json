@@ -4,5 +4,11 @@
     "url": "azure://sender@example.com/tenant123/client123/secret123/target@example.com",
     "body": "hello",
     "title": "Test Subject"
+  },
+  {
+    "name": "o365-default",
+    "url": "o365://sender@example.com/tenant123/client123/secret123/target@example.com",
+    "body": "hello",
+    "title": "Test Subject"
   }
 ]

@@ -13,5 +13,20 @@
         "url": "http://chat.example.com/hooks/abc123/def456"
       }
     ]
+  },
+  {
+    "name": "rockets-default",
+    "requests": [
+      {
+        "body": "{\"text\": \"apprise parity\\r\\nhello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://chat.example.com/hooks/abc123/def456"
+      }
+    ]
   }
 ]

@@ -4,5 +4,11 @@
     "url": "nclouds://user:pass@nextcloud.local/target1",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "ncloud-default",
+    "url": "ncloud://user:pass@nextcloud.local/target1",
+    "body": "hello from python",
+    "title": "apprise parity"
   }
 ]

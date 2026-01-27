@@ -4,5 +4,11 @@
     "url": "misskeys://token@misskey.example",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "misskey-default",
+    "url": "misskey://token@misskey.example",
+    "body": "hello from python",
+    "title": "apprise parity"
   }
 ]

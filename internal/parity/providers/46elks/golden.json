@@ -41,5 +41,21 @@
         "url": "https://api.46elks.com/a1/sms"
       }
     ]
+  },
+  {
+    "name": "elks-default",
+    "requests": [
+      {
+        "body": "to=14051231234&from=14051231234&message=title%0D%0Abody",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.46elks.com/a1/sms"
+      }
+    ]
   }
 ]

@@ -5,5 +5,12 @@
     "body": "hello from python",
     "title": "apprise parity",
     "type": "info"
+  },
+  {
+    "name": "napi-default",
+    "url": "napi://clientid/secret/@john?mode=template",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]

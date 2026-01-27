@@ -14,5 +14,21 @@
         "url": "https://nextcloud.local/ocs/v2.php/apps/notifications/api/v2/admin_notifications/target1"
       }
     ]
+  },
+  {
+    "name": "ncloud-default",
+    "requests": [
+      {
+        "body": "shortMessage=apprise+parity&longMessage=hello+from+python",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://nextcloud.local/ocs/v2.php/apps/notifications/api/v2/admin_notifications/target1"
+      }
+    ]
   }
 ]

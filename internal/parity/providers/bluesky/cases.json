@@ -4,5 +4,11 @@
     "url": "bsky://handle@token",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "bluesky-default",
+    "url": "bluesky://handle@token",
+    "body": "hello from python",
+    "title": "apprise parity"
   }
 ]

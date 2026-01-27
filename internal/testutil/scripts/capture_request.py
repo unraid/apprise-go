@@ -278,6 +278,10 @@ def capture_request(url, body, title, notify_type):
             response._content = b'{"uri":"at://example/post"}'
         elif parsed.netloc == "api.twist.com" and parsed.path.endswith("/users/login"):
             response._content = b'{"token":"token","default_workspace":12345}'
+        elif parsed.netloc == "api.twitter.com" and parsed.path.endswith(
+            "/account/verify_credentials.json"
+        ):
+            response._content = b'{"screen_name":"apprise","id":"123","id_str":"123"}'
         elif parsed.path.endswith("/Users/AuthenticateByName"):
             response._content = (
                 b'{"AccessToken":"token","Id":"user-id","User":{"Id":"user-id"}}'

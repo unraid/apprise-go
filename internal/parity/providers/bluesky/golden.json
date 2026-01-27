@@ -44,5 +44,51 @@
         "url": "https://bsky.social/xrpc/com.atproto.repo.createRecord"
       }
     ]
+  },
+  {
+    "name": "bluesky-default",
+    "requests": [
+      {
+        "body": "",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "GET",
+        "url": "https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=handle.bsky.social"
+      },
+      {
+        "body": "",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "GET",
+        "url": "https://plc.directory/did:plc:123"
+      },
+      {
+        "body": "{\"identifier\": \"did:plc:123\", \"password\": \"token\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://bsky.social/xrpc/com.atproto.server.createSession"
+      },
+      {
+        "body": "{\"collection\": \"app.bsky.feed.post\", \"repo\": \"did:plc:123\", \"record\": {\"text\": \"apprise parity\\r\\nhello from python\", \"createdAt\": \"2024-01-01T00:00:00Z\", \"$type\": \"app.bsky.feed.post\"}}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://bsky.social/xrpc/com.atproto.repo.createRecord"
+      }
+    ]
   }
 ]

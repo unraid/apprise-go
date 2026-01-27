@@ -12,5 +12,12 @@
     "body": "hello",
     "title": "",
     "type": "warning"
+  },
+  {
+    "name": "elks-default",
+    "url": "elks://user:pass@14051231234",
+    "body": "body",
+    "title": "title",
+    "type": "info"
   }
 ]

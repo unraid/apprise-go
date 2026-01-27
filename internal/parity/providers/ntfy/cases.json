@@ -12,5 +12,12 @@
     "body": "body",
     "title": "title",
     "type": "failure"
+  },
+  {
+    "name": "ntfys-default",
+    "url": "ntfys://topic?image=no",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]

@@ -12,5 +12,12 @@
     "body": "hello",
     "title": "title",
     "type": "success"
+  },
+  {
+    "name": "gotifys-default",
+    "url": "gotifys://example.com/ABC123",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]

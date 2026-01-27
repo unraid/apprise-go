@@ -4,5 +4,11 @@
     "url": "nctalk://user:pass@talk.local/room1/room2?url_prefix=nextcloud&+X-Test=abc",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "nctalks-default",
+    "url": "nctalks://user:pass@talk.local/room1/room2?url_prefix=nextcloud&+X-Test=abc",
+    "body": "hello from python",
+    "title": "apprise parity"
   }
 ]

@@ -4,5 +4,23 @@
     "url": "mastodons://token@mastodon.local",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "mastodon-default",
+    "url": "mastodon://token@mastodon.local",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "toot-default",
+    "url": "toot://token@mastodon.local",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "toots-default",
+    "url": "toots://token@mastodon.local",
+    "body": "hello from python",
+    "title": "apprise parity"
   }
 ]

@@ -30,5 +30,21 @@
         "url": "http://example.com/message"
       }
     ]
+  },
+  {
+    "name": "gotifys-default",
+    "requests": [
+      {
+        "body": "{\"priority\": 5, \"title\": \"apprise parity\", \"message\": \"hello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-gotify-key": "ABC123"
+        },
+        "method": "POST",
+        "url": "https://example.com/message"
+      }
+    ]
   }
 ]

@@ -52,6 +52,9 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	} else if strings.Contains(req.URL.Host, "login.microsoftonline.com") && strings.HasSuffix(req.URL.Path, "/oauth2/v2.0/token") {
 		responseBody = `{"access_token":"token","expires_in":3600}`
 		contentType = "application/json"
+	} else if req.URL.Host == "api.twitter.com" && strings.HasSuffix(req.URL.Path, "/account/verify_credentials.json") {
+		responseBody = `{"screen_name":"apprise","id":"123","id_str":"123"}`
+		contentType = "application/json"
 	} else if strings.HasSuffix(req.URL.Path, "/xrpc/com.atproto.server.createSession") {
 		responseBody = `{"accessJwt":"token","refreshJwt":"refresh"}`
 		contentType = "application/json"

@@ -4,5 +4,11 @@
     "url": "emby://user:pass@emby.local?modal=yes",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "embys-default",
+    "url": "embys://user:pass@emby.local?modal=yes",
+    "body": "hello from python",
+    "title": "apprise parity"
   }
 ]

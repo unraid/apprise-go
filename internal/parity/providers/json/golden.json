@@ -30,5 +30,20 @@
         "url": "http://example.com:8080/notify?ref=xyz"
       }
     ]
+  },
+  {
+    "name": "jsons-default",
+    "requests": [
+      {
+        "body": "{\"version\": \"1.0\", \"title\": \"apprise parity\", \"message\": \"hello from python\", \"attachments\": [], \"type\": \"info\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://example.com/notify"
+      }
+    ]
   }
 ]

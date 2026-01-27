@@ -15,5 +15,22 @@
         "url": "http://chat.local/prefix/webapi/entry.cgi?api=SYNO.Chat.External&method=incoming&version=2&token=token"
       }
     ]
+  },
+  {
+    "name": "synologys-default",
+    "requests": [
+      {
+        "body": "payload={\"text\": \"apprise parity\\r\\nhello from python\", \"file_url\": \"https://example.com/file.txt\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise",
+          "x-trace": "abc"
+        },
+        "method": "POST",
+        "url": "https://chat.local/prefix/webapi/entry.cgi?api=SYNO.Chat.External&method=incoming&version=2&token=token"
+      }
+    ]
   }
 ]

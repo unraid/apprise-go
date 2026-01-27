@@ -12,5 +12,12 @@
     "body": "body",
     "title": "title",
     "type": "warning"
+  },
+  {
+    "name": "apprises-default",
+    "url": "apprises://example.com/ABC123?method=json",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]

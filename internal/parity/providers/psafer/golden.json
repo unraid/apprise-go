@@ -23,5 +23,30 @@
         "url": "http://www.pushsafer.com/api"
       }
     ]
+  },
+  {
+    "name": "psafers-default",
+    "requests": [
+      {
+        "body": "t=apprise+parity&m=hello+from+python&i=25&c=%233AA3E3&d=device1&s=5&v=2&k=privatekey",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.pushsafer.com/api"
+      },
+      {
+        "body": "t=apprise+parity&m=hello+from+python&i=25&c=%233AA3E3&d=device2&s=5&v=2&k=privatekey",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.pushsafer.com/api"
+      }
+    ]
   }
 ]

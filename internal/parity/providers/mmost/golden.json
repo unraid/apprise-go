@@ -13,5 +13,20 @@
         "url": "http://mattermost.example.com/hooks/hooks-token"
       }
     ]
+  },
+  {
+    "name": "mmosts-default",
+    "requests": [
+      {
+        "body": "{\"text\": \"apprise parity\\r\\nhello from python\", \"icon_url\": null, \"username\": \"Apprise\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mattermost.example.com/hooks/hooks-token"
+      }
+    ]
   }
 ]

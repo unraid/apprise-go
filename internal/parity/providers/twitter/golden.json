@@ -30,5 +30,31 @@
         "url": "https://api.twitter.com/1.1/statuses/update.json"
       }
     ]
+  },
+  {
+    "name": "x-default",
+    "requests": [
+      {
+        "body": "",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"Lof9NNEEdqT59NvNMycCGVnQ68k%3D\"",
+          "user-agent": "Apprise"
+        },
+        "method": "GET",
+        "url": "https://api.twitter.com/1.1/account/verify_credentials.json"
+      },
+      {
+        "body": "{\"event\": {\"type\": \"message_create\", \"message_create\": {\"target\": {\"recipient_id\": \"123\"}, \"message_data\": {\"text\": \"hello\"}}}}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"DHvqVkFRTOh3f%2BV%2FZPQcSiWmNQg%3D\"",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.twitter.com/1.1/direct_messages/events/new.json"
+      }
+    ]
   }
 ]

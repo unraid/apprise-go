@@ -38,5 +38,45 @@
         "url": "http://emby.local:8096/Sessions/session-id/Message"
       }
     ]
+  },
+  {
+    "name": "embys-default",
+    "requests": [
+      {
+        "body": "{\"Username\": \"user\", \"pw\": \"pass\", \"passwordMd5\": \"1a1dc91c907325c69271ddf0c944bc72\", \"password\": \"9d4e1e23bd5b727046a9e3b4b7db57bd8d6ee684\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.9.7\""
+        },
+        "method": "POST",
+        "url": "https://emby.local:8096/Users/AuthenticateByName"
+      },
+      {
+        "body": "",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.9.7\", UserId=\"user\"",
+          "x-mediabrowser-token": "token"
+        },
+        "method": "GET",
+        "url": "https://emby.local:8096/Sessions?ControllableByUserId=user-id"
+      },
+      {
+        "body": "{\"Header\": \"apprise parity\", \"Text\": \"hello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.9.7\", UserId=\"user\"",
+          "x-mediabrowser-token": "token"
+        },
+        "method": "POST",
+        "url": "https://emby.local:8096/Sessions/session-id/Message"
+      }
+    ]
   }
 ]

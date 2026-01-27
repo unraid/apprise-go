@@ -4,5 +4,11 @@
     "url": "matrix://0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "matrixs-default",
+    "url": "matrixs://0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "body": "hello from python",
+    "title": "apprise parity"
   }
 ]

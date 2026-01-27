@@ -5,5 +5,12 @@
     "body": "hello from python",
     "title": "apprise parity",
     "type": "info"
+  },
+  {
+    "name": "mmosts-default",
+    "url": "mmosts://mattermost.example.com/hooks-token?image=no",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]
