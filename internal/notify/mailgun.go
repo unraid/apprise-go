@@ -53,16 +53,17 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 	}
 
 	fromName := mailgunDefaultName
-	if raw := strings.TrimSpace(target.Query["from"]); raw != "" {
-		if isSimpleEmail(raw) {
-			fromAddr = raw
+	rawFrom := strings.TrimSpace(target.Query["from"])
+	if rawFrom == "" {
+		rawFrom = strings.TrimSpace(target.Query["name"])
+	}
+	if rawFrom != "" {
+		if isSimpleEmail(rawFrom) {
+			fromAddr = rawFrom
 			fromName = ""
 		} else {
-			fromName = raw
+			fromName = rawFrom
 		}
-	}
-	if name := strings.TrimSpace(target.Query["name"]); name != "" && strings.TrimSpace(target.Query["from"]) == "" {
-		fromName = name
 	}
 
 	region := strings.ToLower(strings.TrimSpace(target.Query["region"]))

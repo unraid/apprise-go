@@ -3,6 +3,7 @@ package notify
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 )
 
@@ -14,12 +15,29 @@ const (
 	pushoverSendToAllDevices = "ALL_DEVICES"
 )
 
+var pushoverPriorityMap = map[string]int{
+	"l":  -2,
+	"m":  -1,
+	"n":  0,
+	"h":  1,
+	"e":  2,
+	"-2": -2,
+	"-1": -1,
+	"0":  0,
+	"1":  1,
+	"2":  2,
+}
+
 type PushoverTarget struct {
-	userKey  string
-	token    string
-	targets  []string
-	sound    string
-	priority int
+	userKey              string
+	token                string
+	targets              []string
+	sound                string
+	priority             int
+	supplementalURL      string
+	supplementalURLTitle string
+	retry                int
+	expire               int
 }
 
 func NewPushoverTarget(target *ParsedURL) (*PushoverTarget, error) {
@@ -38,12 +56,50 @@ func NewPushoverTarget(target *ParsedURL) (*PushoverTarget, error) {
 		targets = []string{pushoverSendToAllDevices}
 	}
 
+	priority := pushoverDefaultPriority
+	if rawPriority := strings.TrimSpace(target.Query["priority"]); rawPriority != "" {
+		priority = parsePushoverPriority(rawPriority)
+	}
+
+	retry := 0
+	expire := 0
+	if priority == 2 {
+		retry = 900
+		if rawRetry := strings.TrimSpace(target.Query["retry"]); rawRetry != "" {
+			if parsed, err := strconv.Atoi(rawRetry); err == nil {
+				retry = parsed
+			}
+		}
+		if retry < 30 {
+			return nil, fmt.Errorf("pushover retry must be at least 30 seconds")
+		}
+
+		expire = 3600
+		if rawExpire := strings.TrimSpace(target.Query["expire"]); rawExpire != "" {
+			if parsed, err := strconv.Atoi(rawExpire); err == nil {
+				expire = parsed
+			}
+		}
+		if expire < 0 || expire > 10800 {
+			return nil, fmt.Errorf("pushover expire must be between 0 and 10800 seconds")
+		}
+	}
+
+	sound := pushoverDefaultSound
+	if rawSound := strings.TrimSpace(target.Query["sound"]); rawSound != "" {
+		sound = strings.ToLower(rawSound)
+	}
+
 	return &PushoverTarget{
-		userKey:  userKey,
-		token:    token,
-		targets:  targets,
-		sound:    pushoverDefaultSound,
-		priority: pushoverDefaultPriority,
+		userKey:              userKey,
+		token:                token,
+		targets:              targets,
+		sound:                sound,
+		priority:             priority,
+		supplementalURL:      strings.TrimSpace(target.Query["url"]),
+		supplementalURLTitle: strings.TrimSpace(target.Query["url_title"]),
+		retry:                retry,
+		expire:               expire,
 	}, nil
 }
 
@@ -61,6 +117,16 @@ func (p *PushoverTarget) BuildRequest(body, title string, notifyType NotifyType)
 	values.Set("message", body)
 	values.Set("device", strings.Join(p.targets, ","))
 	values.Set("sound", p.sound)
+	if p.supplementalURL != "" {
+		values.Set("url", p.supplementalURL)
+	}
+	if p.supplementalURLTitle != "" {
+		values.Set("url_title", p.supplementalURLTitle)
+	}
+	if p.priority == 2 {
+		values.Set("retry", fmt.Sprintf("%d", p.retry))
+		values.Set("expire", fmt.Sprintf("%d", p.expire))
+	}
 
 	headers := map[string]string{
 		"User-Agent":    "Apprise",
@@ -86,6 +152,25 @@ func (p *PushoverTarget) Send(body, title string, notifyType NotifyType) error {
 	}
 
 	return SendRequest(spec)
+}
+
+func parsePushoverPriority(raw string) int {
+	normalized := strings.TrimSpace(strings.ToLower(raw))
+	if normalized == "" {
+		return pushoverDefaultPriority
+	}
+	if value, err := strconv.Atoi(normalized); err == nil {
+		if value >= -2 && value <= 2 {
+			return value
+		}
+		return pushoverDefaultPriority
+	}
+	for key, value := range pushoverPriorityMap {
+		if strings.HasPrefix(normalized, key) {
+			return value
+		}
+	}
+	return pushoverDefaultPriority
 }
 
 func init() {

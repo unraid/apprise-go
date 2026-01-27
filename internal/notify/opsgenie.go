@@ -130,7 +130,7 @@ func NewOpsgenieTarget(target *ParsedURL) (*OpsgenieTarget, error) {
 func (o *OpsgenieTarget) Send(body, title string, notifyType NotifyType) error {
 	action := o.resolveAction(notifyType)
 	if action != "new" {
-		return fmt.Errorf("unsupported action: %s", action)
+		return nil
 	}
 
 	if len(o.targets) == 0 {

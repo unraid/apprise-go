@@ -3,8 +3,13 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 )
+
+var pagertreeIntegrationRegex = regexp.MustCompile(`^int_[A-Za-z0-9_-]{7,14}$`)
+
+const pagertreeFixedUUID = "00000000-0000-4000-8000-000000000000"
 
 type PagerTreeTarget struct {
 	integration string
@@ -12,12 +17,18 @@ type PagerTreeTarget struct {
 	thirdparty  string
 	urgency     string
 	tags        []string
+	headers     map[string]string
+	payload     map[string]string
+	meta        map[string]string
 }
 
 func NewPagerTreeTarget(target *ParsedURL) (*PagerTreeTarget, error) {
 	integration := strings.TrimSpace(target.Host)
 	if integration == "" {
 		return nil, fmt.Errorf("missing integration id")
+	}
+	if !pagertreeIntegrationRegex.MatchString(integration) {
+		return nil, fmt.Errorf("invalid integration id")
 	}
 
 	action := strings.ToLower(strings.TrimSpace(target.Query["action"]))
@@ -42,12 +53,42 @@ func NewPagerTreeTarget(target *ParsedURL) (*PagerTreeTarget, error) {
 		tags = append(tags, parseDelimitedList(tagValue)...)
 	}
 
+	headers := map[string]string{}
+	for key, value := range target.QueryAdd {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		headers[key] = value
+	}
+
+	payloadExtras := map[string]string{}
+	for key, value := range target.QueryPayload {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		payloadExtras[key] = value
+	}
+
+	metaExtras := map[string]string{}
+	for key, value := range target.QueryDel {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		metaExtras[key] = value
+	}
+
 	return &PagerTreeTarget{
 		integration: integration,
 		action:      action,
 		thirdparty:  thirdparty,
 		urgency:     urgency,
 		tags:        tags,
+		headers:     headers,
+		payload:     payloadExtras,
+		meta:        metaExtras,
 	}, nil
 }
 
@@ -61,12 +102,12 @@ func (p *PagerTreeTarget) Send(body, title string, notifyType NotifyType) error 
 }
 
 func (p *PagerTreeTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	if p.thirdparty == "" {
-		return RequestSpec{}, fmt.Errorf("missing thirdparty id")
+	thirdparty := p.thirdparty
+	if thirdparty == "" {
+		thirdparty = pagertreeFixedUUID
 	}
-
 	payload := map[string]any{
-		"id":         p.thirdparty,
+		"id":         thirdparty,
 		"event_type": p.action,
 	}
 
@@ -77,6 +118,9 @@ func (p *PagerTreeTarget) BuildRequest(body, title string, notifyType NotifyType
 		}
 
 		meta := map[string]any{}
+		for key, value := range p.meta {
+			meta[key] = value
+		}
 		payload["title"] = eventTitle
 		payload["description"] = body
 		payload["meta"] = meta
@@ -86,6 +130,10 @@ func (p *PagerTreeTarget) BuildRequest(body, title string, notifyType NotifyType
 		}
 	}
 
+	for key, value := range p.payload {
+		payload[key] = value
+	}
+
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
@@ -93,15 +141,20 @@ func (p *PagerTreeTarget) BuildRequest(body, title string, notifyType NotifyType
 
 	url := fmt.Sprintf("https://api.pagertree.com/integration/%s", p.integration)
 
+	headers := map[string]string{
+		"User-Agent":   "Apprise",
+		"Accept":       "*/*",
+		"Content-Type": "application/json",
+	}
+	for key, value := range p.headers {
+		headers[key] = value
+	}
+
 	return RequestSpec{
-		Method: "POST",
-		URL:    url,
-		Headers: map[string]string{
-			"User-Agent":   "Apprise",
-			"Accept":       "*/*",
-			"Content-Type": "application/json",
-		},
-		Body: string(data),
+		Method:  "POST",
+		URL:     url,
+		Headers: headers,
+		Body:    string(data),
 	}, nil
 }
 

@@ -247,7 +247,18 @@ func formatEmail(name, email string) string {
 	if name == "" {
 		return email
 	}
-	return fmt.Sprintf("%s <%s>", name, email)
+	return fmt.Sprintf("%s <%s>", quoteEmailName(name), email)
+}
+
+func quoteEmailName(name string) string {
+	if name == "" {
+		return ""
+	}
+	if !strings.ContainsAny(name, "()<>\",;:@[]\r\n\t") {
+		return name
+	}
+	escaped := strings.ReplaceAll(name, "\"", "\\\"")
+	return "\"" + escaped + "\""
 }
 
 func isSimpleEmail(value string) bool {
