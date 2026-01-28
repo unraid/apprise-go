@@ -18,6 +18,18 @@ type schemaExerciseCase struct {
 	URL    string `json:"url"`
 }
 
+const (
+	defaultBody  = "apprise parity body"
+	defaultTitle = "apprise parity title"
+)
+
+func bodyForExerciseCase(name string) string {
+	if strings.HasPrefix(name, "choice-overflow-") {
+		return strings.Repeat("apprise overflow ", 400)
+	}
+	return defaultBody
+}
+
 func loadSchemaExerciseCases(t *testing.T, schemas []string) []schemaExerciseCase {
 	t.Helper()
 
@@ -77,32 +89,39 @@ func TestE2ERequestParitySchemaExercise(t *testing.T) {
 			}
 
 			logProgress(t, "python-vs-go "+schema+"/"+name)
-			pythonSpecs := testutil.CapturePythonRequestsWithType(
+			body := bodyForExerciseCase(c.Name)
+			pythonSpecs, pythonSuccess := testutil.CapturePythonRequestsWithTypeResult(
 				t,
 				c.URL,
-				"apprise parity body",
-				"apprise parity title",
+				body,
+				defaultTitle,
 				notify.NotifyInfo,
 			)
 
 			parsedURL, err := notify.ParseURL(c.URL)
 			if err != nil {
+				if pythonSuccess != nil && !*pythonSuccess {
+					return
+				}
 				t.Fatalf("parse url: %v", err)
 			}
 			target, err := builder(parsedURL)
 			if err != nil {
+				if pythonSuccess != nil && !*pythonSuccess {
+					return
+				}
 				if len(pythonSpecs) == 0 {
 					return
 				}
 				t.Fatalf("build target: %v", err)
 			}
 			goSpecs, err := testutil.CaptureGoRequestsResult(t, func() error {
-				return target.Send("apprise parity body", "apprise parity title", notify.NotifyInfo)
+				return target.Send(body, defaultTitle, notify.NotifyInfo)
 			})
+			if shouldSkip := assertNotifySuccessMatches(t, pythonSuccess, err); shouldSkip {
+				return
+			}
 			if err != nil {
-				if len(pythonSpecs) == 0 {
-					return
-				}
 				t.Fatalf("send request failed: %v", err)
 			}
 

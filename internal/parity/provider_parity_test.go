@@ -32,7 +32,7 @@ func TestProviderRequestParity(t *testing.T) {
 					notifyType = parsed
 				}
 
-				pythonSpecs := testutil.CapturePythonRequestsWithType(t, c.URL, c.Body, c.Title, notifyType)
+				pythonSpecs, pythonSuccess := testutil.CapturePythonRequestsWithTypeResult(t, c.URL, c.Body, c.Title, notifyType)
 				parsedURL, err := notify.ParseURL(c.URL)
 				if err != nil {
 					t.Fatalf("parse url: %v", err)
@@ -43,9 +43,15 @@ func TestProviderRequestParity(t *testing.T) {
 					t.Fatalf("build target: %v", err)
 				}
 
-				goSpecs := testutil.CaptureGoRequests(t, func() error {
+				goSpecs, err := testutil.CaptureGoRequestsResult(t, func() error {
 					return target.Send(c.Body, c.Title, notifyType)
 				})
+				if shouldSkip := assertNotifySuccessMatches(t, pythonSuccess, err); shouldSkip {
+					return
+				}
+				if err != nil {
+					t.Fatalf("send request failed: %v", err)
+				}
 
 				assertRequestSpecSequenceMatches(t, pythonSpecs, goSpecs)
 			})

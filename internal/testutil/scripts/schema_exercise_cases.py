@@ -39,7 +39,7 @@ MATRIX_T2BOT_TOKEN = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789
 ROOT_DIR = Path(__file__).resolve().parents[3]
 FIXTURES_DIR = ROOT_DIR / "internal" / "testutil" / "fixtures"
 
-CACHE_VERSION = 1
+CACHE_VERSION = 5
 CACHE_ENV = "APPRISE_CASES_CACHE"
 CACHE_DIR_ENV = "APPRISE_CASES_CACHE_DIR"
 CACHE_SUBDIR = ".tmp/pycases"
@@ -215,6 +215,8 @@ def token_name(segment):
 
 def sample_for_name(name):
     lowered = name.lower()
+    if "gateway" in lowered or "threema" in lowered:
+        return "ABCDEFGH"
     if lowered in ("tz", "timezone"):
         return "UTC"
     if "subscriber" in lowered:
@@ -268,6 +270,73 @@ def sample_for_name(name):
     if "group" in lowered:
         return "group"
     return "token"
+
+
+def targets_required(tokens):
+    if not isinstance(tokens, dict):
+        return False
+    spec = tokens.get("targets")
+    return isinstance(spec, dict) and bool(spec.get("required"))
+
+
+def template_has_targets(template, tokens):
+    if "{targets}" in template:
+        return True
+    if not isinstance(tokens, dict):
+        return False
+    for name, spec in tokens.items():
+        if not isinstance(spec, dict):
+            continue
+        if spec.get("map_to") == "targets" and f"{{{name}}}" in template:
+            return True
+    return False
+
+
+def target_alias(args):
+    if not isinstance(args, dict):
+        return None
+    for name, spec in args.items():
+        if isinstance(spec, dict) and spec.get("alias_of") == "targets":
+            return name
+    for name, spec in args.items():
+        if isinstance(spec, dict) and spec.get("map_to") == "targets":
+            return name
+    return None
+
+
+def ensure_targets(url, template, tokens, args):
+    if template_has_targets(template, tokens):
+        return url
+    alias = target_alias(args)
+    if alias is None:
+        if not targets_required(tokens):
+            return url
+        alias = "targets"
+    targets_spec = tokens.get("targets") if isinstance(tokens, dict) else None
+    value = sample_for_token("targets", targets_spec, tokens)
+    return ensure_query_params(url, [(alias, value)])
+
+
+def normalize_mailgun_url(url):
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme.lower() != "mailgun":
+        return url
+    netloc = parsed.netloc
+    if "@" not in netloc or ":" not in netloc:
+        return url
+    userinfo, hostpart = netloc.rsplit("@", 1)
+    host, apikey = hostpart.split(":", 1)
+    if not apikey:
+        return url
+    path = (parsed.path or "/").lstrip("/")
+    if path:
+        new_path = f"/{apikey}/{path}"
+    else:
+        new_path = f"/{apikey}/"
+    new_netloc = f"{userinfo}@{host}"
+    return urllib.parse.urlunsplit(
+        (parsed.scheme, new_netloc, new_path, parsed.query, parsed.fragment)
+    )
 
 
 def sample_for_label(label):
@@ -430,7 +499,10 @@ def sample_for_spec(name, spec):
             value = fixture_path("workflow_template.json")
             lock_value = True
         if "keyfile" in lowered_name:
-            value = fixture_path("vapid_test_key.pem")
+            if "oauth" in label_lower:
+                value = fixture_path("fcm_test_key.json")
+            else:
+                value = fixture_path("vapid_test_key.pem")
             lock_value = True
         if "subfile" in lowered_name:
             value = fixture_path("vapid_test_sub.json")
@@ -645,6 +717,10 @@ def generate_cases(schema, plugin, details):
         url = fill_template(template, schema, tokens)
         if not url:
             continue
+        if schema.lower() == "mailgun":
+            url = normalize_mailgun_url(url)
+        if not is_matrix_t2bot_template(schema, template):
+            url = ensure_targets(url, template, tokens, args)
         if can_parse(url):
             valid_templates.append(url)
             cases.append({"name": f"template-{len(cases) + 1}", "url": url})
@@ -709,6 +785,16 @@ def generate_cases(schema, plugin, details):
                                         template_url = filled
                                         break
                         url = append_query(template_url, [(name, value)])
+                        if name.lower() == "mode" and str(value).lower() == "oauth2":
+                            keyfile_spec = (
+                                tokens.get("keyfile")
+                                if isinstance(tokens, dict)
+                                else None
+                            )
+                            keyfile_value = sample_for_token(
+                                "keyfile", keyfile_spec, tokens
+                            )
+                            url = ensure_query_params(url, [("keyfile", keyfile_value)])
                         if can_parse(url):
                             cases.append({"name": f"choice-{name}-{value}", "url": url})
                 continue
@@ -736,6 +822,7 @@ def generate_cases(schema, plugin, details):
                 prefix = ""
             key_name = "key"
             lowered = name.lower()
+            label_lower = str(spec.get("name") or "").lower()
             value = "value"
             if "mapping" in lowered:
                 if "template" in lowered:
@@ -743,6 +830,8 @@ def generate_cases(schema, plugin, details):
                 else:
                     key_name = "info"
                     value = "INFO"
+                    if "action" in label_lower:
+                        value = "new"
             key = f"{prefix}{key_name}"
             url = append_query(primary, [(key, value)])
             if can_parse(url):

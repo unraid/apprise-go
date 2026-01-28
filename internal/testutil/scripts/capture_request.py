@@ -94,7 +94,7 @@ DROP_HEADERS = {"x-apprise-id", "x-apprise-recursion-count"}
 KEEP_HEADERS = {"content-type", "accept", "accepts", "authorization"}
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
-CACHE_VERSION = 1
+CACHE_VERSION = 8
 CACHE_ENV = "APPRISE_CAPTURE_CACHE"
 CACHE_DIR_ENV = "APPRISE_CAPTURE_CACHE_DIR"
 CACHE_SUBDIR = ".tmp/pycapture"
@@ -212,18 +212,22 @@ def load_cache(url, body, title, notify_type):
         return None, path
     try:
         raw = path.read_text(encoding="utf-8")
-        return json.loads(raw), path
+        payload = json.loads(raw)
     except Exception:
         return None, path
 
+    if isinstance(payload, list):
+        payload = {"requests": payload, "success": None}
+    return payload, path
 
-def store_cache(path, specs):
+
+def store_cache(path, payload):
     if path is None:
         return
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(path.suffix + f".tmp.{os.getpid()}")
-        tmp.write_text(json.dumps(specs, separators=(",", ":")), encoding="utf-8")
+        tmp.write_text(json.dumps(payload, separators=(",", ":")), encoding="utf-8")
         os.replace(tmp, path)
     except Exception:
         return
@@ -293,6 +297,13 @@ def apply_fixed_time():
         import apprise.plugins.dingtalk as dingtalk
 
         dingtalk.time.time = lambda: fixed.timestamp()
+    except Exception:
+        pass
+
+    try:
+        import apprise.plugins.fcm.oauth as fcm_oauth
+
+        fcm_oauth.datetime = FixedDatetime
     except Exception:
         pass
 
@@ -466,6 +477,8 @@ def capture_request(url, body, title, notify_type):
             response._content = b'{"access_token":"token","expires_in":3600}'
         elif "reddit.com/api/v1/access_token" in prepared.url:
             response._content = b'{"access_token":"token","expires_in":3600}'
+        elif parsed.netloc == "oauth2.googleapis.com" and parsed.path == "/token":
+            response._content = b'{"access_token":"token","expires_in":3600}'
         elif "login.microsoftonline.com" in prepared.url and parsed.path.endswith(
             "/oauth2/v2.0/token"
         ):
@@ -508,6 +521,8 @@ def capture_request(url, body, title, notify_type):
             ).encode("utf-8")
         elif parsed.netloc == "slack.com" and parsed.path == "/api/users.lookupByEmail":
             response._content = b'{"ok": true, "user": {"id": "U123"}}'
+        elif parsed.netloc == "slack.com" and parsed.path == "/api/chat.postMessage":
+            response._content = b'{"ok": true, "ts": "123.456"}'
         elif parsed.path.endswith("/Users/AuthenticateByName"):
             response._content = (
                 b'{"AccessToken":"token","Id":"user-id","User":{"Id":"user-id"}}'
@@ -565,6 +580,10 @@ def capture_request(url, body, title, notify_type):
             response._content = json.dumps({"joined_rooms": [f"#room:{host}"]}).encode(
                 "utf-8"
             )
+        elif (
+            "/_matrix/client/" in parsed.path and "/send/m.room.message" in parsed.path
+        ):
+            response._content = b'{"event_id":"$event"}'
         elif "/_matrix/client/" in parsed.path and parsed.path.endswith("/logout"):
             response._content = b"{}"
         elif "/_matrix/media/" in parsed.path and parsed.path.endswith("/upload"):
@@ -581,6 +600,43 @@ def capture_request(url, body, title, notify_type):
             ).encode("utf-8")
         elif parsed.path.endswith("/api/v1/logout"):
             response._content = b"{}"
+        elif (
+            parsed.netloc == "wxpusher.zjiecode.com"
+            and parsed.path == "/api/send/message"
+        ):
+            response._content = b'{"code":1000,"msg":"ok"}'
+        elif parsed.netloc.endswith("notificationapi.com"):
+            response._content = b'{"ok":true}'
+        elif parsed.netloc == "api.sendpulse.com" and parsed.path.endswith(
+            "/smtp/emails"
+        ):
+            response._content = b'{"result":true}'
+        elif parsed.netloc == "www.pushsafer.com" and parsed.path == "/api":
+            response._content = b'{"status":1,"success":"ok"}'
+        elif parsed.netloc == "oauth.reddit.com" and parsed.path == "/api/submit":
+            response._content = b'{"json":{"errors":[]}}'
+        elif parsed.netloc == "api.simplepush.io" and parsed.path == "/send":
+            response._content = b'{"status":"OK","message":"OK"}'
+        elif parsed.netloc == "voip.ms" and parsed.path == "/api/v1/rest.php":
+            response._content = b'{"status":"success","message":"ok"}'
+        elif parsed.path.endswith("/api/message"):
+            response._content = b'{"result":true}'
+        elif parsed.hostname == "www.hampager.de" and parsed.path == "/calls":
+            response.status_code = 201
+            response._content = b'{"ok":true}'
+        elif parsed.netloc == "api.pushy.me" and parsed.path == "/push":
+            response._content = b'{"success":true,"id":"id","info":{"devices":1}}'
+        elif parsed.path == "/jsonrpc/sms":
+            response._content = b'{"result":{"status":"ok"}}'
+        elif (
+            parsed.netloc in ("api.opsgenie.com", "api.eu.opsgenie.com")
+            and parsed.path == "/v2/alerts"
+        ):
+            response._content = b'{"requestId":"request"}'
+        elif parsed.netloc == "www.dmc.sfr-sh.fr" and parsed.path.endswith(
+            "/DmcWS/1.5.8/JsonService/MessagesUnitairesWS/addSingleCall"
+        ):
+            response._content = b'{"success":true}'
         else:
             response._content = b"ok"
         response.url = prepared.url
@@ -591,7 +647,7 @@ def capture_request(url, body, title, notify_type):
         asset = AppriseAsset()
         service = apprise.Apprise(asset=asset)
         service.add(url)
-        service.notify(
+        success = service.notify(
             body=body,
             title=title,
             notify_type=notify_type,
@@ -599,8 +655,9 @@ def capture_request(url, body, title, notify_type):
     finally:
         requests.sessions.Session.request = original_request
 
-    store_cache(cache_path, captured)
-    return captured
+    payload = {"requests": captured, "success": bool(success)}
+    store_cache(cache_path, payload)
+    return payload
 
 
 def main():
@@ -619,8 +676,8 @@ def main():
     elif args.type.lower() == "failure":
         notify_type = NotifyType.FAILURE
 
-    specs = capture_request(args.url, args.body, args.title, notify_type)
-    print(json.dumps(specs))
+    payload = capture_request(args.url, args.body, args.title, notify_type)
+    print(json.dumps(payload))
 
 
 if __name__ == "__main__":

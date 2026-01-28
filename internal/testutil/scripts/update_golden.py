@@ -79,12 +79,13 @@ def main():
 
         golden_cases = []
         for case in cases:
-            specs = capture_request(
+            payload = capture_request(
                 case["url"],
                 case.get("body", ""),
                 case.get("title", ""),
                 parse_notify_type(case.get("type")),
             )
+            specs = payload.get("requests", [])
             golden_cases.append(
                 {"name": case["name"], "requests": rewrite_values(specs)}
             )

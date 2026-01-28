@@ -95,6 +95,21 @@ func logProgress(t *testing.T, label string) {
 	t.Logf("parity: %s", label)
 }
 
+func assertNotifySuccessMatches(t *testing.T, pythonSuccess *bool, err error) bool {
+	t.Helper()
+
+	if pythonSuccess == nil {
+		return false
+	}
+
+	goSuccess := err == nil
+	if *pythonSuccess != goSuccess {
+		t.Fatalf("notify success mismatch: python=%v goErr=%v", *pythonSuccess, err)
+	}
+
+	return !goSuccess
+}
+
 func normalizeHeaders(headers map[string]string) map[string]string {
 	normalized := map[string]string{}
 	for key, value := range headers {

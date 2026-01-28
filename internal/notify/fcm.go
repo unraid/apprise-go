@@ -28,7 +28,13 @@ func NewFCMTarget(target *ParsedURL) (*FCMTarget, error) {
 	if apiKey == "" {
 		apiKey = strings.TrimSpace(target.User)
 	}
-	project := apiKey
+	project := strings.TrimSpace(target.Query["project"])
+	if project == "" {
+		project = strings.TrimSpace(target.Host)
+		if project == "" {
+			project = strings.TrimSpace(target.User)
+		}
+	}
 	keyfile := strings.TrimSpace(target.Query["keyfile"])
 	mode := strings.ToLower(strings.TrimSpace(target.Query["mode"]))
 	if mode == "" {
@@ -45,6 +51,14 @@ func NewFCMTarget(target *ParsedURL) (*FCMTarget, error) {
 	}
 	if mode == "legacy" && apiKey == "" {
 		return nil, fmt.Errorf("missing api key")
+	}
+	if mode == "oauth2" {
+		if project == "" {
+			return nil, fmt.Errorf("missing project")
+		}
+		if keyfile == "" {
+			return nil, fmt.Errorf("missing keyfile")
+		}
 	}
 
 	targets := make([]string, 0, 1)
@@ -111,7 +125,11 @@ func (f *FCMTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
 	if f.mode == "oauth2" {
-		return RequestSpec{}, fmt.Errorf("oauth2 unsupported")
+		accessToken, err := f.accessToken()
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		return f.buildOAuthSpec(body, title, notifyType, f.targets[0], accessToken)
 	}
 
 	spec, err := f.buildSpec(body, title, notifyType, f.targets[0])
@@ -126,6 +144,19 @@ func (f *FCMTarget) Send(body, title string, notifyType NotifyType) error {
 		return fmt.Errorf("missing targets")
 	}
 	if f.mode == "oauth2" {
+		accessToken, err := f.accessToken()
+		if err != nil {
+			return err
+		}
+		for _, recipient := range f.targets {
+			spec, err := f.buildOAuthSpec(body, title, notifyType, recipient, accessToken)
+			if err != nil {
+				return err
+			}
+			if err := SendRequest(spec); err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 
