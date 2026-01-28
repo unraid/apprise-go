@@ -114,8 +114,13 @@ Each release includes:
   - `apprise-go-darwin-arm64.zip` - macOS Apple Silicon (signed & notarized)
   - `apprise-go-linux-amd64` - Linux AMD64
   - `apprise-go-linux-arm64` - Linux ARM64
+  - `apprise-go-linux-386` - Linux 32-bit
+  - `apprise-go-linux-armv7` - Linux ARMv7 (Raspberry Pi, etc.)
   - `apprise-go-windows-amd64.exe` - Windows AMD64
   - `apprise-go-windows-arm64.exe` - Windows ARM64
+  - `apprise-go-windows-386.exe` - Windows 32-bit
+  - `apprise-go-freebsd-amd64` - FreeBSD AMD64
+  - `apprise-go-freebsd-arm64` - FreeBSD ARM64
 - **Source code** (zip and tar.gz)
 - **SHA256 checksums** for verification
 

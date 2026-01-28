@@ -80,6 +80,13 @@ jobs:
           - goos: linux
             goarch: arm64
             ext: ""
+          - goos: linux
+            goarch: 386
+            ext: ""
+          - goos: linux
+            goarch: arm
+            goarm: "7"
+            ext: ""
           - goos: darwin
             goarch: amd64
             ext: ""
@@ -92,6 +99,15 @@ jobs:
           - goos: windows
             goarch: arm64
             ext: ".exe"
+          - goos: windows
+            goarch: 386
+            ext: ".exe"
+          - goos: freebsd
+            goarch: amd64
+            ext: ""
+          - goos: freebsd
+            goarch: arm64
+            ext: ""
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -105,14 +121,21 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
           CGO_ENABLED: "0"
           BIN_EXT: ${{ matrix.ext }}
         run: |
           mkdir -p dist
-          go build -trimpath -ldflags "-s -w" -o "dist/apprise-go-${GOOS}-${GOARCH}${BIN_EXT}" ./cmd/apprise
+          if [ "$GOARCH" = "arm" ] && [ -n "$GOARM" ]; then
+            OUTPUT_NAME="apprise-go-${GOOS}-${GOARCH}v${GOARM}${BIN_EXT}"
+          else
+            OUTPUT_NAME="apprise-go-${GOOS}-${GOARCH}${BIN_EXT}"
+          fi
+          go build -trimpath -ldflags "-s -w" -o "dist/${OUTPUT_NAME}" ./cmd/apprise
+          echo "output_name=${OUTPUT_NAME}" >> $GITHUB_ENV
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v6
         with:
-          name: apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
-          path: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+          name: ${{ env.output_name }}
+          path: dist/${{ env.output_name }}

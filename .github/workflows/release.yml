@@ -24,6 +24,15 @@ jobs:
             goarch: arm64
             notarize: false
             ext: ""
+          - goos: linux
+            goarch: 386
+            notarize: false
+            ext: ""
+          - goos: linux
+            goarch: arm
+            goarm: "7"
+            notarize: false
+            ext: ""
           - goos: darwin
             goarch: amd64
             notarize: true
@@ -40,6 +49,18 @@ jobs:
             goarch: arm64
             notarize: false
             ext: ".exe"
+          - goos: windows
+            goarch: 386
+            notarize: false
+            ext: ".exe"
+          - goos: freebsd
+            goarch: amd64
+            notarize: false
+            ext: ""
+          - goos: freebsd
+            goarch: arm64
+            notarize: false
+            ext: ""
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -53,11 +74,17 @@ jobs:
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
           CGO_ENABLED: "0"
           BIN_EXT: ${{ matrix.ext }}
         run: |
           mkdir -p dist
-          go build -trimpath -ldflags "-s -w" -o "dist/apprise-go-${GOOS}-${GOARCH}${BIN_EXT}" ./cmd/apprise
+          if [ "$GOARCH" = "arm" ] && [ -n "$GOARM" ]; then
+            OUTPUT_NAME="apprise-go-${GOOS}-${GOARCH}v${GOARM}${BIN_EXT}"
+          else
+            OUTPUT_NAME="apprise-go-${GOOS}-${GOARCH}${BIN_EXT}"
+          fi
+          go build -trimpath -ldflags "-s -w" -o "dist/${OUTPUT_NAME}" ./cmd/apprise
 
       - name: Write signing certificate
         if: matrix.notarize
@@ -75,11 +102,21 @@ jobs:
           printf '%s' "$APP_STORE_CONNECT_KEY_JSON" > app_store_connect_key.json
           chmod 600 app_store_connect_key.json
 
+      - name: Set output name
+        id: set-output-name
+        run: |
+          if [ "${{ matrix.goarch }}" = "arm" ] && [ -n "${{ matrix.goarm }}" ]; then
+            OUTPUT_NAME="apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}v${{ matrix.goarm }}${{ matrix.ext }}"
+          else
+            OUTPUT_NAME="apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
+          fi
+          echo "output_name=${OUTPUT_NAME}" >> $GITHUB_OUTPUT
+
       - name: Sign darwin binary
         if: matrix.notarize
         uses: indygreg/apple-code-sign-action@v1
         with:
-          input_path: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}
+          input_path: dist/${{ steps.set-output-name.outputs.output_name }}
           p12_file: apple_codesign.p12
           p12_password: ${{ secrets.APPLE_BUILD_CERTIFICATE_PASSWORD }}
           sign_args: --code-signature-flags=runtime
@@ -88,14 +125,14 @@ jobs:
       - name: Zip darwin binary
         if: matrix.notarize
         run: |
-          zip -j "dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}.zip" \
-            "dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}"
+          zip -j "dist/${{ steps.set-output-name.outputs.output_name }}.zip" \
+            "dist/${{ steps.set-output-name.outputs.output_name }}"
 
       - name: Notarize darwin zip
         if: matrix.notarize
         uses: indygreg/apple-code-sign-action@v1
         with:
-          input_path: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+          input_path: dist/${{ steps.set-output-name.outputs.output_name }}.zip
           sign: false
           notarize: true
           app_store_connect_api_key_json_file: app_store_connect_key.json
@@ -108,10 +145,10 @@ jobs:
         if: github.event_name == 'release' && matrix.notarize
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}.zip
+          files: dist/${{ steps.set-output-name.outputs.output_name }}.zip
 
       - name: Upload release asset (non-darwin)
         if: github.event_name == 'release' && !matrix.notarize
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+          files: dist/${{ steps.set-output-name.outputs.output_name }}
