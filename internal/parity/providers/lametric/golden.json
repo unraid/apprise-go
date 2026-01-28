@@ -30,5 +30,20 @@
         "url": "http://lametric.local:8080/api/v2/device/notifications"
       }
     ]
+  },
+  {
+    "name": "cloud",
+    "requests": [
+      {
+        "body": "{\"frames\": [{\"icon\": \"i620\", \"text\": \"apprise parity\\r\\nhello from python\", \"index\": 0}]}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://developer.lametric.com/api/v1/dev/widget/update/com.lametric.testapp/1"
+      }
+    ]
   }
 ]

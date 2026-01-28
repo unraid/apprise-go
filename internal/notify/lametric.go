@@ -308,6 +308,9 @@ func parseLametricAppID(value string) (string, string, bool) {
 		return "", "", false
 	}
 	appID := matches[1]
+	if strings.HasPrefix(strings.ToLower(appID), "com.lametric.") {
+		appID = appID[len("com.lametric."):]
+	}
 	appVer := ""
 	if len(matches) > 2 {
 		appVer = matches[2]

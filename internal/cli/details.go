@@ -86,12 +86,8 @@ func PrintDetails(w io.Writer) error {
 		}
 
 		prefix := "   - "
-		for idx, template := range templates {
-			if idx == 0 {
-				fmt.Fprintf(w, "%s%s\n", prefix, template)
-			} else {
-				fmt.Fprintf(w, "%s%s\n", prefix, template)
-			}
+		for _, template := range templates {
+			fmt.Fprintf(w, "%s%s\n", prefix, template)
 		}
 		fmt.Fprintln(w)
 	}

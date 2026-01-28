@@ -13,5 +13,20 @@
         "url": "https://oapi.dingtalk.com/robot/send?access_token=token123"
       }
     ]
+  },
+  {
+    "name": "secret",
+    "requests": [
+      {
+        "body": "{\"msgtype\": \"text\", \"at\": {\"atMobiles\": [], \"isAtAll\": false}, \"text\": {\"content\": \"apprise parity\\r\\nhello from python\"}}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://oapi.dingtalk.com/robot/send?access_token=token123&timestamp=1704067200000&sign=AMbworxHp4%252FLxNNyqraOLmTCH6%252Bb77H4P9UXFhml7%252Fw%253D"
+      }
+    ]
   }
 ]

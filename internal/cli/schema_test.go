@@ -35,6 +35,8 @@ func TestSchemaMatchesPython(t *testing.T) {
 	}
 
 	if !reflect.DeepEqual(want, got) {
-		t.Fatalf("schema mismatch")
+		wantJSON, _ := json.MarshalIndent(want, "", "  ")
+		gotJSON, _ := json.MarshalIndent(got, "", "  ")
+		t.Fatalf("schema mismatch:\nwant:\n%s\n\ngot:\n%s", wantJSON, gotJSON)
 	}
 }

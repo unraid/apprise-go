@@ -3,13 +3,20 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strings"
 )
 
 const pushedURL = "https://api.pushed.co/1/push"
 
+var pushedChannelRe = regexp.MustCompile(`^#?([A-Za-z0-9]+)$`)
+var pushedUserRe = regexp.MustCompile(`^@([A-Za-z0-9]+)$`)
+
 type PushedTarget struct {
 	appKey    string
 	appSecret string
+	channels  []string
+	users     []string
 }
 
 func NewPushedTarget(target *ParsedURL) (*PushedTarget, error) {
@@ -19,14 +26,30 @@ func NewPushedTarget(target *ParsedURL) (*PushedTarget, error) {
 		return nil, fmt.Errorf("missing app credentials")
 	}
 	appSecret := segments[0]
+	targets := append([]string{}, segments[1:]...)
+	if rawTargets, ok := target.Query["to"]; ok && strings.TrimSpace(rawTargets) != "" {
+		targets = append(targets, parseDelimitedList(rawTargets)...)
+	}
+
+	channels, users, hasInvalid := parsePushedTargets(targets)
+	if len(targets) > 0 && len(channels)+len(users) == 0 && hasInvalid {
+		return nil, fmt.Errorf("no pushed targets")
+	}
 
 	return &PushedTarget{
 		appKey:    appKey,
 		appSecret: appSecret,
+		channels:  channels,
+		users:     users,
 	}, nil
 }
 
 func (p *PushedTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	payload := p.buildPayload(body, title, notifyType)
+	return p.buildRequest(payload)
+}
+
+func (p *PushedTarget) buildPayload(body, title string, notifyType NotifyType) map[string]any {
 	if title != "" {
 		if body != "" {
 			body = title + "\r\n" + body
@@ -41,7 +64,11 @@ func (p *PushedTarget) BuildRequest(body, title string, notifyType NotifyType) (
 		"target_type": "app",
 		"content":     body,
 	}
+	_ = notifyType
+	return payload
+}
 
+func (p *PushedTarget) buildRequest(payload map[string]any) (RequestSpec, error) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
@@ -53,9 +80,6 @@ func (p *PushedTarget) BuildRequest(body, title string, notifyType NotifyType) (
 		"Content-Type": "application/json",
 	}
 
-	_ = title
-	_ = notifyType
-
 	return RequestSpec{
 		Method:  "POST",
 		URL:     pushedURL,
@@ -65,12 +89,77 @@ func (p *PushedTarget) BuildRequest(body, title string, notifyType NotifyType) (
 }
 
 func (p *PushedTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := p.BuildRequest(body, title, notifyType)
-	if err != nil {
-		return err
+	basePayload := p.buildPayload(body, title, notifyType)
+	if len(p.channels)+len(p.users) == 0 {
+		spec, err := p.buildRequest(basePayload)
+		if err != nil {
+			return err
+		}
+		return SendRequest(spec)
 	}
 
-	return SendRequest(spec)
+	var firstErr error
+	for _, channel := range p.channels {
+		payload := map[string]any{}
+		for key, value := range basePayload {
+			payload[key] = value
+		}
+		payload["target_type"] = "channel"
+		payload["target_alias"] = channel
+		spec, err := p.buildRequest(payload)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		if err := SendRequest(spec); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	for _, user := range p.users {
+		payload := map[string]any{}
+		for key, value := range basePayload {
+			payload[key] = value
+		}
+		payload["target_type"] = "pushed_id"
+		payload["pushed_id"] = user
+		spec, err := p.buildRequest(payload)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		if err := SendRequest(spec); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	return firstErr
+}
+
+func parsePushedTargets(targets []string) ([]string, []string, bool) {
+	channels := []string{}
+	users := []string{}
+	hasInvalid := false
+	for _, target := range targets {
+		target = strings.TrimSpace(target)
+		if target == "" {
+			continue
+		}
+		if match := pushedChannelRe.FindStringSubmatch(target); len(match) > 1 {
+			channels = append(channels, match[1])
+			continue
+		}
+		if match := pushedUserRe.FindStringSubmatch(target); len(match) > 1 {
+			users = append(users, match[1])
+			continue
+		}
+		hasInvalid = true
+	}
+	return channels, users, hasInvalid
 }
 
 func init() {

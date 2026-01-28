@@ -198,6 +198,16 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 func CaptureGoRequests(t *testing.T, send func() error) []notify.RequestSpec {
 	t.Helper()
 
+	specs, err := CaptureGoRequestsResult(t, send)
+	if err != nil {
+		t.Fatalf("send request failed: %v", err)
+	}
+	return specs
+}
+
+func CaptureGoRequestsResult(t *testing.T, send func() error) ([]notify.RequestSpec, error) {
+	t.Helper()
+
 	captureMu.Lock()
 	defer captureMu.Unlock()
 
@@ -208,9 +218,6 @@ func CaptureGoRequests(t *testing.T, send func() error) []notify.RequestSpec {
 		http.DefaultTransport = previous
 	}()
 
-	if err := send(); err != nil {
-		t.Fatalf("send request failed: %v", err)
-	}
-
-	return capture.requests
+	err := send()
+	return capture.requests, err
 }

@@ -376,14 +376,6 @@ func specDefault(spec map[string]any) (any, bool) {
 	return raw, true
 }
 
-func specDefaultAllowNil(spec map[string]any) (any, bool) {
-	if spec == nil {
-		return nil, false
-	}
-	raw, ok := spec["default"]
-	return raw, ok
-}
-
 func specRequired(spec map[string]any) bool {
 	if spec == nil {
 		return false
@@ -1375,8 +1367,6 @@ func tokenRegex(spec map[string]any, fallback string) (string, string) {
 }
 
 func tokenValueMatches(spec map[string]any, value any) bool {
-	_ = spec
-	_ = value
 	return true
 }
 
@@ -1428,13 +1418,16 @@ func wantsEmptyOnMissingUserinfo(mapTo, token string) bool {
 func shouldSetEmailToken(token, mapTo string) bool {
 	lower := strings.ToLower(strings.TrimSpace(mapTo))
 	lowerToken := strings.ToLower(strings.TrimSpace(token))
+	if strings.Contains(lower, "email") && strings.Contains(lower, "from") {
+		return true
+	}
+	if strings.Contains(lowerToken, "email") && strings.Contains(lowerToken, "from") {
+		return true
+	}
 	if strings.Contains(lower, "from") || strings.Contains(lowerToken, "from") {
 		return true
 	}
 	if strings.Contains(lower, "addr") || strings.Contains(lowerToken, "addr") {
-		return true
-	}
-	if strings.Contains(lower, "email") && strings.Contains(lower, "from") {
 		return true
 	}
 	return false
@@ -1591,23 +1584,6 @@ func shouldSetBaseURL(specs schemaSpecs, argName string) bool {
 	}
 	mapTo := specMapTo(spec, argName)
 	return mapTo != ""
-}
-
-func shouldSetBaseURLForMapTo(specs schemaSpecs, mapTo string) bool {
-	if mapTo == "" {
-		return false
-	}
-	for name, spec := range specs.args {
-		if specMapTo(spec, name) == mapTo {
-			return true
-		}
-	}
-	for name, spec := range specs.tokens {
-		if specMapTo(spec, name) == mapTo {
-			return true
-		}
-	}
-	return false
 }
 
 func delimContains(spec map[string]any, delim string) bool {

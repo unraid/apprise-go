@@ -13,5 +13,30 @@
         "url": "https://api.pushed.co/1/push"
       }
     ]
+  },
+  {
+    "name": "targets",
+    "requests": [
+      {
+        "body": "{\"app_key\": \"appkey123\", \"app_secret\": \"appsecret456\", \"target_type\": \"channel\", \"content\": \"apprise parity\\r\\nhello from python\", \"target_alias\": \"channel1\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushed.co/1/push"
+      },
+      {
+        "body": "{\"app_key\": \"appkey123\", \"app_secret\": \"appsecret456\", \"target_type\": \"pushed_id\", \"content\": \"apprise parity\\r\\nhello from python\", \"pushed_id\": \"user1\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushed.co/1/push"
+      }
+    ]
   }
 ]

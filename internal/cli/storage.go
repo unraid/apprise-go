@@ -130,12 +130,12 @@ func resolveStorageAction(raw string) (string, bool) {
 }
 
 func resolveStoragePath(explicit string) string {
+	if envPath := strings.TrimSpace(os.Getenv(defaultEnvAppriseStoragePath)); envPath != "" {
+		return expandPath(envPath)
+	}
 	path := strings.TrimSpace(explicit)
 	if path != "" {
 		return expandPath(path)
-	}
-	if envPath := strings.TrimSpace(os.Getenv(defaultEnvAppriseStoragePath)); envPath != "" {
-		return expandPath(envPath)
 	}
 	return expandPath(defaultStoragePath)
 }

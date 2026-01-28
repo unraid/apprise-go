@@ -60,6 +60,9 @@ func parseConfigFile(path string) []taggedURL {
 			urls = append(urls, parsed...)
 		}
 	}
+	if err := scanner.Err(); err != nil {
+		return urls
+	}
 	return urls
 }
 

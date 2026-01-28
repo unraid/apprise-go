@@ -5,5 +5,12 @@
     "body": "hello from python",
     "title": "apprise parity",
     "type": "info"
+  },
+  {
+    "name": "targets",
+    "url": "pushed://appkey123/appsecret456/@user1/channel1",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]

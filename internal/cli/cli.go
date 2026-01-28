@@ -193,6 +193,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
+	// TODO: Wire these options into CLI behavior once the runtime supports them.
 	_ = opts.inputFormat
 	_ = opts.disableAsync
 	_ = opts.attachments
@@ -1533,7 +1534,7 @@ func isStorageAction(args []string) bool {
 	if len(args) == 0 {
 		return false
 	}
-	return strings.HasPrefix(strings.ToLower(args[0]), "storage")
+	return strings.HasPrefix("storage", strings.ToLower(args[0]))
 }
 
 func resolveNotifyURLs(opts *cliOptions, args []string, stderr io.Writer) []taggedURL {

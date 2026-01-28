@@ -10,5 +10,11 @@
     "url": "lametric://apikey@lametric.local",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "cloud",
+    "url": "lametric://AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==@com.lametric.testapp/1?mode=cloud",
+    "body": "hello from python",
+    "title": "apprise parity"
   }
 ]

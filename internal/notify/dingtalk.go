@@ -111,7 +111,7 @@ func (d *DingTalkTarget) signature() (string, string) {
 	return timestamp, url.QueryEscape(signature)
 }
 
-var dingtalkSecretRegex = regexp.MustCompile(`^[a-z0-9]+$`)
+var dingtalkSecretRegex = regexp.MustCompile(`(?i)^[a-z0-9]+$`)
 
 func init() {
 	RegisterSchemaEntryOrdered(15, SchemaEntry{

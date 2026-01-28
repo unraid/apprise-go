@@ -109,7 +109,7 @@ func (n *NotifiarrTarget) BuildRequest(body, title string, notifyType NotifyType
 
 func (n *NotifiarrTarget) Send(body, title string, notifyType NotifyType) error {
 	if len(n.channels) == 0 {
-		return nil
+		return fmt.Errorf("missing channels")
 	}
 
 	for _, channel := range n.channels {

@@ -96,9 +96,15 @@ func TestE2ERequestParitySchemaExercise(t *testing.T) {
 				}
 				t.Fatalf("build target: %v", err)
 			}
-			goSpecs := testutil.CaptureGoRequests(t, func() error {
+			goSpecs, err := testutil.CaptureGoRequestsResult(t, func() error {
 				return target.Send("apprise parity body", "apprise parity title", notify.NotifyInfo)
 			})
+			if err != nil {
+				if len(pythonSpecs) == 0 {
+					return
+				}
+				t.Fatalf("send request failed: %v", err)
+			}
 
 			assertRequestSpecSequenceMatches(t, pythonSpecs, goSpecs)
 		})

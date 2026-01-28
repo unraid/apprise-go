@@ -5,5 +5,12 @@
     "body": "hello from python",
     "title": "apprise parity",
     "type": "info"
+  },
+  {
+    "name": "secret",
+    "url": "dingtalk://SeCrEt123@token123",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]

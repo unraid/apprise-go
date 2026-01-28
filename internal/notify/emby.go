@@ -35,6 +35,9 @@ func NewEmbyTarget(target *ParsedURL) (*EmbyTarget, error) {
 	}
 
 	user := strings.TrimSpace(target.User)
+	if user == "" {
+		return nil, fmt.Errorf("missing user")
+	}
 	secure := strings.EqualFold(target.Scheme, "embys")
 	port := target.Port
 	if port == 0 {
@@ -81,7 +84,7 @@ func (e *EmbyTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 
 func (e *EmbyTarget) Send(body, title string, notifyType NotifyType) error {
 	if e.user == "" {
-		return nil
+		return fmt.Errorf("missing user")
 	}
 	if !e.isAuthenticated() {
 		if err := e.login(); err != nil {
