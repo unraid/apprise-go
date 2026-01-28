@@ -3,6 +3,12 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.1.8 (2026-01-28)
+
+### Features
+
+- cli add schema details and storage support (#24)
+
 ## 0.1.7 (2026-01-25)
 
 ### Features
