@@ -41,7 +41,6 @@ type fcmTokenResponse struct {
 
 func (f *FCMTarget) buildOAuthSpec(body, title string, notifyType NotifyType, recipient, accessToken string) (RequestSpec, error) {
 	message := map[string]any{
-		"token": nil,
 		"notification": map[string]string{
 			"title": title,
 			"body":  body,
@@ -151,7 +150,8 @@ func fetchFCMAccessToken(account *fcmServiceAccount) (string, error) {
 	req.Header.Set("Accept", "*/*")
 	req.Header.Set("User-Agent", "Apprise")
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
