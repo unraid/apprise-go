@@ -1,0 +1,7 @@
+version: 2
+
+secret:
+  # Exclude test fixture directories containing test-only keys
+  ignored_paths:
+    - '**/testutil/fixtures/**'
+    - '**/parity/providers/vapid/private_key.pem'
