@@ -26,6 +26,9 @@ func TestProviderManifestsCoverSupportedSchemas(t *testing.T) {
 
 	missing := []string{}
 	for _, schema := range notify.SupportedSchemas() {
+		if isNonHTTPSchema(schema) {
+			continue
+		}
 		if _, ok := schemaToProvider[schema]; !ok {
 			missing = append(missing, schema)
 		}

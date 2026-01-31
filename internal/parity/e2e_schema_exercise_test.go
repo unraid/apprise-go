@@ -70,6 +70,9 @@ func TestE2ERequestParitySchemaExercise(t *testing.T) {
 		if !notify.SupportsSchema(schema) {
 			continue
 		}
+		if isNonHTTPSchema(schema) {
+			continue
+		}
 		seen[schema]++
 
 		name := c.Name
@@ -130,6 +133,9 @@ func TestE2ERequestParitySchemaExercise(t *testing.T) {
 	}
 
 	for _, schema := range schemas {
+		if isNonHTTPSchema(strings.ToLower(schema)) {
+			continue
+		}
 		if seen[strings.ToLower(schema)] == 0 {
 			t.Fatalf("missing exercise cases for schema %s", schema)
 		}

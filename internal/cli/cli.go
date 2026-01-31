@@ -1222,6 +1222,17 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				fmt.Fprintf(stderr, "pushplus notify error: %s\n", err)
 				failed = true
 			}
+		case "mailto", "mailtos":
+			mailtoTarget, err := notify.NewMailtoTarget(parsed)
+			if err != nil {
+				fmt.Fprintf(stderr, "mailto target error: %s\n", err)
+				failed = true
+				continue
+			}
+			if err := mailtoTarget.Send(body, title, nt); err != nil {
+				fmt.Fprintf(stderr, "mailto notify error: %s\n", err)
+				failed = true
+			}
 		case "smtp2go":
 			smtp2goTarget, err := notify.NewSMTP2GoTarget(parsed)
 			if err != nil {
