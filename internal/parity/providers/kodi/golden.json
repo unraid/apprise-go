@@ -1,0 +1,66 @@
+[
+  {
+    "name": "xbmc-default",
+    "requests": [
+      {
+        "body": "{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ShowNotification\", \"params\": {\"title\": \"apprise parity\", \"message\": \"hello from python\", \"displaytime\": 12000, \"image\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-128x128.png\"}, \"id\": 1}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://kodi.local:8080/jsonrpc"
+      }
+    ]
+  },
+  {
+    "name": "xbmcs-secure",
+    "requests": [
+      {
+        "body": "{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ShowNotification\", \"params\": {\"title\": \"apprise parity\", \"message\": \"hello from python\", \"displaytime\": 12000, \"image\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-128x128.png\"}, \"id\": 1}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://kodi.local:8080/jsonrpc"
+      }
+    ]
+  },
+  {
+    "name": "kodi-default",
+    "requests": [
+      {
+        "body": "{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ShowNotification\", \"params\": {\"title\": \"apprise parity\", \"message\": \"hello from python\", \"displaytime\": 12000, \"image\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-128x128.png\"}, \"id\": 1, \"type\": \"info\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://kodi.local/jsonrpc"
+      }
+    ]
+  },
+  {
+    "name": "kodis-secure",
+    "requests": [
+      {
+        "body": "{\"jsonrpc\": \"2.0\", \"method\": \"GUI.ShowNotification\", \"params\": {\"title\": \"apprise parity\", \"message\": \"hello from python\", \"displaytime\": 12000, \"image\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-128x128.png\"}, \"id\": 1, \"type\": \"info\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://kodi.local/jsonrpc"
+      }
+    ]
+  }
+]

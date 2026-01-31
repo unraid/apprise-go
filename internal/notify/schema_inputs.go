@@ -224,6 +224,10 @@ func adjustSchemaValues(specs schemaSpecs, target *ParsedURL, values map[string]
 		if _, ok := target.Query["from"]; !ok {
 			delete(values, "from_addr")
 		}
+	case "xbmc", "xbmcs":
+		if portValue, ok := values["port"]; !ok || portValue.Value == nil {
+			values["port"] = schemaValueInt(8080)
+		}
 	case "seven":
 		if _, ok := values["label"]; !ok {
 			values["label"] = schemaValueAny(nil)

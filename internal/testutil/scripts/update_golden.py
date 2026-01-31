@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import sys
@@ -59,16 +60,41 @@ def rewrite_values(value):
     return value
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "providers",
+        nargs="*",
+        help="Provider names to update (default: all)",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Verify golden files match generated output without writing",
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
     apply_default_env()
 
     parity_root = repo_root / "internal" / "parity"
     os.chdir(parity_root)
 
     provider_dirs = [p for p in providers_root.iterdir() if p.is_dir()]
+    if args.providers:
+        wanted = {p.strip() for p in args.providers if p.strip()}
+        provider_dirs = [p for p in provider_dirs if p.name in wanted]
+        missing = wanted - {p.name for p in provider_dirs}
+        if missing:
+            raise SystemExit(
+                "Unknown provider(s): " + ", ".join(sorted(missing))
+            )
     if not provider_dirs:
         raise SystemExit(f"No provider dirs found under {providers_root}")
 
+    changed = []
     for provider_dir in sorted(provider_dirs):
         cases_path = provider_dir / "cases.json"
         if not cases_path.exists():
@@ -91,7 +117,20 @@ def main():
             )
 
         golden_path = provider_dir / "golden.json"
-        golden_path.write_text(json.dumps(golden_cases, indent=2, sort_keys=True))
+        rendered = json.dumps(golden_cases, indent=2, sort_keys=True)
+        if args.check:
+            existing = ""
+            if golden_path.exists():
+                existing = golden_path.read_text()
+            if existing != rendered:
+                changed.append(provider_dir.name)
+        else:
+            golden_path.write_text(rendered)
+
+    if args.check and changed:
+        raise SystemExit(
+            "Golden files out of date: " + ", ".join(sorted(changed))
+        )
 
 
 if __name__ == "__main__":

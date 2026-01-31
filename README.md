@@ -69,35 +69,38 @@ go build -o apprise-go ./cmd/apprise
 
 ```bash
 # Send a simple notification
-apprise-go -u "discord://webhook_id/webhook_token" -m "Hello from apprise-go!"
+apprise -b "Hello from apprise!" "discord://webhook_id/webhook_token"
 ```
 
 ### Multiple Services
 
 ```bash
 # Send to multiple services at once
-apprise-go -u "discord://..." -u "slack://..." -m "Multi-platform notification"
+apprise -b "Multi-platform notification" "discord://..." "slack://..."
 ```
 
 ### With Title
 
 ```bash
 # Add a title to your notification
-apprise-go -u "discord://..." -t "Alert" -m "Something happened!"
+apprise -t "Alert" -b "Something happened!" "discord://..."
 ```
 
-### Schema Information
+### Schema and Service Information
 
 ```bash
-# Get configuration details for a service
-apprise-go --schema discord
+# Get full Apprise schema as JSON
+apprise --schema
+
+# Print details about all supported services
+apprise --details
 ```
 
 ### Storage Support
 
 ```bash
 # Store and reuse configurations
-apprise-go --storage /path/to/config -m "Using saved config"
+apprise --storage-path /path/to/config -b "Using saved config"
 ```
 
 ## Releases

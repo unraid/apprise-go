@@ -16,6 +16,8 @@ var pushSchemas = map[string]struct{}{
 	"fcm":             {},
 	"hassio":          {},
 	"hassios":         {},
+	"kodi":            {},
+	"kodis":           {},
 	"kumulos":         {},
 	"lametric":        {},
 	"lametrics":       {},
@@ -71,4 +73,6 @@ var pushSchemas = map[string]struct{}{
 	"workflow":        {},
 	"workflows":       {},
 	"wxpusher":        {},
+	"xbmc":            {},
+	"xbmcs":           {},
 }

@@ -1,0 +1,26 @@
+[
+  {
+    "name": "xbmc-default",
+    "url": "xbmc://user:pass@kodi.local",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "xbmcs-secure",
+    "url": "xbmcs://user:pass@kodi.local",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "kodi-default",
+    "url": "kodi://user:pass@kodi.local",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "kodis-secure",
+    "url": "kodis://user:pass@kodi.local",
+    "body": "hello from python",
+    "title": "apprise parity"
+  }
+]

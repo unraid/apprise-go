@@ -57,6 +57,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"emby": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewEmbyTarget(parsed)
 	},
+	"kodi": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewXBMCTarget(parsed)
+	},
 	"kumulos": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewKumulosTarget(parsed)
 	},

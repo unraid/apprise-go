@@ -1387,6 +1387,17 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				fmt.Fprintf(stderr, "emby notify error: %s\n", err)
 				failed = true
 			}
+		case "xbmc", "xbmcs", "kodi", "kodis":
+			xbmcTarget, err := notify.NewXBMCTarget(parsed)
+			if err != nil {
+				fmt.Fprintf(stderr, "xbmc target error: %s\n", err)
+				failed = true
+				continue
+			}
+			if err := xbmcTarget.Send(body, title, nt); err != nil {
+				fmt.Fprintf(stderr, "xbmc notify error: %s\n", err)
+				failed = true
+			}
 		case "hassio", "hassios":
 			hassTarget, err := notify.NewHomeAssistantTarget(parsed)
 			if err != nil {

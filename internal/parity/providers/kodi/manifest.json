@@ -1,0 +1,4 @@
+{
+  "name": "kodi",
+  "schemas": ["xbmc", "xbmcs", "kodi", "kodis"]
+}

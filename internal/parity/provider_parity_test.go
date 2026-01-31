@@ -13,6 +13,11 @@ func TestProviderRequestParity(t *testing.T) {
 
 	for _, name := range sortedProviderNames(defs) {
 		def := defs[name]
+		golden := loadProviderGolden(t, def.Dir)
+		goldenByName := map[string]goldenCase{}
+		for _, g := range golden {
+			goldenByName[g.Name] = g
+		}
 		builder, ok := providerBuilders[name]
 		if !ok {
 			t.Fatalf("missing provider builder for %s", name)
@@ -33,6 +38,11 @@ func TestProviderRequestParity(t *testing.T) {
 				}
 
 				pythonSpecs, pythonSuccess := testutil.CapturePythonRequestsWithTypeResult(t, c.URL, c.Body, c.Title, notifyType)
+				if expected, ok := goldenByName[c.Name]; ok {
+					assertRequestSpecSequenceMatches(t, pythonSpecs, expected.Requests)
+				} else {
+					t.Fatalf("missing golden case for %s/%s", name, c.Name)
+				}
 				parsedURL, err := notify.ParseURL(c.URL)
 				if err != nil {
 					t.Fatalf("parse url: %v", err)
