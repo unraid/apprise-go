@@ -3,6 +3,12 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.1.10 (2026-01-31)
+
+### Features
+
+- add mailto SMTP support and parity coverage (#32)
+
 ## 0.1.9 (2026-01-28)
 
 ### Features
