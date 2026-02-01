@@ -34,8 +34,12 @@ func appriseColor(notifyType NotifyType) string {
 
 func appriseColorInt(notifyType NotifyType) int {
 	color := strings.TrimPrefix(appriseColor(notifyType), "#")
-	value, err := strconv.ParseInt(color, 16, 64)
+	value, err := strconv.ParseUint(color, 16, 32)
 	if err != nil {
+		return 0
+	}
+	maxInt := uint64(^uint(0) >> 1)
+	if value > maxInt {
 		return 0
 	}
 	return int(value)

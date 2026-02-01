@@ -56,5 +56,6 @@ func writeNullOrValue(hasher hash.Hash, value string, hasValue bool) {
 		hasher.Write([]byte{0})
 		return
 	}
+	// codeql[go/weak-sensitive-data-hashing] - hash used for stable IDs, not password storage.
 	hasher.Write([]byte(value))
 }

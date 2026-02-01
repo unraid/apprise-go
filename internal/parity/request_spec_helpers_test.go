@@ -68,6 +68,10 @@ func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpe
 		assertJSONBodyEqual(t, pythonBody, goBody)
 		return
 	}
+	if shouldCompareBodyAsJSON(pythonBody, goBody) {
+		assertJSONBodyEqual(t, pythonBody, goBody)
+		return
+	}
 	if shouldCompareForm(pythonHeaders, pythonBody) {
 		assertQueryEqual(t, pythonBody, goBody)
 		return
@@ -160,6 +164,21 @@ func shouldCompareForm(headers map[string]string, body string) bool {
 	return strings.Contains(body, "=")
 }
 
+func shouldCompareBodyAsJSON(pythonBody, goBody string) bool {
+	if strings.TrimSpace(pythonBody) == "" || strings.TrimSpace(goBody) == "" {
+		return false
+	}
+	var pythonValue any
+	if err := json.Unmarshal([]byte(pythonBody), &pythonValue); err != nil {
+		return false
+	}
+	var goValue any
+	if err := json.Unmarshal([]byte(goBody), &goValue); err != nil {
+		return false
+	}
+	return true
+}
+
 func assertJSONBodyEqual(t *testing.T, pythonBody, goBody string) {
 	t.Helper()
 
@@ -205,11 +224,25 @@ func normalizeQueryValues(values url.Values) url.Values {
 	for key, list := range values {
 		clean := make([]string, len(list))
 		for i, value := range list {
-			clean[i] = normalizeAppriseURL(value)
+			clean[i] = normalizeQueryValue(value)
 		}
 		normalized[key] = clean
 	}
 	return normalized
+}
+
+func normalizeQueryValue(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") {
+		var parsed any
+		if err := json.Unmarshal([]byte(trimmed), &parsed); err == nil {
+			parsed = normalizeJSONValue(parsed)
+			if normalized, err := json.Marshal(parsed); err == nil {
+				return string(normalized)
+			}
+		}
+	}
+	return normalizeAppriseURL(value)
 }
 
 func normalizeJSONValue(value any) any {

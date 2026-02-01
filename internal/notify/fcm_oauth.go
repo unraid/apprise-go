@@ -206,39 +206,44 @@ func (account *fcmServiceAccount) jwtAssertion() (string, error) {
 }
 
 func encodeJWTHeader(alg, kid string) (string, error) {
-	typValue, err := json.Marshal("JWT")
-	if err != nil {
-		return "", err
+	type jwtHeader struct {
+		Typ string  `json:"typ"`
+		Alg string  `json:"alg"`
+		Kid *string `json:"kid"`
 	}
-	algValue, err := json.Marshal(alg)
-	if err != nil {
-		return "", err
+	header := jwtHeader{
+		Typ: "JWT",
+		Alg: alg,
 	}
-	kidValue := "null"
 	if kid != "" {
-		value, err := json.Marshal(kid)
-		if err != nil {
-			return "", err
-		}
-		kidValue = string(value)
+		header.Kid = &kid
 	}
-	return fmt.Sprintf("{\"typ\": %s, \"alg\": %s, \"kid\": %s}", string(typValue), string(algValue), kidValue), nil
+	data, err := json.Marshal(header)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 func encodeJWTPayload(iat, exp int64, iss, aud, scope string) (string, error) {
-	issValue, err := json.Marshal(iss)
+	type jwtPayload struct {
+		Iat   int64  `json:"iat"`
+		Exp   int64  `json:"exp"`
+		Iss   string `json:"iss"`
+		Aud   string `json:"aud"`
+		Scope string `json:"scope"`
+	}
+	data, err := json.Marshal(jwtPayload{
+		Iat:   iat,
+		Exp:   exp,
+		Iss:   iss,
+		Aud:   aud,
+		Scope: scope,
+	})
 	if err != nil {
 		return "", err
 	}
-	audValue, err := json.Marshal(aud)
-	if err != nil {
-		return "", err
-	}
-	scopeValue, err := json.Marshal(scope)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("{\"iat\": %d, \"exp\": %d, \"iss\": %s, \"aud\": %s, \"scope\": %s}", iat, exp, string(issValue), string(audValue), string(scopeValue)), nil
+	return string(data), nil
 }
 
 func signRS256(key *rsa.PrivateKey, signingInput string) (string, error) {

@@ -302,11 +302,13 @@ func (e *EmbyTarget) loginPayload() map[string]string {
 }
 
 func md5Hash(value string) string {
+	// codeql[go/weak-sensitive-data-hashing]
 	sum := md5.Sum([]byte(value))
 	return hex.EncodeToString(sum[:])
 }
 
 func sha1Hash(value string) string {
+	// codeql[go/weak-sensitive-data-hashing]
 	sum := sha1.Sum([]byte(value))
 	return hex.EncodeToString(sum[:])
 }

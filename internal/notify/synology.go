@@ -65,20 +65,17 @@ func NewSynologyTarget(target *ParsedURL) (*SynologyTarget, error) {
 func (s *SynologyTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
 	message := mergeTitleBody(title, body)
 
-	textValue, err := json.Marshal(message)
+	type synologyPayload struct {
+		Text    string `json:"text"`
+		FileURL string `json:"file_url,omitempty"`
+	}
+	payload := synologyPayload{Text: message}
+	if s.fileURL != "" {
+		payload.FileURL = s.fileURL
+	}
+	payloadData, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
-	}
-
-	payloadData := []byte{}
-	if s.fileURL == "" {
-		payloadData = []byte(fmt.Sprintf("{\"text\": %s}", textValue))
-	} else {
-		fileValue, err := json.Marshal(s.fileURL)
-		if err != nil {
-			return RequestSpec{}, err
-		}
-		payloadData = []byte(fmt.Sprintf("{\"text\": %s, \"file_url\": %s}", textValue, fileValue))
 	}
 
 	params := url.Values{}

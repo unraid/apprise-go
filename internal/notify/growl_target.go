@@ -194,10 +194,13 @@ func (g *GrowlTarget) gntpInfoLine(messageType string) (string, error) {
 	}
 
 	seed := []byte(time.Now().Format(time.ANSIC))
+	// codeql[go/weak-sensitive-data-hashing]
 	saltHash := md5.Sum(seed)
 	saltHex := strings.ToUpper(fmt.Sprintf("%x", saltHash))
 	keyBasis := append([]byte(g.password), saltHash[:]...)
+	// codeql[go/weak-sensitive-data-hashing]
 	key := md5.Sum(keyBasis)
+	// codeql[go/weak-sensitive-data-hashing]
 	keyHash := md5.Sum(key[:])
 	info = fmt.Sprintf("GNTP/1.0 %s NONE MD5:%s.%s", messageType, strings.ToUpper(fmt.Sprintf("%x", keyHash)), saltHex)
 	return info, nil

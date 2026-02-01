@@ -83,6 +83,7 @@ func awsSignature(secret, date, region, service, payload string) string {
 }
 
 func sha256Hex(value string) string {
+	// codeql[go/weak-sensitive-data-hashing]
 	hash := sha256.Sum256([]byte(value))
 	return hex.EncodeToString(hash[:])
 }

@@ -134,6 +134,7 @@ func (s *SimplePushTarget) ensureEncryption() error {
 		}
 	}
 
+	// codeql[go/weak-sensitive-data-hashing] - Simplepush derives the AES key with SHA1 per service spec.
 	hash := sha1.Sum([]byte(s.password + s.user))
 	hexDigest := hex.EncodeToString(hash[:])
 	keyBytes, err := hex.DecodeString(hexDigest[:32])

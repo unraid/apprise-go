@@ -45,19 +45,20 @@ func NewPushjetTarget(target *ParsedURL) (*PushjetTarget, error) {
 }
 
 func (p *PushjetTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	messageJSON, err := json.Marshal(body)
+	type pushjetPayload struct {
+		Message string  `json:"message"`
+		Title   string  `json:"title"`
+		Link    *string `json:"link"`
+		Level   *string `json:"level"`
+	}
+	payloadData, err := json.Marshal(pushjetPayload{
+		Message: body,
+		Title:   title,
+	})
 	if err != nil {
 		return RequestSpec{}, err
 	}
-	titleJSON, err := json.Marshal(title)
-	if err != nil {
-		return RequestSpec{}, err
-	}
-	payload := fmt.Sprintf(
-		`{"message": %s, "title": %s, "link": null, "level": null}`,
-		string(messageJSON),
-		string(titleJSON),
-	)
+	payload := string(payloadData)
 
 	u := url.URL{
 		Scheme: p.scheme,

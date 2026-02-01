@@ -198,6 +198,7 @@ def cache_key(url, body, title, notify_type):
         },
     }
     payload = json.dumps(key, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    # codeql[py/weak-sensitive-data-hashing] - cache key only.
     digest = hashlib.sha256(payload).hexdigest()
     return digest
 
@@ -451,7 +452,8 @@ def capture_request(url, body, title, notify_type):
         else:
             body_text = str(req_body)
 
-        if "/xrpc/com.atproto.repo.createRecord" in prepared.url:
+        parsed = urlparse(prepared.url)
+        if parsed.path.endswith("/xrpc/com.atproto.repo.createRecord"):
             try:
                 payload = json.loads(body_text)
                 record = payload.get("record")
@@ -472,14 +474,13 @@ def capture_request(url, body, title, notify_type):
 
         response = requests.Response()
         response.status_code = 200
-        parsed = urlparse(prepared.url)
-        if "sendpulse.com/oauth/access_token" in prepared.url:
+        if parsed.netloc.endswith("sendpulse.com") and parsed.path == "/oauth/access_token":
             response._content = b'{"access_token":"token","expires_in":3600}'
-        elif "reddit.com/api/v1/access_token" in prepared.url:
+        elif parsed.netloc.endswith("reddit.com") and parsed.path == "/api/v1/access_token":
             response._content = b'{"access_token":"token","expires_in":3600}'
         elif parsed.netloc == "oauth2.googleapis.com" and parsed.path == "/token":
             response._content = b'{"access_token":"token","expires_in":3600}'
-        elif "login.microsoftonline.com" in prepared.url and parsed.path.endswith(
+        elif parsed.netloc == "login.microsoftonline.com" and parsed.path.endswith(
             "/oauth2/v2.0/token"
         ):
             response._content = b'{"access_token":"token","expires_in":3600}'
