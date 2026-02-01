@@ -15,6 +15,24 @@ type = "PrepareRelease"
 type = "Release"
 
 [[workflows]]
+name = "prepare-release"
+
+[[workflows.steps]]
+type = "Command"
+command = "git checkout -B knope/release"
+
+[[workflows.steps]]
+type = "PrepareRelease"
+
+[[workflows.steps]]
+type = "Command"
+command = "git commit -m \"chore: prepare release $version\""
+
+[[workflows.steps]]
+type = "Command"
+command = "git push --force-with-lease origin knope/release"
+
+[[workflows]]
 name = "document-change"
 
 [[workflows.steps]]
