@@ -474,9 +474,10 @@ def capture_request(url, body, title, notify_type):
 
         response = requests.Response()
         response.status_code = 200
-        if parsed.netloc.endswith("sendpulse.com") and parsed.path == "/oauth/access_token":
+        hostname = parsed.hostname or ""
+        if hostname in ("sendpulse.com", "api.sendpulse.com") and parsed.path == "/oauth/access_token":
             response._content = b'{"access_token":"token","expires_in":3600}'
-        elif parsed.netloc.endswith("reddit.com") and parsed.path == "/api/v1/access_token":
+        elif hostname in ("reddit.com", "www.reddit.com") and parsed.path == "/api/v1/access_token":
             response._content = b'{"access_token":"token","expires_in":3600}'
         elif parsed.netloc == "oauth2.googleapis.com" and parsed.path == "/token":
             response._content = b'{"access_token":"token","expires_in":3600}'
