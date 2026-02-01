@@ -3,6 +3,16 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.2.0 (2026-02-01)
+
+### Features
+
+- full parity with non-http endpoints (and parity reports) (#34)
+
+### Fixes
+
+- resolve codeql scanning warnings (#36)
+
 ## 0.1.10 (2026-01-31)
 
 ### Features
