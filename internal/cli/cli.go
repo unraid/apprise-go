@@ -1233,6 +1233,105 @@ func Run(args []string, stdout, stderr io.Writer) int {
 				fmt.Fprintf(stderr, "mailto notify error: %s\n", err)
 				failed = true
 			}
+		case "dbus", "kde", "qt", "glib", "gio", "gnome":
+			localTarget, err := notify.NewLocalNotifyTarget(parsed)
+			if err != nil {
+				fmt.Fprintf(stderr, "%s target error: %s\n", parsed.Scheme, err)
+				failed = true
+				continue
+			}
+			if err := localTarget.Send(body, title, nt); err != nil {
+				fmt.Fprintf(stderr, "%s notify error: %s\n", parsed.Scheme, err)
+				failed = true
+			}
+		case "growl":
+			growlTarget, err := notify.NewGrowlTarget(parsed)
+			if err != nil {
+				fmt.Fprintf(stderr, "growl target error: %s\n", err)
+				failed = true
+				continue
+			}
+			if err := growlTarget.Send(body, title, nt); err != nil {
+				fmt.Fprintf(stderr, "growl notify error: %s\n", err)
+				failed = true
+			}
+		case "mqtt", "mqtts":
+			mqttTarget, err := notify.NewMQTTTarget(parsed)
+			if err != nil {
+				fmt.Fprintf(stderr, "mqtt target error: %s\n", err)
+				failed = true
+				continue
+			}
+			if err := mqttTarget.Send(body, title, nt); err != nil {
+				fmt.Fprintf(stderr, "mqtt notify error: %s\n", err)
+				failed = true
+			}
+		case "smpp", "smpps":
+			smppTarget, err := notify.NewSMPPTarget(parsed)
+			if err != nil {
+				fmt.Fprintf(stderr, "smpp target error: %s\n", err)
+				failed = true
+				continue
+			}
+			if err := smppTarget.Send(body, title, nt); err != nil {
+				fmt.Fprintf(stderr, "smpp notify error: %s\n", err)
+				failed = true
+			}
+		case "syslog":
+			syslogTarget, err := notify.NewSyslogTarget(parsed)
+			if err != nil {
+				fmt.Fprintf(stderr, "syslog target error: %s\n", err)
+				failed = true
+				continue
+			}
+			if err := syslogTarget.Send(body, title, nt); err != nil {
+				fmt.Fprintf(stderr, "syslog notify error: %s\n", err)
+				failed = true
+			}
+		case "macosx":
+			macosxTarget, err := notify.NewMacOSXTarget(parsed)
+			if err != nil {
+				fmt.Fprintf(stderr, "macosx target error: %s\n", err)
+				failed = true
+				continue
+			}
+			if err := macosxTarget.Send(body, title, nt); err != nil {
+				fmt.Fprintf(stderr, "macosx notify error: %s\n", err)
+				failed = true
+			}
+		case "windows":
+			windowsTarget, err := notify.NewWindowsTarget(parsed)
+			if err != nil {
+				fmt.Fprintf(stderr, "windows target error: %s\n", err)
+				failed = true
+				continue
+			}
+			if err := windowsTarget.Send(body, title, nt); err != nil {
+				fmt.Fprintf(stderr, "windows notify error: %s\n", err)
+				failed = true
+			}
+		case "aprs":
+			aprsTarget, err := notify.NewAprsTarget(parsed)
+			if err != nil {
+				fmt.Fprintf(stderr, "aprs target error: %s\n", err)
+				failed = true
+				continue
+			}
+			if err := aprsTarget.Send(body, title, nt); err != nil {
+				fmt.Fprintf(stderr, "aprs notify error: %s\n", err)
+				failed = true
+			}
+		case "rsyslog":
+			rsyslogTarget, err := notify.NewRSyslogTarget(parsed)
+			if err != nil {
+				fmt.Fprintf(stderr, "rsyslog target error: %s\n", err)
+				failed = true
+				continue
+			}
+			if err := rsyslogTarget.Send(body, title, nt); err != nil {
+				fmt.Fprintf(stderr, "rsyslog notify error: %s\n", err)
+				failed = true
+			}
 		case "smtp2go":
 			smtp2goTarget, err := notify.NewSMTP2GoTarget(parsed)
 			if err != nil {

@@ -234,6 +234,13 @@ func (m *MailtoTarget) connect() (*smtp.Client, error) {
 			ServerName:         m.smtpHost,
 			InsecureSkipVerify: !m.verifyTLS,
 		}
+		if m.verifyTLS {
+			if pool, ok, err := loadCertPoolFromEnv(); err != nil {
+				return nil, err
+			} else if ok {
+				tlsConfig.RootCAs = pool
+			}
+		}
 		conn, err := tls.Dial("tcp", addr, tlsConfig)
 		if err != nil {
 			return nil, err
@@ -265,6 +272,13 @@ func (m *MailtoTarget) connect() (*smtp.Client, error) {
 		tlsConfig := &tls.Config{
 			ServerName:         m.smtpHost,
 			InsecureSkipVerify: !m.verifyTLS,
+		}
+		if m.verifyTLS {
+			if pool, ok, err := loadCertPoolFromEnv(); err != nil {
+				return nil, err
+			} else if ok {
+				tlsConfig.RootCAs = pool
+			}
 		}
 		if err := client.StartTLS(tlsConfig); err != nil {
 			_ = client.Close()
@@ -299,17 +313,6 @@ func (m *MailtoTarget) buildMessages(body, title string) ([]mailtoMessage, error
 		format = "text"
 	}
 
-	contentType := "text/plain"
-	if format == "html" {
-		contentType = "text/html"
-	}
-
-	encodedBody, err := encodeQuotedPrintable(body)
-	if err != nil {
-		encodedBody = body
-	}
-	encodedBody = normalizeCRLF(encodedBody)
-
 	subject := ""
 	if strings.TrimSpace(title) != "" {
 		subject = encodeRFC2047(title)
@@ -323,6 +326,7 @@ func (m *MailtoTarget) buildMessages(body, title string) ([]mailtoMessage, error
 		bcc := filterEmailList(m.bcc, nil, target)
 		reply := filterEmailList(m.replyTo, nil, target)
 
+		contentTypeHeader, transferHeader, messageBody := buildMailtoBody(body, format)
 		headers := []string{
 			fmt.Sprintf("Subject: %s", subject),
 			fmt.Sprintf("From: %s", fromHeader),
@@ -330,9 +334,11 @@ func (m *MailtoTarget) buildMessages(body, title string) ([]mailtoMessage, error
 			fmt.Sprintf("Date: %s", time.Now().Format(time.RFC1123Z)),
 			fmt.Sprintf("Message-ID: %s", mailtoMessageID(m.smtpHost)),
 			"MIME-Version: 1.0",
-			fmt.Sprintf("Content-Type: %s; charset=\"utf-8\"", contentType),
-			"Content-Transfer-Encoding: quoted-printable",
+			fmt.Sprintf("Content-Type: %s", contentTypeHeader),
 			"X-Application: Apprise",
+		}
+		if transferHeader != "" {
+			headers = append(headers, fmt.Sprintf("Content-Transfer-Encoding: %s", transferHeader))
 		}
 
 		if len(cc) > 0 {
@@ -345,7 +351,7 @@ func (m *MailtoTarget) buildMessages(body, title string) ([]mailtoMessage, error
 			headers = append(headers, fmt.Sprintf("%s: %s", key, value))
 		}
 
-		data := strings.Join(headers, "\r\n") + "\r\n\r\n" + encodedBody
+		data := strings.Join(headers, "\r\n") + "\r\n\r\n" + messageBody
 		toAddrs := append([]string{target}, cc...)
 		toAddrs = append(toAddrs, bcc...)
 		messages = append(messages, mailtoMessage{
@@ -407,6 +413,57 @@ func normalizeCRLF(value string) string {
 	value = strings.ReplaceAll(value, "\r\n", "\n")
 	value = strings.ReplaceAll(value, "\r", "\n")
 	return strings.ReplaceAll(value, "\n", "\r\n")
+}
+
+func buildMailtoBody(body, format string) (string, string, string) {
+	if format == "html" {
+		plain := htmlToText(body)
+		html := body
+
+		plainEncoded, err := encodeQuotedPrintable(plain)
+		if err != nil {
+			plainEncoded = plain
+		}
+		plainEncoded = normalizeCRLF(plainEncoded)
+
+		htmlEncoded, err := encodeQuotedPrintable(html)
+		if err != nil {
+			htmlEncoded = html
+		}
+		htmlEncoded = normalizeCRLF(htmlEncoded)
+
+		boundary := fmt.Sprintf("===============%d==", time.Now().UnixNano())
+		bodyPayload := buildMultipartAlternative(boundary, plainEncoded, htmlEncoded)
+		return fmt.Sprintf("multipart/alternative; boundary=\"%s\"", boundary), "", bodyPayload
+	}
+
+	encodedBody, err := encodeQuotedPrintable(body)
+	if err != nil {
+		encodedBody = body
+	}
+	encodedBody = normalizeCRLF(encodedBody)
+
+	return "text/plain; charset=\"utf-8\"", "quoted-printable", encodedBody
+}
+
+func buildMultipartAlternative(boundary, plain, html string) string {
+	lines := []string{
+		"--" + boundary,
+		"Content-Type: text/plain; charset=\"utf-8\"",
+		"MIME-Version: 1.0",
+		"Content-Transfer-Encoding: quoted-printable",
+		"",
+		plain,
+		"--" + boundary,
+		"Content-Type: text/html; charset=\"utf-8\"",
+		"MIME-Version: 1.0",
+		"Content-Transfer-Encoding: quoted-printable",
+		"",
+		html,
+		"--" + boundary + "--",
+		"",
+	}
+	return strings.Join(lines, "\r\n")
 }
 
 func sendSMTPMessage(client *smtp.Client, from string, to []string, body string) error {

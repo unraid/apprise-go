@@ -1,6 +1,6 @@
-package parity
+package notify
 
-var nonHTTPSchemas = map[string]struct{}{
+var systemSchemas = map[string]struct{}{
 	"aprs":    {},
 	"dbus":    {},
 	"gio":     {},
@@ -11,17 +11,10 @@ var nonHTTPSchemas = map[string]struct{}{
 	"macosx":  {},
 	"mqtt":    {},
 	"mqtts":   {},
-	"mailto":  {},
-	"mailtos": {},
 	"qt":      {},
 	"rsyslog": {},
 	"smpp":    {},
 	"smpps":   {},
 	"syslog":  {},
 	"windows": {},
-}
-
-func isNonHTTPSchema(schema string) bool {
-	_, ok := nonHTTPSchemas[schema]
-	return ok
 }

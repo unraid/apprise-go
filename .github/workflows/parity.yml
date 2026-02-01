@@ -6,7 +6,7 @@ on:
   pull_request:
   push:
     branches:
-      - main
+      - "**"
   workflow_dispatch:
   schedule:
     - cron: "0 9 * * 1"
@@ -62,6 +62,25 @@ jobs:
 
       - name: Run parity tests
         run: bash scripts/ci/run_parity_tests.sh
+
+      - name: Publish parity report summary
+        if: always()
+        run: |
+          echo "## Parity Report" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -f reports/parity_report.md ]]; then
+            cat reports/parity_report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Parity report not generated." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload parity report artifact
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: parity-report
+          path: |
+            reports/parity_report.md
+            reports/parity_report.json
       - name: Notify Discord on scheduled parity failure
         if: failure() && github.event_name == 'schedule' && env.DISCORD_WEBHOOK != ''
         run: |

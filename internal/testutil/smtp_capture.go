@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"bufio"
+	"crypto/tls"
 	"net"
 	"strings"
 	"sync"
@@ -15,23 +16,59 @@ type SMTPMessage struct {
 }
 
 type SMTPCapture struct {
-	addr     string
-	listener net.Listener
-	mu       sync.Mutex
-	messages []SMTPMessage
+	addr            string
+	listener        net.Listener
+	mu              sync.Mutex
+	messages        []SMTPMessage
+	tlsConfig       *tls.Config
+	supportStartTLS bool
 }
 
 func StartSMTPCapture(t *testing.T) *SMTPCapture {
 	t.Helper()
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	return startSMTPCapture(t, false, false)
+}
+
+func StartSMTPTLSCapture(t *testing.T) *SMTPCapture {
+	t.Helper()
+
+	return startSMTPCapture(t, true, false)
+}
+
+func StartSMTPStartTLSCapture(t *testing.T) *SMTPCapture {
+	t.Helper()
+
+	return startSMTPCapture(t, false, true)
+}
+
+func startSMTPCapture(t *testing.T, implicitTLS bool, startTLS bool) *SMTPCapture {
+	t.Helper()
+
+	var (
+		listener  net.Listener
+		err       error
+		tlsConfig *tls.Config
+	)
+
+	if implicitTLS || startTLS {
+		tlsConfig = TestTLSConfig(t)
+	}
+
+	if implicitTLS {
+		listener, err = tls.Listen("tcp", "127.0.0.1:0", tlsConfig)
+	} else {
+		listener, err = net.Listen("tcp", "127.0.0.1:0")
+	}
 	if err != nil {
 		t.Fatalf("smtp listen failed: %v", err)
 	}
 
 	capture := &SMTPCapture{
-		addr:     listener.Addr().String(),
-		listener: listener,
+		addr:            listener.Addr().String(),
+		listener:        listener,
+		tlsConfig:       tlsConfig,
+		supportStartTLS: startTLS,
 	}
 
 	go capture.acceptLoop()
@@ -87,10 +124,17 @@ func (s *SMTPCapture) handleConn(conn net.Conn) {
 
 	reader := bufio.NewReader(conn)
 	writer := bufio.NewWriter(conn)
+	tlsActive := false
 
 	writeLine := func(line string) {
 		_, _ = writer.WriteString(line + "\r\n")
 		_ = writer.Flush()
+	}
+
+	resetIO := func(newConn net.Conn) {
+		conn = newConn
+		reader = bufio.NewReader(conn)
+		writer = bufio.NewWriter(conn)
 	}
 
 	writeLine("220 localhost ESMTP")
@@ -110,6 +154,9 @@ func (s *SMTPCapture) handleConn(conn net.Conn) {
 		switch {
 		case strings.HasPrefix(upper, "EHLO") || strings.HasPrefix(upper, "HELO"):
 			writeLine("250-localhost")
+			if s.supportStartTLS && !tlsActive {
+				writeLine("250-STARTTLS")
+			}
 			writeLine("250 OK")
 		case strings.HasPrefix(upper, "MAIL FROM:"):
 			mailFrom = strings.TrimSpace(line[len("MAIL FROM:"):])
@@ -159,7 +206,19 @@ func (s *SMTPCapture) handleConn(conn net.Conn) {
 		case strings.HasPrefix(upper, "QUIT"):
 			writeLine("221 Bye")
 			return
-		case strings.HasPrefix(upper, "AUTH") || strings.HasPrefix(upper, "STARTTLS"):
+		case strings.HasPrefix(upper, "STARTTLS"):
+			if !s.supportStartTLS || tlsActive {
+				writeLine("502 Command not implemented")
+				continue
+			}
+			writeLine("220 Ready to start TLS")
+			tlsConn := tls.Server(conn, s.tlsConfig)
+			if err := tlsConn.Handshake(); err != nil {
+				return
+			}
+			tlsActive = true
+			resetIO(tlsConn)
+		case strings.HasPrefix(upper, "AUTH"):
 			writeLine("502 Command not implemented")
 		default:
 			writeLine("250 OK")

@@ -60,21 +60,4 @@ func isIgnoredSchema(schema string) bool {
 
 // Non-HTTP providers are excluded from schema coverage for the initial release.
 // Keep in sync with PROCESS.md.
-var ignoredSchemas = map[string]struct{}{
-	"aprs":    {},
-	"dbus":    {},
-	"gio":     {},
-	"glib":    {},
-	"gnome":   {},
-	"growl":   {},
-	"kde":     {},
-	"macosx":  {},
-	"mqtt":    {},
-	"mqtts":   {},
-	"qt":      {},
-	"rsyslog": {},
-	"smpp":    {},
-	"smpps":   {},
-	"syslog":  {},
-	"windows": {},
-}
+var ignoredSchemas = map[string]struct{}{}

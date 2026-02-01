@@ -7,8 +7,11 @@
 [![GitHub Release](https://img.shields.io/github/v/release/unraid/apprise-go)](https://github.com/unraid/apprise-go/releases)
 [![License](https://img.shields.io/github/license/unraid/apprise-go)](LICENSE)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/unraid/apprise-go)](go.mod)
+[![Parity](https://github.com/unraid/apprise-go/actions/workflows/parity.yml/badge.svg)](https://github.com/unraid/apprise-go/actions/workflows/parity.yml)
 
 [Features](#features) • [Installation](#installation) • [Usage](#usage) • [Releases](#releases) • [Contributing](#contributing)
+
+Latest parity report: [GitHub Actions parity workflow](https://github.com/unraid/apprise-go/actions/workflows/parity.yml)
 
 </div>
 

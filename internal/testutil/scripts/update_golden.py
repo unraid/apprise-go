@@ -10,6 +10,22 @@ providers_root = repo_root / "internal" / "parity" / "providers"
 
 sys.path.insert(0, str(script_dir))
 
+def apprise_source_root():
+    env_root = os.environ.get("APPRISE_SOURCE_ROOT", "").strip()
+    if env_root:
+        candidate = Path(env_root)
+        if (candidate / "apprise").is_dir():
+            return candidate
+    candidate = repo_root.parent / "apprise"
+    if (candidate / "apprise").is_dir():
+        return candidate
+    return None
+
+
+apprise_root = apprise_source_root()
+if apprise_root:
+    sys.path.insert(0, str(apprise_root))
+
 from apprise.common import NotifyType  # noqa: E402
 from capture_request import capture_request  # noqa: E402
 

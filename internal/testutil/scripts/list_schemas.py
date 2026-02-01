@@ -4,7 +4,7 @@ import os
 import re
 import sys
 
-MODULE_RE = re.compile(r"^(?P<name>(?!base|_)[a-z0-9_]+)(\.py)?$", re.I)
+MODULE_RE = re.compile(r"^(?P<name>(?!_)[a-z0-9_]+)(\.py)?$", re.I)
 CLASS_RE = re.compile(r"^Notify(?!Base|ImageSize|Type)[A-Za-z0-9]+$")
 
 
@@ -68,17 +68,47 @@ def extract_constants(tree):
     return constants, dict_constants
 
 
-def eval_protocol(node, constants, dict_constants):
+def extract_constants_from_body(body):
+    constants = {}
+    dict_constants = {}
+
+    for node in body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if len(node.targets) != 1:
+            continue
+        target = node.targets[0]
+        if not isinstance(target, ast.Name):
+            continue
+
+        value = eval_basic(node.value)
+        if isinstance(value, dict):
+            dict_constants[target.id] = value
+        elif isinstance(value, str):
+            constants[target.id] = [value]
+        elif isinstance(value, list):
+            constants[target.id] = value
+
+    return constants, dict_constants
+
+
+def eval_protocol(node, constants, dict_constants, class_constants, class_dict_constants):
     if is_str_node(node):
         return [str_value(node)]
     if isinstance(node, (ast.List, ast.Tuple)):
         values = []
         for item in node.elts:
-            value = eval_protocol(item, constants, dict_constants)
+            value = eval_protocol(
+                item, constants, dict_constants, class_constants, class_dict_constants
+            )
             if value:
                 values.extend(value)
         return values
     if isinstance(node, ast.Name):
+        if node.id in class_constants:
+            return class_constants[node.id]
+        if node.id in class_dict_constants:
+            return list(class_dict_constants[node.id].keys())
         if node.id in constants:
             return constants[node.id]
         if node.id in dict_constants:
@@ -86,10 +116,14 @@ def eval_protocol(node, constants, dict_constants):
     if isinstance(node, ast.Call):
         if isinstance(node.func, ast.Name) and node.func.id in ("list", "tuple", "set"):
             if len(node.args) == 1:
-                return eval_protocol(node.args[0], constants, dict_constants)
+                return eval_protocol(
+                    node.args[0], constants, dict_constants, class_constants, class_dict_constants
+                )
         if isinstance(node.func, ast.Attribute) and node.func.attr == "keys":
             if isinstance(node.func.value, ast.Name):
                 name = node.func.value.id
+                if name in class_dict_constants:
+                    return list(class_dict_constants[name].keys())
                 if name in dict_constants:
                     return list(dict_constants[name].keys())
     return None
@@ -108,6 +142,8 @@ def extract_schemas(module_path):
         if not CLASS_RE.match(node.name):
             continue
 
+        class_constants, class_dict_constants = extract_constants_from_body(node.body)
+
         protocol_nodes = []
         for stmt in node.body:
             if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1:
@@ -119,7 +155,9 @@ def extract_schemas(module_path):
                 protocol_nodes.append(stmt.value)
 
         for value_node in protocol_nodes:
-            values = eval_protocol(value_node, constants, dict_constants)
+            values = eval_protocol(
+                value_node, constants, dict_constants, class_constants, class_dict_constants
+            )
             if not values:
                 continue
             for value in values:
@@ -130,16 +168,17 @@ def extract_schemas(module_path):
 
 
 def iter_modules(plugin_dir):
-    for entry in os.listdir(plugin_dir):
-        if not MODULE_RE.match(entry):
-            continue
-        path = os.path.join(plugin_dir, entry)
-        if os.path.isdir(path):
-            yield os.path.join(path, "__init__.py")
-        elif entry.endswith(".py"):
-            yield path
-        else:
-            yield path + ".py"
+    for root, dirs, files in os.walk(plugin_dir):
+        dirs[:] = [d for d in dirs if not d.startswith("__")]
+        for filename in files:
+            if not filename.endswith(".py"):
+                continue
+            if filename == "__init__.py":
+                yield os.path.join(root, filename)
+                continue
+            if not MODULE_RE.match(filename):
+                continue
+            yield os.path.join(root, filename)
 
 
 def main():

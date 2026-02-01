@@ -30,6 +30,7 @@ func initSupportedSchemas() map[string]struct{} {
 	addSchemas(merged, emailSchemas)
 	addSchemas(merged, pushSchemas)
 	addSchemas(merged, smsSchemas)
+	addSchemas(merged, systemSchemas)
 	return merged
 }
 

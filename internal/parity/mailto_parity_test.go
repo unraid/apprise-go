@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"mime"
+	"mime/multipart"
 	"mime/quotedprintable"
 	"net"
 	"net/mail"
@@ -48,12 +49,12 @@ func TestMailtoSMTPParity(t *testing.T) {
 	}
 
 	url := fmt.Sprintf(
-		"mailto://%s:%s?from=sender@example.com&to=recipient@example.com&cc=cc@example.com&bcc=bcc@example.com&reply=reply@example.com&mode=insecure&format=text",
+		"mailto://%s:%s?from=sender@example.com&to=recipient@example.com&cc=cc@example.com&bcc=bcc@example.com&reply=reply@example.com&mode=insecure",
 		host,
 		port,
 	)
 
-	body := "apprise parity body"
+	body := "<b>apprise</b> parity body<br />second line"
 	title := "apprise parity title"
 
 	appriseRoot := testutil.AppriseSourceRoot(t)
@@ -212,6 +213,66 @@ func decodeSMTPBody(t *testing.T, header mail.Header, body io.Reader) string {
 	raw, err := io.ReadAll(body)
 	if err != nil {
 		t.Fatalf("read smtp body failed: %v", err)
+	}
+
+	contentType := header.Get("Content-Type")
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err == nil && strings.HasPrefix(strings.ToLower(mediaType), "multipart/") {
+		boundary := params["boundary"]
+		if boundary != "" {
+			return decodeMultipartBody(t, boundary, raw)
+		}
+	}
+
+	encoding := strings.ToLower(strings.TrimSpace(header.Get("Content-Transfer-Encoding")))
+	switch encoding {
+	case "base64":
+		decoded, err := base64.StdEncoding.DecodeString(stripWhitespace(string(raw)))
+		if err == nil {
+			raw = decoded
+		}
+	case "quoted-printable":
+		reader := quotedprintable.NewReader(bytes.NewReader(raw))
+		decoded, err := io.ReadAll(reader)
+		if err == nil {
+			raw = decoded
+		}
+	}
+
+	out := string(raw)
+	out = strings.ReplaceAll(out, "\r\n", "\n")
+	out = strings.TrimRight(out, "\n")
+	return out
+}
+
+func decodeMultipartBody(t *testing.T, boundary string, raw []byte) string {
+	t.Helper()
+
+	reader := multipart.NewReader(bytes.NewReader(raw), boundary)
+	parts := []string{}
+	for {
+		part, err := reader.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("parse smtp multipart failed: %v", err)
+		}
+
+		partBody := decodeSMTPPartBody(t, mail.Header(part.Header), part)
+		partType := normalizeContentType(part.Header.Get("Content-Type"))
+		parts = append(parts, partType+"\n"+partBody)
+	}
+
+	return strings.Join(parts, "\n--PART--\n")
+}
+
+func decodeSMTPPartBody(t *testing.T, header mail.Header, body io.Reader) string {
+	t.Helper()
+
+	raw, err := io.ReadAll(body)
+	if err != nil {
+		t.Fatalf("read smtp part body failed: %v", err)
 	}
 
 	encoding := strings.ToLower(strings.TrimSpace(header.Get("Content-Transfer-Encoding")))

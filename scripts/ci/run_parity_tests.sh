@@ -10,4 +10,6 @@ if [[ -z "${GOCACHE_DIR}" ]]; then
   export GOCACHE="${GOCACHE_DIR}"
 fi
 
-go test ./internal/parity -count=1 -v
+go run ./internal/tools/parity_report \
+  -out reports/parity_report.md \
+  -json reports/parity_report.json
