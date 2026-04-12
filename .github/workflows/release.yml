@@ -143,12 +143,12 @@ jobs:
 
       - name: Upload release asset (darwin zip)
         if: github.event_name == 'release' && matrix.notarize
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/${{ steps.set-output-name.outputs.output_name }}.zip
 
       - name: Upload release asset (non-darwin)
         if: github.event_name == 'release' && !matrix.notarize
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/${{ steps.set-output-name.outputs.output_name }}
