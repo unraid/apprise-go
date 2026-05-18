@@ -46,7 +46,7 @@ func AssertRequestSpecSequenceMatches(t *testing.T, pythonSpecs, goSpecs []notif
 func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpec) {
 	t.Helper()
 
-	if strings.ToUpper(pythonSpec.Method) != strings.ToUpper(goSpec.Method) {
+	if !strings.EqualFold(pythonSpec.Method, goSpec.Method) {
 		t.Fatalf("method mismatch: python=%s go=%s", pythonSpec.Method, goSpec.Method)
 	}
 

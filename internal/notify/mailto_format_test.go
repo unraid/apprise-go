@@ -28,7 +28,7 @@ func TestMailtoHTMLFormatAcceptsConvertedMarkdownBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("smtp host split failed: %v", err)
 	}
-	rawURL := fmt.Sprintf("mailto://%s:%s/recipient@example.com?from=sender@example.com&format=html&mode=insecure", host, port)
+	rawURL := fmt.Sprintf("mailto://%s/recipient@example.com?from=sender@example.com&format=html&mode=insecure", net.JoinHostPort(host, port))
 
 	script := filepath.Join(testutil.RepoRoot(t), "internal", "testutil", "scripts", "capture_smtp.py")
 	stdout, stderr, err := testutil.RunPythonScript(
