@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/unraid/apprise-go/internal/notify"
 )
@@ -36,6 +37,7 @@ type notifyOptions struct {
 
 // Apprise stores notification target URLs and sends messages to them.
 type Apprise struct {
+	mu   sync.RWMutex
 	urls []string
 }
 
@@ -96,30 +98,50 @@ func WithInputFormat(inputFormat string) Option {
 
 // Add validates and stores a notification target URL.
 func (a *Apprise) Add(rawURL string) error {
-	rawURL = strings.TrimSpace(rawURL)
-	parsed, err := notify.ParseURL(rawURL)
+	rawURL, err := validateTargetURL(rawURL)
 	if err != nil {
 		return err
 	}
-	if !notify.SupportsSchema(parsed.Scheme) {
-		return fmt.Errorf("unsupported url schema: %s", parsed.Scheme)
-	}
+
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	a.urls = append(a.urls, rawURL)
 	return nil
 }
 
+func validateTargetURL(rawURL string) (string, error) {
+	rawURL = strings.TrimSpace(rawURL)
+	parsed, err := notify.ParseURL(rawURL)
+	if err != nil {
+		return "", err
+	}
+	if !notify.SupportsSchema(parsed.Scheme) {
+		return "", fmt.Errorf("unsupported URL scheme: %s", parsed.Scheme)
+	}
+	return rawURL, nil
+}
+
 // AddAll validates and stores multiple notification target URLs.
+// It stops on the first error, leaving any earlier valid URLs configured.
 func (a *Apprise) AddAll(rawURLs ...string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	for _, rawURL := range rawURLs {
-		if err := a.Add(rawURL); err != nil {
+		validated, err := validateTargetURL(rawURL)
+		if err != nil {
 			return err
 		}
+		a.urls = append(a.urls, validated)
 	}
 	return nil
 }
 
 // URLs returns a copy of the configured notification target URLs.
 func (a *Apprise) URLs() []string {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
 	urls := make([]string, len(a.urls))
 	copy(urls, a.urls)
 	return urls
@@ -127,7 +149,12 @@ func (a *Apprise) URLs() []string {
 
 // Send sends body to all configured target URLs.
 func (a *Apprise) Send(body string, options ...Option) error {
-	if len(a.urls) == 0 {
+	a.mu.RLock()
+	urls := make([]string, len(a.urls))
+	copy(urls, a.urls)
+	a.mu.RUnlock()
+
+	if len(urls) == 0 {
 		return ErrNoTargets
 	}
 
@@ -139,7 +166,7 @@ func (a *Apprise) Send(body string, options ...Option) error {
 	}
 
 	var errs []error
-	for _, rawURL := range a.urls {
+	for _, rawURL := range urls {
 		if err := notify.SendTargetURL(rawURL, body, opts.title, opts.inputFormat, opts.notifyType); err != nil {
 			errs = append(errs, &TargetError{
 				URL: rawURL,

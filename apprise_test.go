@@ -9,56 +9,35 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/unraid/apprise-go/internal/testutil"
 )
 
 func TestAppriseSendJSONTarget(t *testing.T) {
-	requests := make(chan map[string]any, 1)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
+	testutil.RequirePythonApprise(t)
 
-		data, err := io.ReadAll(r.Body)
-		if err != nil {
-			t.Errorf("read body: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
+	targetURL := "json://example.com/notify"
+	body := "hello"
+	title := "Greeting"
+	pythonRequests := testutil.CapturePythonRequestsWithFormat(t, targetURL, body, title, "text")
+
+	goRequests := testutil.CaptureGoRequests(t, func() error {
+		client := New()
+		if err := client.Add(targetURL); err != nil {
+			return err
 		}
+		return client.Send(body, WithTitle(title))
+	})
 
-		var payload map[string]any
-		if err := json.Unmarshal(data, &payload); err != nil {
-			t.Errorf("decode json: %v", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		requests <- payload
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	client := New()
-	if err := client.Add("json://" + server.Listener.Addr().String() + "/notify"); err != nil {
-		t.Fatalf("add target: %v", err)
-	}
-
-	if err := client.Send("hello", WithTitle("Greeting"), WithNotifyType(NotifySuccess)); err != nil {
-		t.Fatalf("send: %v", err)
-	}
-
-	payload := readPayload(t, requests)
-	if got := payload["message"]; got != "hello" {
-		t.Fatalf("message = %v, want hello", got)
-	}
-	if got := payload["title"]; got != "Greeting" {
-		t.Fatalf("title = %v, want Greeting", got)
-	}
-	if got := payload["type"]; got != "success" {
-		t.Fatalf("type = %v, want success", got)
-	}
+	testutil.AssertRequestSpecSequenceMatches(t, pythonRequests, goRequests)
 }
 
 func TestAppriseSendConvertsInputFormat(t *testing.T) {
 	requests := make(chan map[string]any, 1)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
+		defer func() {
+			_ = r.Body.Close()
+		}()
 
 		data, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -101,7 +80,7 @@ func TestAppriseSendNoTargets(t *testing.T) {
 
 func TestAppriseAddRejectsUnsupportedSchema(t *testing.T) {
 	err := New().Add("unknown://example.com")
-	if err == nil || !strings.Contains(err.Error(), "unsupported url schema: unknown") {
+	if err == nil || !strings.Contains(err.Error(), "unsupported URL scheme: unknown") {
 		t.Fatalf("error = %v, want unsupported schema", err)
 	}
 }
