@@ -57,7 +57,9 @@
 
 ## Final Checks
 
-- [ ] Queue reviewed: no `TODO` left
+- [x] Queue reviewed: no `TODO` left
 - [x] Remaining `BLOCKED` items documented with reason
-- [ ] Re-pulled CodeRabbit threads and reviews
-- [ ] No unhandled top-level review-body comment remains
+- [x] Re-pulled CodeRabbit threads and reviews
+- [x] No unhandled top-level review-body comment remains
+
+Re-pull result: one unresolved CodeRabbit inline thread remains (`CR-001`) and is intentionally `BLOCKED` because the requested HTML to Markdown change conflicts with current upstream Python Apprise conversion behavior. The remaining top-level review-body entries are duplicates or aggregates mapped to queue items above.
