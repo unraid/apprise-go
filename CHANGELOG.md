@@ -3,6 +3,17 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.2.1 (2026-05-18)
+
+### Fixes
+
+- update module golang.org/x/crypto to v0.48.0 (#38)
+- honor CLI input format for formatted notifications (#50)
+- update module golang.org/x/net to v0.54.0 (#42)
+- config tag group resolution (#49)
+- update github.com/gomarkdown/markdown digest to 7d523f7 (#41)
+- add valid Dependabot config (#52)
+
 ## 0.2.0 (2026-02-01)
 
 ### Features
