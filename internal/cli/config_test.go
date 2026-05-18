@@ -115,14 +115,19 @@ func TestParseYAMLHelpersRejectUnsupportedURLShapes(t *testing.T) {
 	if tags := parseYAMLTagsFromOptions(42); tags != nil {
 		t.Fatalf("expected nil tags for scalar options, got %#v", tags)
 	}
+	assertStringSlices(t, parseYAMLTagsFromOptions([]any{map[string]any{"tag": "from-list"}, "invalid"}), []string{"from-list"})
 	if tags := parseYAMLTagsFromOptions([]any{"invalid"}); len(tags) != 0 {
 		t.Fatalf("expected empty tags for non-map options list, got %#v", tags)
 	}
+	assertTaggedURLs(t, parseYAMLURLMappedOptions("json://localhost/one", []any{"invalid"}, []string{"global"}), []taggedURL{
+		{URL: "json://localhost/one", Tags: []string{"global"}},
+	})
 }
 
 func TestParseYAMLConfigSupportsURLMap(t *testing.T) {
 	cfg := parseYAMLConfig([]byte(`
 urls:
+  ignored: value
   json://localhost/one:
     tag: tagA
   json://localhost/two:
@@ -133,6 +138,36 @@ urls:
 	byURL := taggedByURL(cfg.URLs)
 	assertStringSlices(t, byURL["json://localhost/one"].Tags, []string{"taga"})
 	assertStringSlices(t, byURL["json://localhost/two"].Tags, []string{"tagb"})
+}
+
+func TestParseYAMLConfigMatchesAppriseTagsAliasListExpansion(t *testing.T) {
+	cfg := parseYAMLConfig([]byte(`
+urls:
+  - json://localhost/one:
+    - tags: test1
+    - tags: test2
+  - json://localhost/two:
+    - tags: test3
+`))
+
+	assertTaggedURLs(t, cfg.URLs, []taggedURL{
+		{URL: "json://localhost/one", Tags: []string{"test1"}},
+		{URL: "json://localhost/one", Tags: []string{"test2"}},
+		{URL: "json://localhost/two", Tags: []string{"test3"}},
+	})
+}
+
+func TestParseYAMLConfigMatchesAppriseTagPriorityOverTags(t *testing.T) {
+	cfg := parseYAMLConfig([]byte(`
+urls:
+  - json://localhost/one:
+      tag: primary
+      tags: secondary
+`))
+
+	assertTaggedURLs(t, cfg.URLs, []taggedURL{
+		{URL: "json://localhost/one", Tags: []string{"primary"}},
+	})
 }
 
 func TestParseYAMLGroupTagsCoversScalarListAndMapForms(t *testing.T) {
@@ -189,6 +224,34 @@ mygrouptag=mytagA
 	}
 }
 
+func TestResolveNotifyURLsMatchesIssue47TextTagAndGroupRepro(t *testing.T) {
+	configPath := writeConfig(t, "apprise.conf", `
+mytagA,mytagB=tgram://123456:abcdef/7890/
+mygrouptag=mytagA
+`)
+
+	for _, tc := range []struct {
+		name string
+		tag  string
+	}{
+		{name: "single tag works", tag: "mytagB"},
+		{name: "group tag works", tag: "mygrouptag"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := &cliOptions{
+				configPaths: []string{configPath},
+				tags:        []string{tc.tag},
+			}
+
+			tagged := resolveNotifyURLs(opts, nil, nil)
+
+			assertTaggedURLs(t, tagged, []taggedURL{
+				{URL: "tgram://123456:abcdef/7890/", Tags: []string{"mygrouptag", "mytaga", "mytagb"}},
+			})
+		})
+	}
+}
+
 func TestResolveNotifyURLsFiltersYAMLGroupTags(t *testing.T) {
 	configPath := writeConfig(t, "apprise.yaml", `
 version: 1
@@ -213,6 +276,39 @@ urls:
 	}
 	if tagged[0].URL != "json://localhost/one" {
 		t.Fatalf("expected grouped YAML URL, got %q", tagged[0].URL)
+	}
+}
+
+func TestResolveNotifyURLsMatchesIssue47YAMLTagAndGroupRepro(t *testing.T) {
+	configPath := writeConfig(t, "apprise.yaml", `
+version: 1
+groups:
+  grouptag: mytag
+urls:
+  - tgram://123456:abcdef/7890/:
+      tag:
+        - mytag
+`)
+
+	for _, tc := range []struct {
+		name string
+		tag  string
+	}{
+		{name: "yaml tag works", tag: "mytag"},
+		{name: "yaml group tag works", tag: "grouptag"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := &cliOptions{
+				configPaths: []string{configPath},
+				tags:        []string{tc.tag},
+			}
+
+			tagged := resolveNotifyURLs(opts, nil, nil)
+
+			assertTaggedURLs(t, tagged, []taggedURL{
+				{URL: "tgram://123456:abcdef/7890/", Tags: []string{"grouptag", "mytag"}},
+			})
+		})
 	}
 }
 

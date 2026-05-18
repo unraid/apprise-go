@@ -380,10 +380,10 @@ func parseYAMLURLs(value any, globalTags []string) []taggedURL {
 	case map[string]any:
 		parsed := []taggedURL{}
 		for key, options := range urls {
-			parsed = append(parsed, taggedURL{
-				URL:  strings.TrimSpace(key),
-				Tags: mergeTags(globalTags, parseYAMLTagsFromOptions(options)),
-			})
+			if !urlSchemeRe.MatchString(key) {
+				continue
+			}
+			parsed = append(parsed, parseYAMLURLMappedOptions(key, options, globalTags)...)
 		}
 		return parsed
 	default:
@@ -412,15 +412,37 @@ func parseYAMLURLEntry(entry any, globalTags []string) []taggedURL {
 			if !urlSchemeRe.MatchString(key) {
 				continue
 			}
-			parsed = append(parsed, taggedURL{
-				URL:  strings.TrimSpace(key),
-				Tags: mergeTags(globalTags, parseYAMLTagsFromOptions(options)),
-			})
+			parsed = append(parsed, parseYAMLURLMappedOptions(key, options, globalTags)...)
 		}
 		return parsed
 	default:
 		return nil
 	}
+}
+
+func parseYAMLURLMappedOptions(rawURL string, options any, globalTags []string) []taggedURL {
+	url := strings.TrimSpace(rawURL)
+	if entries, ok := options.([]any); ok {
+		parsed := []taggedURL{}
+		for _, entry := range entries {
+			entryMap, ok := asStringMap(entry)
+			if !ok {
+				continue
+			}
+			parsed = append(parsed, taggedURL{
+				URL:  url,
+				Tags: mergeTags(globalTags, parseYAMLTags(entryMap)),
+			})
+		}
+		if len(parsed) > 0 {
+			return parsed
+		}
+	}
+
+	return []taggedURL{{
+		URL:  url,
+		Tags: mergeTags(globalTags, parseYAMLTagsFromOptions(options)),
+	}}
 }
 
 func parseYAMLURLValue(value any, tags []string) []taggedURL {
