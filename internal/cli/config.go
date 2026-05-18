@@ -457,9 +457,7 @@ func parseYAMLURLValue(value any, tags []string) []taggedURL {
 	case []any:
 		parsed := []taggedURL{}
 		for _, entry := range urls {
-			for _, parsedEntry := range parseYAMLURLValue(entry, tags) {
-				parsed = append(parsed, parsedEntry)
-			}
+			parsed = append(parsed, parseYAMLURLValue(entry, tags)...)
 		}
 		return parsed
 	default:
