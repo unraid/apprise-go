@@ -19,6 +19,20 @@ func PythonPath(t *testing.T) string {
 	return path
 }
 
+func RequirePythonApprise(t *testing.T) {
+	t.Helper()
+
+	path := filepath.Join(VenvBinDir(t), "python")
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("python not found in venv: %s", path)
+	}
+
+	_, stderr, err := RunCommand(t, path, "-c", "import apprise")
+	if err != nil {
+		t.Fatalf("python apprise import failed: %v (stderr: %s)", err, stderr)
+	}
+}
+
 func AppriseCLIPath(t *testing.T) string {
 	t.Helper()
 

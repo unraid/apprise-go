@@ -105,7 +105,7 @@ func (t *TelegramTarget) BuildRequest(body, title string, notifyType NotifyType)
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
 
-	message := formatTelegramMessage(title, body, t.notifyFormat)
+	message := formatTelegramMessage(title, body, t.notifyFormat, t.markdownMode)
 	spec, err := t.buildSpec(message, t.targets[0])
 	if err != nil {
 		return RequestSpec{}, err
@@ -124,7 +124,7 @@ func (t *TelegramTarget) Send(body, title string, notifyType NotifyType) error {
 		return nil
 	}
 
-	message := formatTelegramMessage(title, body, t.notifyFormat)
+	message := formatTelegramMessage(title, body, t.notifyFormat, t.markdownMode)
 	for _, recipient := range t.targets {
 		if t.includeImage {
 			spec, err := t.buildImageSpec(recipient)
@@ -321,7 +321,7 @@ func telegramMarkdownMode(raw string) string {
 	}
 }
 
-func formatTelegramMessage(title, body, format string) string {
+func formatTelegramMessage(title, body, format, markdownMode string) string {
 	if title == "" {
 		if format == "text" || format == "markdown" {
 			return body
@@ -329,23 +329,48 @@ func formatTelegramMessage(title, body, format string) string {
 		return body
 	}
 	if body == "" {
-		return formatTelegramTitle(title, format)
+		return formatTelegramTitle(title, format, markdownMode)
 	}
-	return formatTelegramTitle(title, format) + "\r\n" + body
+	return formatTelegramTitle(title, format, markdownMode) + "\r\n" + body
 }
 
-func formatTelegramTitle(title, format string) string {
+func formatTelegramTitle(title, format, markdownMode string) string {
 	switch format {
 	case "html":
 		return "<b>" + html.EscapeString(title) + "</b>"
 	case "markdown":
-		return "*" + escapeTelegramMarkdownTitle(title) + "*"
+		return "*" + escapeTelegramMarkdownTitle(title, markdownMode) + "*"
 	default:
 		return title
 	}
 }
 
-func escapeTelegramMarkdownTitle(title string) string {
+func escapeTelegramMarkdownTitle(title, markdownMode string) string {
+	if markdownMode == "MarkdownV2" {
+		replacer := strings.NewReplacer(
+			"\\", "\\\\",
+			"_", "\\_",
+			"*", "\\*",
+			"[", "\\[",
+			"]", "\\]",
+			"(", "\\(",
+			")", "\\)",
+			"~", "\\~",
+			"`", "\\`",
+			">", "\\>",
+			"#", "\\#",
+			"+", "\\+",
+			"-", "\\-",
+			"=", "\\=",
+			"|", "\\|",
+			"{", "\\{",
+			"}", "\\}",
+			".", "\\.",
+			"!", "\\!",
+		)
+		return replacer.Replace(title)
+	}
+
 	replacer := strings.NewReplacer(
 		"\\", "\\\\",
 		"*", "\\*",

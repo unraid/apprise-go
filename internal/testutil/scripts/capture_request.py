@@ -85,7 +85,7 @@ ensure_yaml()
 ensure_markdown()
 ensure_cryptography()
 
-from apprise.common import NotifyType
+from apprise.common import NotifyFormat, NotifyType
 
 import apprise
 from apprise import AppriseAsset
@@ -94,7 +94,7 @@ DROP_HEADERS = {"x-apprise-id", "x-apprise-recursion-count"}
 KEEP_HEADERS = {"content-type", "accept", "accepts", "authorization"}
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
-CACHE_VERSION = 8
+CACHE_VERSION = 9
 CACHE_ENV = "APPRISE_CAPTURE_CACHE"
 CACHE_DIR_ENV = "APPRISE_CAPTURE_CACHE_DIR"
 CACHE_SUBDIR = ".tmp/pycapture"
@@ -163,7 +163,7 @@ def apprise_git_sha():
     return output.decode("utf-8", "replace").strip()
 
 
-def cache_key(url, body, title, notify_type):
+def cache_key(url, body, title, notify_type, body_format):
     notify_name = notify_type.name if hasattr(notify_type, "name") else str(notify_type)
     try:
         import apprise as apprise_module
@@ -177,6 +177,7 @@ def cache_key(url, body, title, notify_type):
         "body": body,
         "title": title,
         "notify_type": notify_name,
+        "body_format": body_format,
         "apprise_version": apprise_version,
         "apprise_sha": apprise_git_sha(),
         "python_version": sys.version,
@@ -203,10 +204,10 @@ def cache_key(url, body, title, notify_type):
     return digest
 
 
-def load_cache(url, body, title, notify_type):
+def load_cache(url, body, title, notify_type, body_format):
     if not cache_enabled():
         return None, None
-    digest = cache_key(url, body, title, notify_type)
+    digest = cache_key(url, body, title, notify_type, body_format)
     root = cache_dir()
     path = root / f"{digest}.json"
     if not path.exists():
@@ -413,8 +414,8 @@ def apply_simplepush_fixes():
         pass
 
 
-def capture_request(url, body, title, notify_type):
-    cached, cache_path = load_cache(url, body, title, notify_type)
+def capture_request(url, body, title, notify_type, body_format=None):
+    cached, cache_path = load_cache(url, body, title, notify_type, body_format)
     if cached is not None:
         return cached
 
@@ -646,7 +647,10 @@ def capture_request(url, body, title, notify_type):
 
     requests.sessions.Session.request = patched_request
     try:
-        asset = AppriseAsset()
+        asset_kwargs = {}
+        if body_format:
+            asset_kwargs["body_format"] = NotifyFormat(body_format)
+        asset = AppriseAsset(**asset_kwargs)
         service = apprise.Apprise(asset=asset)
         service.add(url)
         success = service.notify(
@@ -668,6 +672,7 @@ def main():
     parser.add_argument("--body", default="")
     parser.add_argument("--title", default="")
     parser.add_argument("--type", default="info")
+    parser.add_argument("--body-format", default="")
     args = parser.parse_args()
 
     notify_type = NotifyType.INFO
@@ -678,7 +683,8 @@ def main():
     elif args.type.lower() == "failure":
         notify_type = NotifyType.FAILURE
 
-    payload = capture_request(args.url, args.body, args.title, notify_type)
+    body_format = args.body_format.strip().lower() or None
+    payload = capture_request(args.url, args.body, args.title, notify_type, body_format)
     print(json.dumps(payload))
 
 

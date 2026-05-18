@@ -12,6 +12,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/unraid/apprise-go/internal/notify"
+	"github.com/unraid/apprise-go/internal/testutil"
 )
 
 func TestRunNoArgsDoesNotReadStdin(t *testing.T) {
@@ -51,41 +54,34 @@ func TestRunNoArgsDoesNotReadStdin(t *testing.T) {
 }
 
 func TestRunConvertsMarkdownInputForHTMLTargetFormat(t *testing.T) {
-	requests := make(chan map[string]any, 1)
+	testutil.RequirePythonApprise(t)
+
+	requests := make(chan notify.RequestSpec, 2)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer r.Body.Close()
-		var payload map[string]any
-		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-			t.Errorf("decode request: %v", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		requests <- payload
+		requests <- captureRequestSpec(t, r)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 
 	targetURL := "json://" + server.Listener.Addr().String() + "/notify?format=html"
+	body := "_This is Italics Text_"
+
+	pyStdout, pyStderr, err := testutil.RunApprise(t, "-i", "markdown", "-b", body, targetURL)
+	if err != nil {
+		t.Fatalf("python apprise failed: %v stdout=%s stderr=%s", err, pyStdout, pyStderr)
+	}
+	pythonRequests := readRequestSpecs(t, requests)
+
 	stdout := &bytes.Buffer{}
 	stderr := &bytes.Buffer{}
 
-	code := Run([]string{"-i", "markdown", "-b", "_This is Italics Text_", targetURL}, stdout, stderr)
+	code := Run([]string{"-i", "markdown", "-b", body, targetURL}, stdout, stderr)
 	if code != 0 {
 		t.Fatalf("expected success, got code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
 	}
+	goRequests := readRequestSpecs(t, requests)
 
-	select {
-	case payload := <-requests:
-		message, ok := payload["message"].(string)
-		if !ok {
-			t.Fatalf("missing message payload: %#v", payload)
-		}
-		if !strings.Contains(message, "<em>This is Italics Text</em>") {
-			t.Fatalf("expected markdown converted to HTML, got %q", message)
-		}
-	case <-time.After(time.Second):
-		t.Fatalf("timed out waiting for request")
-	}
+	testutil.AssertRequestSpecSequenceMatches(t, pythonRequests, goRequests)
 }
 
 func TestRunSendsHTMLInputToTelegramHTMLTarget(t *testing.T) {
@@ -154,6 +150,44 @@ func TestRunConvertsMarkdownInputForMailtoHTMLTarget(t *testing.T) {
 	}
 	if !strings.Contains(message, "<em>This is Italics Text</em>") {
 		t.Fatalf("expected converted markdown in email body, got %s", message)
+	}
+}
+
+func captureRequestSpec(t *testing.T, r *http.Request) notify.RequestSpec {
+	t.Helper()
+	defer r.Body.Close()
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		t.Fatalf("read request body: %v", err)
+	}
+	headers := map[string]string{}
+	for key, values := range r.Header {
+		headers[key] = strings.Join(values, ",")
+	}
+
+	return notify.RequestSpec{
+		Method:  r.Method,
+		URL:     "http://" + r.Host + r.URL.RequestURI(),
+		Headers: headers,
+		Body:    string(body),
+	}
+}
+
+func readRequestSpecs(t *testing.T, requests <-chan notify.RequestSpec) []notify.RequestSpec {
+	t.Helper()
+
+	specs := []notify.RequestSpec{}
+	for {
+		select {
+		case spec := <-requests:
+			specs = append(specs, spec)
+		case <-time.After(50 * time.Millisecond):
+			if len(specs) == 0 {
+				t.Fatalf("timed out waiting for request")
+			}
+			return specs
+		}
 	}
 }
 

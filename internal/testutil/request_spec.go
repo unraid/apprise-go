@@ -28,6 +28,34 @@ func CapturePythonRequestsWithType(t *testing.T, url, body, title string, notify
 	return specs
 }
 
+func CapturePythonRequestsWithFormat(t *testing.T, url, body, title, bodyFormat string) []notify.RequestSpec {
+	t.Helper()
+
+	specs, _ := CapturePythonRequestsWithFormatAndTypeResult(t, url, body, title, bodyFormat, notify.NotifyInfo)
+	return specs
+}
+
+func CapturePythonRequestsWithFormatAndTypeResult(t *testing.T, url, body, title, bodyFormat string, notifyType notify.NotifyType) ([]notify.RequestSpec, *bool) {
+	t.Helper()
+
+	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
+	stdout, stderr, err := RunPythonScript(
+		t,
+		script,
+		"--url", url,
+		"--body", body,
+		"--title", title,
+		"--type", string(notifyType),
+		"--body-format", bodyFormat,
+	)
+	if err != nil {
+		t.Fatalf("capture request failed: %v (stderr: %s)", err, strings.TrimSpace(stderr))
+	}
+
+	payload := parsePythonCapturePayload(t, stdout)
+	return payload.Requests, payload.Success
+}
+
 func CapturePythonRequestsResult(t *testing.T, url, body, title string) ([]notify.RequestSpec, *bool) {
 	t.Helper()
 
