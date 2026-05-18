@@ -109,7 +109,6 @@ func TestRunConvertsMarkdownInputForMailtoHTMLTarget(t *testing.T) {
 	if len(pythonMessages) == 0 {
 		t.Fatalf("no smtp message captured from python")
 	}
-	pythonMessage := pythonMessages[len(pythonMessages)-1]
 
 	capture.Reset()
 
@@ -124,10 +123,9 @@ func TestRunConvertsMarkdownInputForMailtoHTMLTarget(t *testing.T) {
 	if len(goMessages) == 0 {
 		t.Fatalf("no smtp message captured from go")
 	}
-	goMessage := goMessages[len(goMessages)-1]
 
-	testutil.AssertSMTPMessagesMatch(t, pythonMessage, goMessage)
-	normalized := testutil.NormalizeSMTPMessage(t, goMessage)
+	testutil.AssertSMTPMessageSequencesMatch(t, pythonMessages, goMessages)
+	normalized := testutil.NormalizeSMTPMessage(t, goMessages[0])
 	if !strings.Contains(normalized.Body, "<em>This is Italics Text</em>") {
 		t.Fatalf("expected converted markdown in email body, got %s", normalized.Body)
 	}
@@ -162,7 +160,7 @@ func readRequestSpecs(t *testing.T, requests <-chan notify.RequestSpec) []notify
 		select {
 		case spec := <-requests:
 			specs = append(specs, spec)
-		case <-time.After(50 * time.Millisecond):
+		case <-time.After(time.Second):
 			if len(specs) == 0 {
 				t.Fatalf("timed out waiting for request")
 			}

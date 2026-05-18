@@ -40,6 +40,17 @@ func AssertSMTPMessagesMatch(t *testing.T, pythonMsg, goMsg SMTPMessage) {
 	}
 }
 
+func AssertSMTPMessageSequencesMatch(t *testing.T, pythonMsgs, goMsgs []SMTPMessage) {
+	t.Helper()
+
+	if len(pythonMsgs) != len(goMsgs) {
+		t.Fatalf("smtp message count mismatch: python=%d go=%d", len(pythonMsgs), len(goMsgs))
+	}
+	for i := range pythonMsgs {
+		AssertSMTPMessagesMatch(t, pythonMsgs[i], goMsgs[i])
+	}
+}
+
 func NormalizeSMTPMessage(t *testing.T, msg SMTPMessage) NormalizedSMTP {
 	t.Helper()
 

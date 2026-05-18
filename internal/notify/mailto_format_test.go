@@ -53,7 +53,6 @@ func TestMailtoHTMLFormatAcceptsConvertedMarkdownBody(t *testing.T) {
 	if len(pythonMessages) == 0 {
 		t.Fatalf("no smtp message captured from python")
 	}
-	pythonMessage := pythonMessages[len(pythonMessages)-1]
 
 	capture.Reset()
 
@@ -77,11 +76,10 @@ func TestMailtoHTMLFormatAcceptsConvertedMarkdownBody(t *testing.T) {
 	if len(goMessages) == 0 {
 		t.Fatalf("no smtp message captured from go")
 	}
-	goMessage := goMessages[len(goMessages)-1]
 
-	testutil.AssertSMTPMessagesMatch(t, pythonMessage, goMessage)
+	testutil.AssertSMTPMessageSequencesMatch(t, pythonMessages, goMessages)
 
-	normalized := testutil.NormalizeSMTPMessage(t, goMessage)
+	normalized := testutil.NormalizeSMTPMessage(t, goMessages[0])
 	if !strings.Contains(normalized.Body, "<em>This is Italics Text</em>") {
 		t.Fatalf("expected converted markdown in html part, got %s", normalized.Body)
 	}
