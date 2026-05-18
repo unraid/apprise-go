@@ -68,6 +68,35 @@ go build -o apprise-go ./cmd/apprise
 
 ## Usage
 
+### Library Usage
+
+```go
+package main
+
+import (
+	"log"
+
+	apprise "github.com/unraid/apprise-go"
+)
+
+func main() {
+	client := apprise.New()
+	if err := client.Add("discord://webhook_id/webhook_token"); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := client.Send(
+		"Something happened!",
+		apprise.WithTitle("Alert"),
+		apprise.WithNotifyType(apprise.NotifyWarning),
+	); err != nil {
+		log.Fatal(err)
+	}
+}
+```
+
+For one-off sends, use `apprise.Send(urls, body, options...)`.
+
 ### Basic Notification
 
 ```bash
