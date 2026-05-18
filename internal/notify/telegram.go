@@ -21,6 +21,8 @@ type telegramRecipient struct {
 type TelegramTarget struct {
 	botToken     string
 	targets      []telegramRecipient
+	notifyFormat string
+	markdownMode string
 	silent       bool
 	preview      bool
 	detect       bool
@@ -73,9 +75,21 @@ func NewTelegramTarget(target *ParsedURL) (*TelegramTarget, error) {
 
 	detect := parseBoolValue(target.Query["detect"], len(targets) == 0)
 
+	format := normalizeNotifyFormat(target.Query["format"])
+	if format == "" {
+		format = "html"
+	}
+	switch format {
+	case "html", "markdown", "text":
+	default:
+		return nil, fmt.Errorf("invalid format")
+	}
+
 	return &TelegramTarget{
 		botToken:     botToken,
 		targets:      targets,
+		notifyFormat: format,
+		markdownMode: telegramMarkdownMode(target.Query["mdv"]),
 		silent:       parseBoolValue(target.Query["silent"], false),
 		preview:      parseBoolValue(target.Query["preview"], false),
 		detect:       detect,
@@ -91,7 +105,7 @@ func (t *TelegramTarget) BuildRequest(body, title string, notifyType NotifyType)
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
 
-	message := formatTelegramMessage(title, body)
+	message := formatTelegramMessage(title, body, t.notifyFormat)
 	spec, err := t.buildSpec(message, t.targets[0])
 	if err != nil {
 		return RequestSpec{}, err
@@ -110,7 +124,7 @@ func (t *TelegramTarget) Send(body, title string, notifyType NotifyType) error {
 		return nil
 	}
 
-	message := formatTelegramMessage(title, body)
+	message := formatTelegramMessage(title, body, t.notifyFormat)
 	for _, recipient := range t.targets {
 		if t.includeImage {
 			spec, err := t.buildImageSpec(recipient)
@@ -139,8 +153,10 @@ func (t *TelegramTarget) buildSpec(body string, recipient telegramRecipient) (Re
 	payload := map[string]any{
 		"disable_notification":     t.silent,
 		"disable_web_page_preview": !t.preview,
-		"parse_mode":               "HTML",
 		"text":                     body,
+	}
+	if parseMode := t.parseMode(); parseMode != "" {
+		payload["parse_mode"] = parseMode
 	}
 
 	if recipient.isNumeric {
@@ -285,15 +301,59 @@ func parseOptionalIntValue(raw string) *int {
 	return &value
 }
 
-func formatTelegramMessage(title, body string) string {
+func (t *TelegramTarget) parseMode() string {
+	switch t.notifyFormat {
+	case "html":
+		return "HTML"
+	case "markdown":
+		return t.markdownMode
+	default:
+		return ""
+	}
+}
+
+func telegramMarkdownMode(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "v2", "markdownv2":
+		return "MarkdownV2"
+	default:
+		return "Markdown"
+	}
+}
+
+func formatTelegramMessage(title, body, format string) string {
 	if title == "" {
-		return html.EscapeString(body)
+		if format == "text" || format == "markdown" {
+			return body
+		}
+		return body
 	}
-	escapedTitle := html.EscapeString(title)
 	if body == "" {
-		return "<b>" + escapedTitle + "</b>"
+		return formatTelegramTitle(title, format)
 	}
-	return "<b>" + escapedTitle + "</b>\r\n" + html.EscapeString(body)
+	return formatTelegramTitle(title, format) + "\r\n" + body
+}
+
+func formatTelegramTitle(title, format string) string {
+	switch format {
+	case "html":
+		return "<b>" + html.EscapeString(title) + "</b>"
+	case "markdown":
+		return "*" + escapeTelegramMarkdownTitle(title) + "*"
+	default:
+		return title
+	}
+}
+
+func escapeTelegramMarkdownTitle(title string) string {
+	replacer := strings.NewReplacer(
+		"\\", "\\\\",
+		"*", "\\*",
+		"_", "\\_",
+		"`", "\\`",
+		"[", "\\[",
+	)
+	return replacer.Replace(title)
 }
 
 func init() {

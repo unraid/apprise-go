@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -66,6 +67,55 @@ func markdownToHTML(content string) string {
 		Flags: html.CommonFlags,
 	})
 	return string(markdown.ToHTML([]byte(content), mdParser, renderer))
+}
+
+func ConvertMessageFormat(content, inputFormat, outputFormat string) (string, error) {
+	input := normalizeNotifyFormat(inputFormat)
+	output := normalizeNotifyFormat(outputFormat)
+	if input == "" {
+		input = "text"
+	}
+	if output == "" {
+		return content, nil
+	}
+	if !isSupportedNotifyFormat(input) {
+		return "", fmt.Errorf("invalid input format: %s", inputFormat)
+	}
+	if !isSupportedNotifyFormat(output) {
+		return "", fmt.Errorf("invalid output format: %s", outputFormat)
+	}
+	if input == output {
+		return content, nil
+	}
+
+	switch input {
+	case "markdown":
+		if output == "html" {
+			return markdownToHTML(content), nil
+		}
+		if output == "text" {
+			return htmlToText(markdownToHTML(content)), nil
+		}
+	case "html":
+		if output == "text" || output == "markdown" {
+			return htmlToText(content), nil
+		}
+	case "text":
+		if output == "html" {
+			return textToHTML(content), nil
+		}
+	}
+
+	return content, nil
+}
+
+func isSupportedNotifyFormat(format string) bool {
+	switch format {
+	case "html", "markdown", "text":
+		return true
+	default:
+		return false
+	}
 }
 
 func textToHTML(content string) string {

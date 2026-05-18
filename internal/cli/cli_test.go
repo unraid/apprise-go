@@ -2,7 +2,11 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -40,5 +44,43 @@ func TestRunNoArgsDoesNotReadStdin(t *testing.T) {
 		case <-time.After(500 * time.Millisecond):
 			t.Fatalf("Run blocked on stdin after closing pipe")
 		}
+	}
+}
+
+func TestRunConvertsMarkdownInputForHTMLTargetFormat(t *testing.T) {
+	requests := make(chan map[string]any, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+		var payload map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Errorf("decode request: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		requests <- payload
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	targetURL := "json://" + server.Listener.Addr().String() + "/notify?format=html"
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+
+	code := Run([]string{"-i", "markdown", "-b", "_This is Italics Text_", targetURL}, stdout, stderr)
+	if code != 0 {
+		t.Fatalf("expected success, got code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+
+	select {
+	case payload := <-requests:
+		message, ok := payload["message"].(string)
+		if !ok {
+			t.Fatalf("missing message payload: %#v", payload)
+		}
+		if !strings.Contains(message, "<em>This is Italics Text</em>") {
+			t.Fatalf("expected markdown converted to HTML, got %q", message)
+		}
+	case <-time.After(time.Second):
+		t.Fatalf("timed out waiting for request")
 	}
 }

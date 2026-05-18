@@ -194,7 +194,6 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	}
 
 	// TODO: Wire these options into CLI behavior once the runtime supports them.
-	_ = opts.inputFormat
 	_ = opts.disableAsync
 	_ = opts.attachments
 	_ = opts.pluginPaths
@@ -220,6 +219,13 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 
 		scheme := strings.ToLower(parsed.Scheme)
+		sendBody, err := notify.ConvertMessageFormat(body, opts.inputFormat, parsed.Query["format"])
+		if err != nil {
+			fmt.Fprintln(stderr, err)
+			failed = true
+			continue
+		}
+		body := sendBody
 		switch scheme {
 		case "apprise", "apprises":
 			appriseTarget, err := notify.NewAppriseTarget(parsed)
