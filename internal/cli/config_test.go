@@ -33,6 +33,21 @@ func TestParseConfigFileTextFallbackForYAMLWithoutStructuredConfig(t *testing.T)
 	assertTaggedURLs(t, tagged, []taggedURL{{URL: "json://localhost/one", Tags: []string{"tag"}}})
 }
 
+func TestParseConfigFileDoesNotTextFallbackForInvalidYAML(t *testing.T) {
+	configPath := writeConfig(t, "apprise.yaml", `
+version: 1
+groups:
+  now: my_now_pers
+urls:
+  - json://localhost/one
+      tag: my_now_pers
+`)
+
+	if tagged := parseConfigFile(configPath); len(tagged) != 0 {
+		t.Fatalf("expected invalid YAML not to fall back to text parsing, got %#v", tagged)
+	}
+}
+
 func TestParseConfigFileMissingFile(t *testing.T) {
 	if tagged := parseConfigFile(filepath.Join(t.TempDir(), "missing.conf")); tagged != nil {
 		t.Fatalf("expected nil for missing file, got %#v", tagged)

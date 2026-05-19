@@ -42,7 +42,7 @@ func SendTargetURL(rawURL, body, title, inputFormat string, notifyType NotifyTyp
 		return err
 	}
 
-	sendBody, err := ConvertMessageFormat(body, inputFormat, parsed.Query["format"])
+	sendBody, err := ConvertMessageFormatForTarget(parsed, body, inputFormat)
 	if err != nil {
 		return err
 	}

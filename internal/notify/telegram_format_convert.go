@@ -1,0 +1,274 @@
+package notify
+
+import (
+	"fmt"
+	"html"
+	"strings"
+
+	nethtml "golang.org/x/net/html"
+)
+
+var telegramHTMLBlockTags = map[string]struct{}{
+	"blockquote": {},
+	"div":        {},
+	"h1":         {},
+	"h2":         {},
+	"h3":         {},
+	"h4":         {},
+	"h5":         {},
+	"h6":         {},
+	"li":         {},
+	"p":          {},
+	"pre":        {},
+}
+
+func convertTelegramMessageFormat(content, inputFormat, outputFormat, markdownVersion string) (string, error) {
+	input := normalizeNotifyFormat(inputFormat)
+	output := normalizeNotifyFormat(outputFormat)
+	if input == "" {
+		input = "text"
+	}
+	if output == "" {
+		output = "html"
+	}
+	if !isSupportedNotifyFormat(input) {
+		return "", fmt.Errorf("invalid input format: %s", inputFormat)
+	}
+	if !isSupportedNotifyFormat(output) {
+		return "", fmt.Errorf("invalid output format: %s", outputFormat)
+	}
+
+	switch output {
+	case "html":
+		switch input {
+		case "markdown":
+			return telegramHTMLFromHTML(markdownToHTML(content)), nil
+		case "html":
+			return telegramHTMLFromHTML(content), nil
+		case "text":
+			return html.EscapeString(content), nil
+		}
+	case "markdown":
+		mode := telegramMarkdownMode(markdownVersion)
+		switch input {
+		case "markdown":
+			return telegramMarkdownFromHTML(markdownToHTML(content), mode), nil
+		case "html":
+			return telegramMarkdownFromHTML(content, mode), nil
+		case "text":
+			return escapeTelegramMarkdownText(content, mode), nil
+		}
+	case "text":
+		return ConvertMessageFormat(content, input, output)
+	}
+
+	return content, nil
+}
+
+func telegramHTMLFromHTML(content string) string {
+	if strings.TrimSpace(content) == "" {
+		return ""
+	}
+	root, err := nethtml.Parse(strings.NewReader(content))
+	if err != nil {
+		return html.EscapeString(content)
+	}
+
+	var out strings.Builder
+	renderTelegramHTMLNode(&out, root)
+	return strings.Trim(out.String(), "\n")
+}
+
+func renderTelegramHTMLNode(out *strings.Builder, node *nethtml.Node) {
+	if node.Type == nethtml.TextNode {
+		out.WriteString(html.EscapeString(node.Data))
+		return
+	}
+	if node.Type != nethtml.ElementNode {
+		renderTelegramHTMLChildren(out, node)
+		return
+	}
+
+	tag := strings.ToLower(node.Data)
+	if _, ok := telegramHTMLBlockTags[tag]; ok && out.Len() > 0 {
+		ensureLineBreak(out)
+	}
+
+	switch tag {
+	case "a":
+		href := htmlAttr(node, "href")
+		if href == "" {
+			renderTelegramHTMLChildren(out, node)
+			break
+		}
+		out.WriteString(`<a href="`)
+		out.WriteString(html.EscapeString(href))
+		out.WriteString(`">`)
+		renderTelegramHTMLChildren(out, node)
+		out.WriteString("</a>")
+	case "b", "strong":
+		out.WriteString("<b>")
+		renderTelegramHTMLChildren(out, node)
+		out.WriteString("</b>")
+	case "blockquote":
+		out.WriteString("<blockquote>")
+		renderTelegramHTMLChildren(out, node)
+		out.WriteString("</blockquote>")
+	case "br":
+		ensureLineBreak(out)
+	case "code":
+		out.WriteString("<code>")
+		renderTelegramHTMLChildren(out, node)
+		out.WriteString("</code>")
+	case "del", "s", "strike":
+		out.WriteString("<s>")
+		renderTelegramHTMLChildren(out, node)
+		out.WriteString("</s>")
+	case "em", "i":
+		out.WriteString("<i>")
+		renderTelegramHTMLChildren(out, node)
+		out.WriteString("</i>")
+	case "pre":
+		out.WriteString("<pre>")
+		renderTelegramHTMLChildren(out, node)
+		out.WriteString("</pre>")
+	case "u", "ins":
+		out.WriteString("<u>")
+		renderTelegramHTMLChildren(out, node)
+		out.WriteString("</u>")
+	default:
+		renderTelegramHTMLChildren(out, node)
+	}
+
+	if _, ok := telegramHTMLBlockTags[tag]; ok {
+		ensureLineBreak(out)
+	}
+}
+
+func renderTelegramHTMLChildren(out *strings.Builder, node *nethtml.Node) {
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		renderTelegramHTMLNode(out, child)
+	}
+}
+
+func telegramMarkdownFromHTML(content, markdownMode string) string {
+	if strings.TrimSpace(content) == "" {
+		return ""
+	}
+	root, err := nethtml.Parse(strings.NewReader(content))
+	if err != nil {
+		return escapeTelegramMarkdownText(content, markdownMode)
+	}
+
+	var out strings.Builder
+	renderTelegramMarkdownNode(&out, root, markdownMode)
+	return strings.Trim(out.String(), "\n")
+}
+
+func renderTelegramMarkdownNode(out *strings.Builder, node *nethtml.Node, markdownMode string) {
+	if node.Type == nethtml.TextNode {
+		out.WriteString(escapeTelegramMarkdownText(node.Data, markdownMode))
+		return
+	}
+	if node.Type != nethtml.ElementNode {
+		renderTelegramMarkdownChildren(out, node, markdownMode)
+		return
+	}
+
+	tag := strings.ToLower(node.Data)
+	if _, ok := telegramHTMLBlockTags[tag]; ok && out.Len() > 0 {
+		ensureLineBreak(out)
+	}
+
+	switch tag {
+	case "b", "strong":
+		out.WriteString("*")
+		renderTelegramMarkdownChildren(out, node, markdownMode)
+		out.WriteString("*")
+	case "br":
+		ensureLineBreak(out)
+	case "code":
+		out.WriteString("`")
+		renderTelegramMarkdownChildren(out, node, markdownMode)
+		out.WriteString("`")
+	case "del", "s", "strike":
+		out.WriteString("~")
+		renderTelegramMarkdownChildren(out, node, markdownMode)
+		out.WriteString("~")
+	case "em", "i":
+		out.WriteString("_")
+		renderTelegramMarkdownChildren(out, node, markdownMode)
+		out.WriteString("_")
+	case "pre":
+		out.WriteString("```")
+		renderTelegramMarkdownChildren(out, node, markdownMode)
+		out.WriteString("```")
+	default:
+		renderTelegramMarkdownChildren(out, node, markdownMode)
+	}
+
+	if _, ok := telegramHTMLBlockTags[tag]; ok {
+		ensureLineBreak(out)
+	}
+}
+
+func renderTelegramMarkdownChildren(out *strings.Builder, node *nethtml.Node, markdownMode string) {
+	for child := node.FirstChild; child != nil; child = child.NextSibling {
+		renderTelegramMarkdownNode(out, child, markdownMode)
+	}
+}
+
+func escapeTelegramMarkdownText(value, markdownMode string) string {
+	if markdownMode == "MarkdownV2" {
+		replacer := strings.NewReplacer(
+			"\\", "\\\\",
+			"_", "\\_",
+			"*", "\\*",
+			"[", "\\[",
+			"]", "\\]",
+			"(", "\\(",
+			")", "\\)",
+			"~", "\\~",
+			"`", "\\`",
+			">", "\\>",
+			"#", "\\#",
+			"+", "\\+",
+			"-", "\\-",
+			"=", "\\=",
+			"|", "\\|",
+			"{", "\\{",
+			"}", "\\}",
+			".", "\\.",
+			"!", "\\!",
+		)
+		return replacer.Replace(value)
+	}
+
+	replacer := strings.NewReplacer(
+		"\\", "\\\\",
+		"*", "\\*",
+		"_", "\\_",
+		"`", "\\`",
+		"[", "\\[",
+	)
+	return replacer.Replace(value)
+}
+
+func htmlAttr(node *nethtml.Node, key string) string {
+	for _, attr := range node.Attr {
+		if strings.EqualFold(attr.Key, key) {
+			return attr.Val
+		}
+	}
+	return ""
+}
+
+func ensureLineBreak(out *strings.Builder) {
+	if out.Len() == 0 {
+		return
+	}
+	value := out.String()
+	if value[len(value)-1] != '\n' {
+		out.WriteByte('\n')
+	}
+}

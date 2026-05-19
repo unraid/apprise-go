@@ -218,7 +218,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 			continue
 		}
 
-		sendBody, err := notify.ConvertMessageFormat(body, opts.inputFormat, parsed.Query["format"])
+		sendBody, err := notify.ConvertMessageFormatForTarget(parsed, body, opts.inputFormat)
 		if err != nil {
 			fmt.Fprintln(stderr, err)
 			failed = true

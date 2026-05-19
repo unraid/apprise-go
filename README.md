@@ -135,6 +135,23 @@ apprise --details
 apprise --storage-path /path/to/config -b "Using saved config"
 ```
 
+### Configuration Files
+
+apprise-go supports Apprise-style TEXT and YAML configuration files. YAML tagged
+URLs should use the upstream mapping form where the URL has a trailing colon:
+
+```yaml
+version: 1
+groups:
+  now: my_now_pers
+urls:
+  - tgram://token_id/chat_id/?format=markdown&mdv=v1:
+      tag: my_now_pers
+```
+
+Do not put `tag` under a bare scalar URL; that is not valid YAML and will not be
+loaded as a tagged Apprise URL.
+
 ## Releases
 
 ### Latest Release

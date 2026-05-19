@@ -62,7 +62,11 @@ func parseConfigFile(path string) []taggedURL {
 		return nil
 	}
 	if isYAMLConfigPath(path) {
-		if parsed := parseYAMLConfig(data); len(parsed.URLs) > 0 || len(parsed.Groups) > 0 {
+		parsed, validYAML := parseYAMLConfigWithStatus(data)
+		if !validYAML {
+			return nil
+		}
+		if len(parsed.URLs) > 0 || len(parsed.Groups) > 0 {
 			return applyTagGroups(parsed.URLs, parsed.Groups)
 		}
 	}
@@ -91,14 +95,19 @@ func parseTextConfig(raw string) parsedConfig {
 }
 
 func parseYAMLConfig(data []byte) parsedConfig {
+	parsed, _ := parseYAMLConfigWithStatus(data)
+	return parsed
+}
+
+func parseYAMLConfigWithStatus(data []byte) (parsedConfig, bool) {
 	var root any
 	if err := yaml.Unmarshal(data, &root); err != nil {
-		return parsedConfig{URLs: []taggedURL{}, Groups: map[string][]string{}}
+		return parsedConfig{URLs: []taggedURL{}, Groups: map[string][]string{}}, false
 	}
 
 	rootMap, ok := asStringMap(root)
 	if !ok {
-		return parsedConfig{URLs: []taggedURL{}, Groups: map[string][]string{}}
+		return parsedConfig{URLs: []taggedURL{}, Groups: map[string][]string{}}, true
 	}
 
 	globalTags := parseYAMLTags(rootMap)
@@ -106,7 +115,7 @@ func parseYAMLConfig(data []byte) parsedConfig {
 		URLs:   parseYAMLURLs(rootMap["urls"], globalTags),
 		Groups: parseYAMLGroups(rootMap["groups"]),
 	}
-	return cfg
+	return cfg, true
 }
 
 func parseTextConfigLine(line string) textConfigLine {

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -88,6 +89,29 @@ func TestRunSendsHTMLInputToTelegramHTMLTarget(t *testing.T) {
 
 func TestRunSendsMarkdownInputToTelegramMarkdownTarget(t *testing.T) {
 	assertRunHTTPRequestParity(t, "tgram://123456:abcdef/7890/?format=markdown&mdv=v1", "_This is Italics Text_", "", "markdown")
+}
+
+func TestRunConvertsStandardMarkdownInputForTelegramMarkdownTarget(t *testing.T) {
+	goSpecs := testutil.CaptureGoRequests(t, func() error {
+		stdout := &bytes.Buffer{}
+		stderr := &bytes.Buffer{}
+		code := Run([]string{"-i", "markdown", "-b", "~~Strike~~ **Bold** _Italics_ Text", "tgram://123456:abcdef/7890/?format=markdown&mdv=v2"}, stdout, stderr)
+		if code != 0 {
+			return fmt.Errorf("Run failed with code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+		}
+		return nil
+	})
+	if len(goSpecs) != 1 {
+		t.Fatalf("expected one request, got %d", len(goSpecs))
+	}
+
+	payload := decodeJSONPayload(t, goSpecs[0].Body)
+	if payload["parse_mode"] != "MarkdownV2" {
+		t.Fatalf("expected MarkdownV2 parse mode, got %#v", payload["parse_mode"])
+	}
+	if payload["text"] != "~Strike~ *Bold* _Italics_ Text" {
+		t.Fatalf("expected Telegram markdown body, got %#v", payload["text"])
+	}
 }
 
 func TestRunConvertsMarkdownInputForMailtoHTMLTarget(t *testing.T) {
@@ -192,4 +216,13 @@ func assertRunHTTPRequestParity(t *testing.T, rawURL, body, title, inputFormat s
 	})
 
 	testutil.AssertRequestSpecSequenceMatches(t, pythonSpecs, goSpecs)
+}
+
+func decodeJSONPayload(t *testing.T, body string) map[string]any {
+	t.Helper()
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(body), &payload); err != nil {
+		t.Fatalf("decode json payload: %v", err)
+	}
+	return payload
 }
