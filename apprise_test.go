@@ -1,7 +1,6 @@
 package apprise
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/unraid/apprise-go/internal/notify"
 	"github.com/unraid/apprise-go/internal/testutil"
 )
 
@@ -33,42 +33,34 @@ func TestAppriseSendJSONTarget(t *testing.T) {
 }
 
 func TestAppriseSendConvertsInputFormat(t *testing.T) {
-	requests := make(chan map[string]any, 1)
+	testutil.RequirePythonApprise(t)
+
+	requests := make(chan notify.RequestSpec, 2)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			_ = r.Body.Close()
-		}()
-
-		data, err := io.ReadAll(r.Body)
-		if err != nil {
-			t.Errorf("read body: %v", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		var payload map[string]any
-		if err := json.Unmarshal(data, &payload); err != nil {
-			t.Errorf("decode json: %v", err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		requests <- payload
+		requests <- captureRequestSpec(t, r)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 
+	targetURL := "json://" + server.Listener.Addr().String() + "/notify?format=html"
+	body := "_hello_"
+
+	pyStdout, pyStderr, err := testutil.RunApprise(t, "-i", "markdown", "-b", body, targetURL)
+	if err != nil {
+		t.Fatalf("python apprise failed: %v stdout=%s stderr=%s", err, pyStdout, pyStderr)
+	}
+	pythonRequests := readRequestSpecs(t, requests)
+
 	if err := Send(
-		[]string{"json://" + server.Listener.Addr().String() + "/notify?format=html"},
-		"_hello_",
+		[]string{targetURL},
+		body,
 		WithInputFormat("markdown"),
 	); err != nil {
 		t.Fatalf("send: %v", err)
 	}
+	goRequests := readRequestSpecs(t, requests)
 
-	payload := readPayload(t, requests)
-	if got := payload["message"]; got != "<p><em>hello</em></p>\n" {
-		t.Fatalf("message = %q, want converted html", got)
-	}
+	testutil.AssertRequestSpecSequenceMatches(t, pythonRequests, goRequests)
 }
 
 func TestAppriseSendNoTargets(t *testing.T) {
@@ -85,14 +77,45 @@ func TestAppriseAddRejectsUnsupportedSchema(t *testing.T) {
 	}
 }
 
-func readPayload(t *testing.T, requests <-chan map[string]any) map[string]any {
+func captureRequestSpec(t *testing.T, r *http.Request) notify.RequestSpec {
+	t.Helper()
+	defer r.Body.Close()
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		t.Fatalf("read request body: %v", err)
+	}
+	headers := map[string]string{}
+	for key, values := range r.Header {
+		headers[key] = strings.Join(values, ",")
+	}
+
+	return notify.RequestSpec{
+		Method:  r.Method,
+		URL:     "http://" + r.Host + r.URL.RequestURI(),
+		Headers: headers,
+		Body:    string(body),
+	}
+}
+
+func readRequestSpecs(t *testing.T, requests <-chan notify.RequestSpec) []notify.RequestSpec {
 	t.Helper()
 
+	specs := []notify.RequestSpec{}
 	select {
-	case payload := <-requests:
-		return payload
+	case spec := <-requests:
+		specs = append(specs, spec)
 	case <-time.After(time.Second):
 		t.Fatalf("timed out waiting for request")
 		return nil
+	}
+
+	for {
+		select {
+		case spec := <-requests:
+			specs = append(specs, spec)
+		default:
+			return specs
+		}
 	}
 }

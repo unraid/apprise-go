@@ -34,6 +34,12 @@ type parsedConfig struct {
 	Groups map[string][]string
 }
 
+type textConfigLine struct {
+	URLs      []taggedURL
+	Groups    []string
+	GroupTags []string
+}
+
 func loadTaggedURLs(configPaths []string) []taggedURL {
 	urls := []taggedURL{}
 	for _, path := range configPaths {
@@ -72,21 +78,11 @@ func parseTextConfig(raw string) parsedConfig {
 
 	scanner := bufio.NewScanner(strings.NewReader(raw))
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
+		parsed := parseTextConfigLine(scanner.Text())
+		for _, group := range parsed.Groups {
+			cfg.Groups[group] = append(cfg.Groups[group], parsed.GroupTags...)
 		}
-
-		if groups, tags, ok := parseGroupAssignment(line); ok {
-			for _, group := range groups {
-				cfg.Groups[group] = append(cfg.Groups[group], tags...)
-			}
-			continue
-		}
-
-		if parsed := parseTaggedLine(line); len(parsed) > 0 {
-			cfg.URLs = append(cfg.URLs, parsed...)
-		}
+		cfg.URLs = append(cfg.URLs, parsed.URLs...)
 	}
 	if err := scanner.Err(); err != nil {
 		return cfg
@@ -111,6 +107,22 @@ func parseYAMLConfig(data []byte) parsedConfig {
 		Groups: parseYAMLGroups(rootMap["groups"]),
 	}
 	return cfg
+}
+
+func parseTextConfigLine(line string) textConfigLine {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, ";") {
+		return textConfigLine{}
+	}
+
+	if groups, tags, ok := parseGroupAssignment(line); ok {
+		return textConfigLine{Groups: groups, GroupTags: tags}
+	}
+	if strings.Contains(line, ":") && !urlSchemeRe.MatchString(line) {
+		return textConfigLine{}
+	}
+
+	return textConfigLine{URLs: parseTaggedLine(line)}
 }
 
 func parseTaggedLine(line string) []taggedURL {

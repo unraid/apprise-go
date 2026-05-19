@@ -303,7 +303,7 @@ func parseOptionalIntValue(raw string) *int {
 
 func (t *TelegramTarget) parseMode() string {
 	switch t.notifyFormat {
-	case "html":
+	case "html", "text":
 		return "HTML"
 	case "markdown":
 		return t.markdownMode
@@ -317,7 +317,7 @@ func telegramMarkdownMode(raw string) string {
 	case "v2", "markdownv2":
 		return "MarkdownV2"
 	default:
-		return "Markdown"
+		return "MARKDOWN"
 	}
 }
 

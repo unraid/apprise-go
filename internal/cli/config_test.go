@@ -1,12 +1,14 @@
 package cli
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/unraid/apprise-go/internal/testutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -252,6 +254,35 @@ mygrouptag=mytagA
 	}
 }
 
+func TestResolveNotifyURLsDoesNotTreatColonTextAsGroupSyntax(t *testing.T) {
+	configPath := writeConfig(t, "apprise.conf", `
+# Groups
+now: now_pers
+now_pers: my_now_pers
+
+# Telegram: Personal
+my_now_pers=tgram://123456:abcdef/7890/?format=markdown&mdv=v1
+`)
+
+	for _, tag := range []string{"now_pers", "now"} {
+		opts := &cliOptions{
+			configPaths: []string{configPath},
+			tags:        []string{tag},
+		}
+		if tagged := resolveNotifyURLs(opts, nil, nil); len(tagged) != 0 {
+			t.Fatalf("expected unsupported colon group %q not to match, got %#v", tag, tagged)
+		}
+	}
+
+	opts := &cliOptions{
+		configPaths: []string{configPath},
+		tags:        []string{"my_now_pers"},
+	}
+	assertTaggedURLs(t, resolveNotifyURLs(opts, nil, nil), []taggedURL{
+		{URL: "tgram://123456:abcdef/7890/?format=markdown&mdv=v1", Tags: []string{"my_now_pers"}},
+	})
+}
+
 func TestResolveNotifyURLsFiltersYAMLGroupTags(t *testing.T) {
 	configPath := writeConfig(t, "apprise.yaml", `
 version: 1
@@ -308,6 +339,89 @@ urls:
 			assertTaggedURLs(t, tagged, []taggedURL{
 				{URL: "tgram://123456:abcdef/7890/", Tags: []string{"grouptag", "mytag"}},
 			})
+		})
+	}
+}
+
+func TestResolveNotifyURLsMatchesIssue47NestedYAMLGroupRepro(t *testing.T) {
+	configPath := writeConfig(t, "apprise.yaml", `
+version: 1
+groups:
+  now: now_pers
+  now_pers: my_now_pers
+urls:
+  - tgram://123456:abcdef/7890/?format=markdown&mdv=v1:
+      tag: my_now_pers
+`)
+
+	for _, tag := range []string{"my_now_pers", "now_pers", "now"} {
+		t.Run(tag, func(t *testing.T) {
+			opts := &cliOptions{
+				configPaths: []string{configPath},
+				tags:        []string{tag},
+			}
+
+			tagged := resolveNotifyURLs(opts, nil, nil)
+
+			assertTaggedURLs(t, tagged, []taggedURL{
+				{
+					URL:  "tgram://123456:abcdef/7890/?format=markdown&mdv=v1",
+					Tags: []string{"my_now_pers", "now", "now_pers"},
+				},
+			})
+		})
+	}
+}
+
+func TestResolveNotifyURLsMatchesPythonNestedGroupParity(t *testing.T) {
+	testutil.RequirePythonApprise(t)
+
+	for _, tc := range []struct {
+		name     string
+		filename string
+		content  string
+	}{
+		{
+			name:     "text equals nested groups",
+			filename: "apprise.conf",
+			content: `
+now=now_pers
+now_pers=my_now_pers
+my_now_pers=json://localhost/one
+`,
+		},
+		{
+			name:     "yaml nested groups",
+			filename: "apprise.yaml",
+			content: `
+version: 1
+groups:
+  now: now_pers
+  now_pers: my_now_pers
+urls:
+  - json://localhost/one:
+      tag: my_now_pers
+`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			configPath := writeConfig(t, tc.filename, tc.content)
+			tags := []string{"my_now_pers", "now_pers", "now"}
+			pythonTags := pythonAppriseResolvedTags(t, configPath, tags)
+
+			for _, tag := range tags {
+				opts := &cliOptions{
+					configPaths: []string{configPath},
+					tags:        []string{tag},
+				}
+				tagged := resolveNotifyURLs(opts, nil, nil)
+				if len(tagged) != len(pythonTags[tag]) {
+					t.Fatalf("tag %q URL count mismatch: go=%d python=%d", tag, len(tagged), len(pythonTags[tag]))
+				}
+				for idx := range tagged {
+					assertStringSlices(t, tagged[idx].Tags, pythonTags[tag][idx])
+				}
+			}
 		})
 	}
 }
@@ -398,6 +512,33 @@ func TestParseTaggedLineHandlesMultipleURLsAndNoURL(t *testing.T) {
 	}
 }
 
+func TestParseTextConfigLineSeparatesConfigGrammar(t *testing.T) {
+	for _, line := range []string{"", " # comment", "; comment"} {
+		if got := parseTextConfigLine(line); len(got.URLs) != 0 || len(got.Groups) != 0 || len(got.GroupTags) != 0 {
+			t.Fatalf("expected empty parsed line for %q, got %#v", line, got)
+		}
+	}
+
+	assertTaggedURLs(t, parseTextConfigLine("tagA=json://localhost/one").URLs, []taggedURL{
+		{URL: "json://localhost/one", Tags: []string{"taga"}},
+	})
+
+	grouped := parseTextConfigLine("groupA = tagA")
+	assertStringSlices(t, grouped.Groups, []string{"groupa"})
+	assertStringSlices(t, grouped.GroupTags, []string{"taga"})
+	if len(grouped.URLs) != 0 {
+		t.Fatalf("expected no URLs for group assignment, got %#v", grouped.URLs)
+	}
+
+	if got := parseTextConfigLine("groupA: tagA"); len(got.URLs) != 0 || len(got.Groups) != 0 || len(got.GroupTags) != 0 {
+		t.Fatalf("expected unsupported colon assignment to be ignored, got %#v", got)
+	}
+
+	assertTaggedURLs(t, parseTextConfigLine("json://localhost/path?format=full").URLs, []taggedURL{
+		{URL: "json://localhost/path?format=full"},
+	})
+}
+
 func TestParseGroupAssignmentValidation(t *testing.T) {
 	groups, tags, ok := parseGroupAssignment("groupA, groupB = tagA tagB")
 	if !ok {
@@ -406,7 +547,7 @@ func TestParseGroupAssignmentValidation(t *testing.T) {
 	assertStringSlices(t, groups, []string{"groupa", "groupb"})
 	assertStringSlices(t, tags, []string{"taga", "tagb"})
 
-	for _, line := range []string{"no equals", "=tag", "group=", "json://localhost/a=tag", "group=json://localhost/a"} {
+	for _, line := range []string{"no equals", "groupC: tagC", "=tag", "group=", "json://localhost/a=tag", "group=json://localhost/a"} {
 		if _, _, ok := parseGroupAssignment(line); ok {
 			t.Fatalf("expected invalid assignment for %q", line)
 		}
@@ -560,6 +701,37 @@ func writeConfig(t *testing.T, name, content string) string {
 		t.Fatalf("write config: %v", err)
 	}
 	return path
+}
+
+func pythonAppriseResolvedTags(t *testing.T, configPath string, tags []string) map[string][][]string {
+	t.Helper()
+
+	script := `
+import apprise
+import json
+import sys
+
+config_path = sys.argv[1]
+tags = sys.argv[2:]
+config = apprise.AppriseConfig(paths=config_path)
+app = apprise.Apprise()
+app.add(config)
+result = {}
+for tag in tags:
+    result[tag] = [sorted(server.tags) for server in app.find(tag)]
+print(json.dumps(result, sort_keys=True))
+`
+	args := append([]string{"-c", script, configPath}, tags...)
+	stdout, stderr, err := testutil.RunCommand(t, testutil.PythonPath(t), args...)
+	if err != nil {
+		t.Fatalf("python apprise config resolution failed: %v stdout=%s stderr=%s", err, strings.TrimSpace(stdout), strings.TrimSpace(stderr))
+	}
+
+	var resolved map[string][][]string
+	if err := json.Unmarshal([]byte(stdout), &resolved); err != nil {
+		t.Fatalf("decode python apprise config resolution: %v stdout=%s", err, stdout)
+	}
+	return resolved
 }
 
 func mustYAMLValue(t *testing.T, raw string) any {

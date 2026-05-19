@@ -40,9 +40,14 @@ func computeImagePathMask() string {
 	}
 
 	if moduleRoot, ok := findModuleRoot(); ok {
-		candidateRoot := filepath.Join(moduleRoot, "..", "apprise", "apprise")
-		if dirExists(filepath.Join(candidateRoot, "assets")) {
-			return joinAssetMask(candidateRoot)
+		for _, candidateRoot := range []string{
+			filepath.Join(moduleRoot, "..", "apprise"),
+			filepath.Join(moduleRoot, "..", "apprise", "apprise"),
+			filepath.Join(moduleRoot, "..", "apprise", "apprise", "apprise"),
+		} {
+			if dirExists(filepath.Join(candidateRoot, "assets")) {
+				return joinAssetMask(candidateRoot)
+			}
 		}
 	}
 

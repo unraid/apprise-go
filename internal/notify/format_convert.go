@@ -66,7 +66,7 @@ func markdownToHTML(content string) string {
 	renderer := html.NewRenderer(html.RendererOptions{
 		Flags: html.CommonFlags,
 	})
-	return string(markdown.ToHTML([]byte(content), mdParser, renderer))
+	return strings.TrimSuffix(string(markdown.ToHTML([]byte(content), mdParser, renderer)), "\n")
 }
 
 func ConvertMessageFormat(content, inputFormat, outputFormat string) (string, error) {

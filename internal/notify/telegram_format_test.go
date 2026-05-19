@@ -17,7 +17,7 @@ func TestTelegramMarkdownFormatSetsMarkdownParseMode(t *testing.T) {
 	assertTelegramFormatParity(t, "tgram://123456:abcdef/7890/?format=markdown&mdv=v1", "_This is Italics Text_", "", "markdown")
 }
 
-func TestTelegramTextFormatOmitsParseMode(t *testing.T) {
+func TestTelegramTextFormatUsesHTMLParseMode(t *testing.T) {
 	assertTelegramFormatParity(t, "tgram://123456:abcdef/7890/?format=text", "<b>plain</b>", "Title", "text")
 }
 
