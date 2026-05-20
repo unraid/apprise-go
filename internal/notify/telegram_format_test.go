@@ -50,6 +50,52 @@ func TestTelegramConvertsStandardMarkdownToTelegramHTML(t *testing.T) {
 	}
 }
 
+func TestTelegramMarkdownV2CodeEscapesOnlyBackticksAndBackslashes(t *testing.T) {
+	payload := captureTelegramPayload(t, "tgram://123456:abcdef/7890/?format=markdown&mdv=v2", "`if x > 0 { return path\\name }`", "", "markdown")
+
+	text, ok := payload["text"].(string)
+	if !ok {
+		t.Fatalf("expected text payload, got %#v", payload["text"])
+	}
+	if text != "`if x > 0 { return path\\\\name }`" {
+		t.Fatalf("expected minimally escaped code text, got %q", text)
+	}
+	for _, overescaped := range []string{`\>`, `\{`, `\}`} {
+		if strings.Contains(text, overescaped) {
+			t.Fatalf("expected code text not to contain overescaped fragment %q in %q", overescaped, text)
+		}
+	}
+}
+
+func TestTelegramMarkdownV2PreEscapesOnlyBackticksAndBackslashes(t *testing.T) {
+	payload := captureTelegramPayload(t, "tgram://123456:abcdef/7890/?format=markdown&mdv=v2", "<pre>if x > 0 { return path\\name }</pre>", "", "html")
+
+	text, ok := payload["text"].(string)
+	if !ok {
+		t.Fatalf("expected text payload, got %#v", payload["text"])
+	}
+	if text != "```if x > 0 { return path\\\\name }```" {
+		t.Fatalf("expected minimally escaped pre text, got %q", text)
+	}
+	for _, overescaped := range []string{`\>`, `\{`, `\}`} {
+		if strings.Contains(text, overescaped) {
+			t.Fatalf("expected pre text not to contain overescaped fragment %q in %q", overescaped, text)
+		}
+	}
+}
+
+func TestTelegramMarkdownV2PreservesLinks(t *testing.T) {
+	payload := captureTelegramPayload(t, "tgram://123456:abcdef/7890/?format=markdown&mdv=v2", `<a href="https://example.com/a)b\c">Docs</a>`, "", "html")
+
+	text, ok := payload["text"].(string)
+	if !ok {
+		t.Fatalf("expected text payload, got %#v", payload["text"])
+	}
+	if text != "[Docs](https://example.com/a\\)b\\\\c)" {
+		t.Fatalf("expected escaped Telegram markdown link, got %q", text)
+	}
+}
+
 func TestTelegramTextFormatUsesHTMLParseMode(t *testing.T) {
 	assertTelegramFormatParity(t, "tgram://123456:abcdef/7890/?format=text", "<b>plain</b>", "Title", "text")
 }

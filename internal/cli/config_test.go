@@ -34,6 +34,8 @@ func TestParseConfigFileTextFallbackForYAMLWithoutStructuredConfig(t *testing.T)
 }
 
 func TestParseConfigFileDoesNotTextFallbackForInvalidYAML(t *testing.T) {
+	testutil.RequirePythonApprise(t)
+
 	configPath := writeConfig(t, "apprise.yaml", `
 version: 1
 groups:
@@ -45,6 +47,11 @@ urls:
 
 	if tagged := parseConfigFile(configPath); len(tagged) != 0 {
 		t.Fatalf("expected invalid YAML not to fall back to text parsing, got %#v", tagged)
+	}
+
+	pythonTags := pythonAppriseResolvedTags(t, configPath, []string{"my_now_pers"})
+	if got := pythonTags["my_now_pers"]; len(got) != 0 {
+		t.Fatalf("expected python apprise to resolve no URLs for invalid YAML, got %#v", got)
 	}
 }
 
