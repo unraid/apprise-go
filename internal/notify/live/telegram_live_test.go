@@ -139,13 +139,13 @@ func telegramLiveAssertParseable(t *testing.T, token string, payload map[string]
 
 	req, err := http.NewRequest(http.MethodPost, "https://api.telegram.org/bot"+token+"/sendMessage", bytes.NewReader(data))
 	if err != nil {
-		t.Fatalf("new telegram request: %v", err)
+		t.Fatalf("new telegram request: %s", telegramLiveRedactToken(err, token))
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := telegramLiveClient().Do(req)
 	if err != nil {
-		t.Fatalf("telegram sendMessage: %v", err)
+		t.Fatalf("telegram sendMessage: %s", telegramLiveRedactToken(err, token))
 	}
 	defer resp.Body.Close()
 
@@ -170,4 +170,32 @@ func telegramLiveAssertParseable(t *testing.T, token string, payload map[string]
 
 func telegramLiveClient() *http.Client {
 	return &http.Client{Timeout: 20 * time.Second}
+}
+
+func TestTelegramLiveRedactToken(t *testing.T) {
+	token := "123456:secret"
+	err := &urlErrorString{message: "Post \"https://api.telegram.org/bot123456:secret/sendMessage\": timeout"}
+
+	got := telegramLiveRedactToken(err, token)
+	if strings.Contains(got, token) {
+		t.Fatalf("redacted error still contains token: %q", got)
+	}
+	if !strings.Contains(got, "<redacted>") {
+		t.Fatalf("redacted error missing placeholder: %q", got)
+	}
+}
+
+func telegramLiveRedactToken(err error, token string) string {
+	if err == nil {
+		return ""
+	}
+	return strings.ReplaceAll(err.Error(), token, "<redacted>")
+}
+
+type urlErrorString struct {
+	message string
+}
+
+func (e *urlErrorString) Error() string {
+	return e.message
 }
