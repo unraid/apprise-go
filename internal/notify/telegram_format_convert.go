@@ -75,17 +75,20 @@ func telegramHTMLFromHTML(content string) string {
 	}
 
 	var out strings.Builder
-	renderTelegramHTMLNode(&out, root)
+	renderTelegramHTMLNode(&out, root, false)
 	return strings.Trim(out.String(), "\n")
 }
 
-func renderTelegramHTMLNode(out *strings.Builder, node *nethtml.Node) {
+func renderTelegramHTMLNode(out *strings.Builder, node *nethtml.Node, inCode bool) {
 	if node.Type == nethtml.TextNode {
+		if !inCode && strings.TrimSpace(node.Data) == "" && strings.ContainsAny(node.Data, "\r\n") {
+			return
+		}
 		out.WriteString(html.EscapeString(node.Data))
 		return
 	}
 	if node.Type != nethtml.ElementNode {
-		renderTelegramHTMLChildren(out, node)
+		renderTelegramHTMLChildren(out, node, inCode)
 		return
 	}
 
@@ -98,46 +101,53 @@ func renderTelegramHTMLNode(out *strings.Builder, node *nethtml.Node) {
 	case "a":
 		href := htmlAttr(node, "href")
 		if href == "" {
-			renderTelegramHTMLChildren(out, node)
+			renderTelegramHTMLChildren(out, node, inCode)
 			break
 		}
 		out.WriteString(`<a href="`)
 		out.WriteString(html.EscapeString(href))
 		out.WriteString(`">`)
-		renderTelegramHTMLChildren(out, node)
+		renderTelegramHTMLChildren(out, node, inCode)
 		out.WriteString("</a>")
 	case "b", "strong":
 		out.WriteString("<b>")
-		renderTelegramHTMLChildren(out, node)
+		renderTelegramHTMLChildren(out, node, inCode)
 		out.WriteString("</b>")
 	case "blockquote":
 		out.WriteString("<blockquote>")
-		renderTelegramHTMLChildren(out, node)
+		renderTelegramHTMLChildren(out, node, inCode)
 		out.WriteString("</blockquote>")
 	case "br":
 		ensureLineBreak(out)
 	case "code":
 		out.WriteString("<code>")
-		renderTelegramHTMLChildren(out, node)
+		renderTelegramHTMLChildren(out, node, true)
 		out.WriteString("</code>")
 	case "del", "s", "strike":
 		out.WriteString("<s>")
-		renderTelegramHTMLChildren(out, node)
+		renderTelegramHTMLChildren(out, node, inCode)
 		out.WriteString("</s>")
 	case "em", "i":
 		out.WriteString("<i>")
-		renderTelegramHTMLChildren(out, node)
+		renderTelegramHTMLChildren(out, node, inCode)
 		out.WriteString("</i>")
+	case "h1", "h2", "h3", "h4", "h5", "h6":
+		out.WriteString("<b>")
+		renderTelegramHTMLChildren(out, node, inCode)
+		out.WriteString("</b>")
+	case "li":
+		out.WriteString("- ")
+		renderTelegramHTMLChildren(out, node, inCode)
 	case "pre":
 		out.WriteString("<pre>")
-		renderTelegramHTMLChildren(out, node)
+		renderTelegramHTMLChildren(out, node, true)
 		out.WriteString("</pre>")
 	case "u", "ins":
 		out.WriteString("<u>")
-		renderTelegramHTMLChildren(out, node)
+		renderTelegramHTMLChildren(out, node, inCode)
 		out.WriteString("</u>")
 	default:
-		renderTelegramHTMLChildren(out, node)
+		renderTelegramHTMLChildren(out, node, inCode)
 	}
 
 	if _, ok := telegramHTMLBlockTags[tag]; ok {
@@ -145,9 +155,9 @@ func renderTelegramHTMLNode(out *strings.Builder, node *nethtml.Node) {
 	}
 }
 
-func renderTelegramHTMLChildren(out *strings.Builder, node *nethtml.Node) {
+func renderTelegramHTMLChildren(out *strings.Builder, node *nethtml.Node, inCode bool) {
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		renderTelegramHTMLNode(out, child)
+		renderTelegramHTMLNode(out, child, inCode)
 	}
 }
 
@@ -168,7 +178,10 @@ func telegramMarkdownFromHTML(content, markdownMode string) string {
 func renderTelegramMarkdownNode(out *strings.Builder, node *nethtml.Node, markdownMode string, inCode bool) {
 	if node.Type == nethtml.TextNode {
 		if inCode {
-			out.WriteString(escapeTelegramMarkdownCodeText(node.Data))
+			out.WriteString(escapeTelegramMarkdownCodeText(node.Data, markdownMode))
+			return
+		}
+		if strings.TrimSpace(node.Data) == "" && strings.ContainsAny(node.Data, "\r\n") {
 			return
 		}
 		out.WriteString(escapeTelegramMarkdownText(node.Data, markdownMode))
@@ -203,19 +216,38 @@ func renderTelegramMarkdownNode(out *strings.Builder, node *nethtml.Node, markdo
 	case "br":
 		ensureLineBreak(out)
 	case "code":
+		if inCode {
+			renderTelegramMarkdownChildren(out, node, markdownMode, true)
+			break
+		}
 		out.WriteString("`")
 		renderTelegramMarkdownChildren(out, node, markdownMode, true)
 		out.WriteString("`")
 	case "del", "s", "strike":
-		out.WriteString("~")
+		if markdownMode == "MarkdownV2" {
+			out.WriteString("~")
+		}
 		renderTelegramMarkdownChildren(out, node, markdownMode, inCode)
-		out.WriteString("~")
+		if markdownMode == "MarkdownV2" {
+			out.WriteString("~")
+		}
 	case "em", "i":
 		out.WriteString("_")
 		renderTelegramMarkdownChildren(out, node, markdownMode, inCode)
 		out.WriteString("_")
+	case "h1", "h2", "h3", "h4", "h5", "h6":
+		out.WriteString("*")
+		renderTelegramMarkdownChildren(out, node, markdownMode, inCode)
+		out.WriteString("*")
+	case "li":
+		if markdownMode == "MarkdownV2" {
+			out.WriteString("\\- ")
+		} else {
+			out.WriteString("- ")
+		}
+		renderTelegramMarkdownChildren(out, node, markdownMode, inCode)
 	case "pre":
-		out.WriteString("```")
+		out.WriteString("```\n")
 		renderTelegramMarkdownChildren(out, node, markdownMode, true)
 		out.WriteString("```")
 	default:
@@ -233,7 +265,10 @@ func renderTelegramMarkdownChildren(out *strings.Builder, node *nethtml.Node, ma
 	}
 }
 
-func escapeTelegramMarkdownCodeText(value string) string {
+func escapeTelegramMarkdownCodeText(value, markdownMode string) string {
+	if markdownMode != "MarkdownV2" {
+		return value
+	}
 	replacer := strings.NewReplacer(
 		"\\", "\\\\",
 		"`", "\\`",
