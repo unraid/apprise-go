@@ -3,6 +3,12 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.2.5 (2026-05-21)
+
+### Fixes
+
+- handle Telegram format conversion edge cases (#60)
+
 ## 0.2.4 (2026-05-20)
 
 ### Fixes
