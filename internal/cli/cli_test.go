@@ -160,20 +160,28 @@ func TestCLILegacyFlagFormsStillParse(t *testing.T) {
 	}
 }
 
-func TestCLIParseErrorsAreNotReportedAsLaterUnknownOptions(t *testing.T) {
-	result := runGoCLI("-R", "not-an-int", "--blah")
+func TestCLIParseErrorsMatchPythonApprise(t *testing.T) {
+	testutil.RequirePythonApprise(t)
+	isolateAppriseCLIEnv(t)
 
-	if result.code != 2 {
-		t.Fatalf("expected parse failure exit code, got code=%d stdout=%q stderr=%q", result.code, result.stdout, result.stderr)
+	args := []string{"-R", "not-an-int", "--blah"}
+	result := runGoCLI(args...)
+	pythonResult := runPythonAppriseCLI(t, args...)
+
+	if result != pythonResult {
+		t.Fatalf(
+			"CLI parse error output mismatch for args %q\npython: code=%d stdout=%q stderr=%q\ngo:     code=%d stdout=%q stderr=%q",
+			args,
+			pythonResult.code,
+			pythonResult.stdout,
+			pythonResult.stderr,
+			result.code,
+			result.stdout,
+			result.stderr,
+		)
 	}
-	if result.stdout != "" {
-		t.Fatalf("expected empty stdout, got %q", result.stdout)
-	}
-	if !strings.Contains(result.stderr, `invalid value "not-an-int" for flag -R`) {
-		t.Fatalf("expected invalid integer parse error, got stderr=%q", result.stderr)
-	}
-	if strings.Contains(result.stderr, "No such option") {
-		t.Fatalf("expected parse error not unknown-option error, got stderr=%q", result.stderr)
+	if result.code != 2 || result.stdout != "" || !strings.Contains(result.stderr, "No such option '--blah'") {
+		t.Fatalf("expected Python-compatible unknown-option parse failure, got code=%d stdout=%q stderr=%q", result.code, result.stdout, result.stderr)
 	}
 }
 
