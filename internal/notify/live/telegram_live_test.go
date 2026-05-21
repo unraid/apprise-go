@@ -1,4 +1,4 @@
-package notify_test
+package live_test
 
 import (
 	"bytes"
@@ -8,6 +8,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/unraid/apprise-go/internal/notify"
+	"github.com/unraid/apprise-go/internal/testutil"
 )
 
 func TestTelegramLiveFormattingAgainstBotAPI(t *testing.T) {
@@ -107,6 +110,23 @@ func telegramLiveDestination(t *testing.T) any {
 
 	t.Skip("set APPRISE_GO_TELEGRAM_CHAT_ID to run Telegram live validation against an explicit destination")
 	return nil
+}
+
+func captureTelegramPayload(t *testing.T, rawURL, body, title, bodyFormat string) map[string]any {
+	t.Helper()
+
+	specs := testutil.CaptureGoRequests(t, func() error {
+		return notify.SendTargetURL(rawURL, body, title, bodyFormat, notify.NotifyInfo)
+	})
+	if len(specs) != 1 {
+		t.Fatalf("expected one request, got %d", len(specs))
+	}
+
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(specs[0].Body), &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	return payload
 }
 
 func telegramLiveAssertParseable(t *testing.T, token string, payload map[string]any) {
