@@ -206,9 +206,11 @@ func Run(args []string, stdout, stderr io.Writer) int {
 			printHelp(stdout)
 			return 0
 		}
-		if option := unknownOption(args, fs); option != "" {
-			printUnknownOption(stderr, option)
-			return 2
+		if isUnknownFlagParseError(err) {
+			if option := unknownOption(args, fs); option != "" {
+				printUnknownOption(stderr, option)
+				return 2
+			}
 		}
 		fmt.Fprintln(stderr, err)
 		return 2
@@ -339,6 +341,10 @@ func printHelp(w io.Writer) {
 func printUnknownOption(w io.Writer, option string) {
 	fmt.Fprint(w, commandErrorUsage+"\n")
 	fmt.Fprintf(w, "Error: No such option '%s'.\n", option)
+}
+
+func isUnknownFlagParseError(err error) bool {
+	return strings.HasPrefix(err.Error(), "flag provided but not defined: ")
 }
 
 func defaultCliOptions() cliOptions {

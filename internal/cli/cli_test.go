@@ -160,6 +160,23 @@ func TestCLILegacyFlagFormsStillParse(t *testing.T) {
 	}
 }
 
+func TestCLIParseErrorsAreNotReportedAsLaterUnknownOptions(t *testing.T) {
+	result := runGoCLI("-R", "not-an-int", "--blah")
+
+	if result.code != 2 {
+		t.Fatalf("expected parse failure exit code, got code=%d stdout=%q stderr=%q", result.code, result.stdout, result.stderr)
+	}
+	if result.stdout != "" {
+		t.Fatalf("expected empty stdout, got %q", result.stdout)
+	}
+	if !strings.Contains(result.stderr, `invalid value "not-an-int" for flag -R`) {
+		t.Fatalf("expected invalid integer parse error, got stderr=%q", result.stderr)
+	}
+	if strings.Contains(result.stderr, "No such option") {
+		t.Fatalf("expected parse error not unknown-option error, got stderr=%q", result.stderr)
+	}
+}
+
 func TestRunConvertsMarkdownInputForHTMLTargetFormat(t *testing.T) {
 	testutil.RequirePythonApprise(t)
 
