@@ -3,11 +3,14 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +18,12 @@ import (
 	"github.com/unraid/apprise-go/internal/notify"
 	"github.com/unraid/apprise-go/internal/testutil"
 )
+
+type cliResult struct {
+	code   int
+	stdout string
+	stderr string
+}
 
 func TestRunNoArgsDoesNotReadStdin(t *testing.T) {
 	oldStdin := os.Stdin
@@ -52,6 +61,58 @@ func TestRunNoArgsDoesNotReadStdin(t *testing.T) {
 	}
 }
 
+func TestCLIHelpWorkflowMatchesPythonApprise(t *testing.T) {
+	testutil.RequirePythonApprise(t)
+	isolateAppriseCLIEnv(t)
+
+	for _, tt := range helpWorkflowCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			python := runPythonAppriseCLI(t, tt.args...)
+			goCLI := runGoCLI(tt.args...)
+
+			if goCLI != python {
+				t.Fatalf(
+					"CLI output mismatch for args %q\npython: code=%d stdout=%q stderr=%q\ngo:     code=%d stdout=%q stderr=%q",
+					tt.args,
+					python.code,
+					python.stdout,
+					python.stderr,
+					goCLI.code,
+					goCLI.stdout,
+					goCLI.stderr,
+				)
+			}
+		})
+	}
+}
+
+func TestAppriseCommandHelpWorkflowMatchesPythonApprise(t *testing.T) {
+	testutil.RequirePythonApprise(t)
+	binary := buildAppriseCommand(t)
+
+	isolateAppriseCLIEnv(t)
+
+	for _, tt := range helpWorkflowCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			python := runPythonAppriseCLI(t, tt.args...)
+			goCLI := runCommand(t, binary, tt.args...)
+
+			if goCLI != python {
+				t.Fatalf(
+					"CLI command output mismatch for args %q\npython: code=%d stdout=%q stderr=%q\ngo:     code=%d stdout=%q stderr=%q",
+					tt.args,
+					python.code,
+					python.stdout,
+					python.stderr,
+					goCLI.code,
+					goCLI.stdout,
+					goCLI.stderr,
+				)
+			}
+		})
+	}
+}
+
 func TestRunConvertsMarkdownInputForHTMLTargetFormat(t *testing.T) {
 	testutil.RequirePythonApprise(t)
 
@@ -81,6 +142,124 @@ func TestRunConvertsMarkdownInputForHTMLTargetFormat(t *testing.T) {
 	goRequests := readRequestSpecs(t, requests)
 
 	testutil.AssertRequestSpecSequenceMatches(t, pythonRequests, goRequests)
+}
+
+func helpWorkflowCases() []struct {
+	name string
+	args []string
+} {
+	return []struct {
+		name string
+		args []string
+	}{
+		{
+			name: "no args",
+			args: nil,
+		},
+		{
+			name: "long help",
+			args: []string{"--help"},
+		},
+		{
+			name: "short help",
+			args: []string{"-h"},
+		},
+		{
+			name: "unknown long option",
+			args: []string{"--blah"},
+		},
+		{
+			name: "unknown long option with value",
+			args: []string{"--blah=value"},
+		},
+		{
+			name: "unknown short option",
+			args: []string{"-Z"},
+		},
+	}
+}
+
+func isolateAppriseCLIEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("APPRISE_URLS", "")
+	t.Setenv("APPRISE_STORAGE_PATH", "")
+	t.Setenv("APPRISE_STORAGE_PRUNE_DAYS", "30")
+	t.Setenv("APPRISE_STORAGE_UID_LENGTH", "8")
+}
+
+func runGoCLI(args ...string) cliResult {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	code := Run(args, stdout, stderr)
+	return cliResult{
+		code:   code,
+		stdout: stdout.String(),
+		stderr: stderr.String(),
+	}
+}
+
+func runPythonAppriseCLI(t *testing.T, args ...string) cliResult {
+	t.Helper()
+
+	stdout, stderr, err := testutil.RunApprise(t, args...)
+	return cliResult{
+		code:   commandExitCode(t, err),
+		stdout: stdout,
+		stderr: stderr,
+	}
+}
+
+func buildAppriseCommand(t *testing.T) string {
+	t.Helper()
+
+	binary := filepath.Join(t.TempDir(), "apprise")
+	cmd := exec.Command("go", "build", "-o", binary, "./cmd/apprise")
+	cmd.Dir = testutil.RepoRoot(t)
+	cmd.Env = os.Environ()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("build apprise command: %v stdout=%s stderr=%s", err, stdout.String(), stderr.String())
+	}
+	return binary
+}
+
+func runCommand(t *testing.T, name string, args ...string) cliResult {
+	t.Helper()
+
+	cmd := exec.Command(name, args...)
+	cmd.Env = os.Environ()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+
+	return cliResult{
+		code:   commandExitCode(t, err),
+		stdout: stdout.String(),
+		stderr: stderr.String(),
+	}
+}
+
+func commandExitCode(t *testing.T, err error) int {
+	t.Helper()
+	if err == nil {
+		return 0
+	}
+
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		return exitErr.ExitCode()
+	}
+
+	t.Fatalf("command failed without exit code: %v", err)
+	return -1
 }
 
 func TestRunSendsHTMLInputToTelegramHTMLTarget(t *testing.T) {

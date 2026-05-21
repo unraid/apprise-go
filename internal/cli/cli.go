@@ -18,6 +18,81 @@ const usageText = "" +
 	"   apprise [OPTIONS] [APPRISE_URL [APPRISE_URL2 [APPRISE_URL3]]]\n" +
 	"   apprise storage [OPTIONS] [ACTION] [UID1 [UID2 [UID3]]]\n"
 
+const helpText = usageText + `
+Send a notification to all of the specified servers identified by their URLs
+the content provided within the title, body and notification-type.
+
+For a list of all of the supported services and information on how to use
+them, check out https://github.com/caronc/apprise
+
+Options:
+  -b, --body TEXT                 Specify the message body. If no body is
+                                  specified then content is read from <stdin>.
+  -t, --title TEXT                Specify the message title. This field is
+                                  completely optional.
+  -P, --plugin-path PATH          Specify one or more plugin paths to scan.
+  -S, --storage-path PATH         Specify the path to the persistent storage
+                                  location
+                                  (default=~/.local/share/apprise/cache).
+  -SPD, --storage-prune-days INTEGER
+                                  Define the number of days the storage prune
+                                  should run using. Setting this to zero (0)
+                                  will eliminate all accumulated content. By
+                                  default this value is 30 days.
+  -SUL, --storage-uid-length INTEGER
+                                  Define the number of unique characters to
+                                  store persistent cache in. By default this
+                                  value is 8 characters.
+  -SM, --storage-mode MODE        Specify the persistent storage operational
+                                  mode (default=auto). Possible values are:
+                                  "auto", "flush", "memory".
+  -c, --config CONFIG_URL         Specify one or more configuration locations.
+  -a, --attach ATTACHMENT_URL     Specify one or more attachments.
+  -n, --notification-type TYPE    Specify the message type (default=info).
+                                  Possible values are: "info", "success",
+                                  "warning", "failure".
+  -i, --input-format FORMAT       Specify the message input format
+                                  (default=text). Possible values are: "text",
+                                  "markdown", "html".
+  -T, --theme THEME               Specify the default theme.
+  -g, --tag TAG                   Specify one or more tags to filter which
+                                  services to notify. Use multiple --tag (-g)
+                                  entries to match ANY tag. Use comma
+                                  separators to require ALL tags (strict
+                                  match). Omit to notify untagged services
+                                  only, or use "all" to notify everything.
+  -Da, --disable-async            Send all notifications sequentially
+  -d, --dry-run                   Perform a trial run but only prints the
+                                  notification services to-be triggered to
+                                  stdout. Notifications are never sent using
+                                  this mode.
+  -l, --details                   Prints details about the current services
+                                  supported by Apprise.
+  -R, --recursion-depth INTEGER   The number of recursive import entries that
+                                  can be loaded from within Apprise
+                                  configuration. By default this is set to 1.
+  -v, --verbose                   Makes the operation more talkative. Use
+                                  multiple v to increase the verbosity. I.e.:
+                                  -vvvv
+  -e, --interpret-escapes         Enable interpretation of backslash escapes
+  -j, --interpret-emojis          Enable interpretation of :emoji: definitions
+  -D, --debug                     Debug mode
+  -V, --version                   Display the apprise version and exit.
+  -h, --help                      Show this message and exit.
+
+Actions:
+  storage             Access the persistent storage disk administration
+    list              List all URL IDs associated with detected URL(s). This
+                      is also the default action run if nothing is provided
+    prune             Eliminates stale entries found based on --storage-prune-
+                      days (-SPD)
+    clean             Removes any persistent data created by Apprise
+`
+
+const commandErrorUsage = "" +
+	"Usage: apprise [OPTIONS] SERVER_URL [SERVER_URL2 [SERVER_URL3]]\n" +
+	"Try 'apprise --help' for help.\n"
+
 type cliOptions struct {
 	body             string
 	title            string
@@ -75,7 +150,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	opts := defaultCliOptions()
 	args = normalizeArgs(args)
 	fs := flag.NewFlagSet("apprise", flag.ContinueOnError)
-	fs.SetOutput(stderr)
+	fs.SetOutput(io.Discard)
+	fs.Usage = func() {}
 
 	fs.StringVar(&opts.body, "body", "", "Specify the message body.")
 	fs.StringVar(&opts.body, "b", "", "Specify the message body.")
@@ -127,16 +203,19 @@ func Run(args []string, stdout, stderr io.Writer) int {
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			printUsage(stdout)
+			printHelp(stdout)
 			return 0
 		}
+		if option := unknownOption(args, fs); option != "" {
+			printUnknownOption(stderr, option)
+			return 2
+		}
 		fmt.Fprintln(stderr, err)
-		printUsage(stderr)
 		return 2
 	}
 
 	if opts.showHelp {
-		printUsage(stdout)
+		printHelp(stdout)
 		return 0
 	}
 
@@ -253,6 +332,15 @@ func printUsage(w io.Writer) {
 	fmt.Fprint(w, usageText)
 }
 
+func printHelp(w io.Writer) {
+	fmt.Fprint(w, helpText)
+}
+
+func printUnknownOption(w io.Writer, option string) {
+	fmt.Fprint(w, commandErrorUsage+"\n")
+	fmt.Fprintf(w, "Error: No such option '%s'.\n", option)
+}
+
 func defaultCliOptions() cliOptions {
 	return cliOptions{
 		notificationType: string(notify.NotifyInfo),
@@ -273,6 +361,27 @@ func envInt(name string, fallback int) int {
 		}
 	}
 	return fallback
+}
+
+func unknownOption(args []string, fs *flag.FlagSet) string {
+	for _, arg := range args {
+		if arg == "--" {
+			return ""
+		}
+		if arg == "-" || !strings.HasPrefix(arg, "-") {
+			continue
+		}
+
+		option := strings.SplitN(arg, "=", 2)[0]
+		name := strings.TrimLeft(option, "-")
+		if name == "" {
+			continue
+		}
+		if fs.Lookup(name) == nil {
+			return option
+		}
+	}
+	return ""
 }
 
 func normalizeArgs(args []string) []string {
