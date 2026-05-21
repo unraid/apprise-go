@@ -113,6 +113,53 @@ func TestAppriseCommandHelpWorkflowMatchesPythonApprise(t *testing.T) {
 	}
 }
 
+func TestCLILegacyFlagFormsStillParse(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{
+			name: "short aliases",
+			args: []string{"-b", "body", "-t", "title", "-n", "success", "-i", "markdown", "-V"},
+		},
+		{
+			name: "long aliases",
+			args: []string{"--body", "body", "--title", "title", "--notification-type", "success", "--input-format", "markdown", "--version"},
+		},
+		{
+			name: "legacy single-dash long aliases",
+			args: []string{"-body", "body", "-title", "title", "-notification-type", "success", "-input-format", "markdown", "-version"},
+		},
+		{
+			name: "verbose bundle",
+			args: []string{"-vvv", "-V"},
+		},
+		{
+			name: "legacy config and tag aliases",
+			args: []string{"-config", "/tmp/missing.yml", "-tag", "all", "-V"},
+		},
+		{
+			name: "legacy storage aliases",
+			args: []string{"-P", "/tmp/plugins", "-S", "/tmp/store", "-SM", "memory", "-SPD", "1", "-SUL", "4", "-T", "default", "-V"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := runGoCLI(tt.args...)
+			if result.code != 0 {
+				t.Fatalf("expected args %q to parse, got code=%d stdout=%q stderr=%q", tt.args, result.code, result.stdout, result.stderr)
+			}
+			if !strings.HasPrefix(result.stdout, "Apprise v") {
+				t.Fatalf("expected version output for args %q, got stdout=%q", tt.args, result.stdout)
+			}
+			if result.stderr != "" {
+				t.Fatalf("expected empty stderr for args %q, got %q", tt.args, result.stderr)
+			}
+		})
+	}
+}
+
 func TestRunConvertsMarkdownInputForHTMLTargetFormat(t *testing.T) {
 	testutil.RequirePythonApprise(t)
 
