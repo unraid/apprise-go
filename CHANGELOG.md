@@ -3,6 +3,12 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.2.6 (2026-05-21)
+
+### Fixes
+
+- match apprise help and option errors (#62)
+
 ## 0.2.5 (2026-05-21)
 
 ### Fixes
