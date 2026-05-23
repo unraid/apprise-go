@@ -185,6 +185,78 @@ func TestTelegramMarkdownV2PreservesLinks(t *testing.T) {
 	}
 }
 
+func TestTelegramPreservesMarkdownParagraphSpacing(t *testing.T) {
+	body := strings.Join([]string{
+		"**--- Header ---**",
+		"",
+		"Hostname: **server**",
+		"Date/Time: **Today**",
+		"Uptime: **TESTER**",
+		"",
+		"_Beware of a tall blond man with one black shoe._",
+	}, "\n")
+
+	cases := []struct {
+		name     string
+		rawURL   string
+		expected string
+	}{
+		{
+			name:   "markdown v1",
+			rawURL: "tgram://123456:abcdef/7890/?format=markdown&mdv=v1",
+			expected: strings.Join([]string{
+				"*— Header —*",
+				"",
+				"Hostname: *server*",
+				"Date/Time: *Today*",
+				"Uptime: *TESTER*",
+				"",
+				"_Beware of a tall blond man with one black shoe._",
+			}, "\n"),
+		},
+		{
+			name:   "markdown v2",
+			rawURL: "tgram://123456:abcdef/7890/?format=markdown&mdv=v2",
+			expected: strings.Join([]string{
+				"*— Header —*",
+				"",
+				"Hostname: *server*",
+				"Date/Time: *Today*",
+				"Uptime: *TESTER*",
+				"",
+				"_Beware of a tall blond man with one black shoe\\._",
+			}, "\n"),
+		},
+		{
+			name:   "html",
+			rawURL: "tgram://123456:abcdef/7890/?format=html",
+			expected: strings.Join([]string{
+				"<b>— Header —</b>",
+				"",
+				"Hostname: <b>server</b>",
+				"Date/Time: <b>Today</b>",
+				"Uptime: <b>TESTER</b>",
+				"",
+				"<i>Beware of a tall blond man with one black shoe.</i>",
+			}, "\n"),
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			payload := captureTelegramPayload(t, tc.rawURL, body, "", "markdown")
+
+			text, ok := payload["text"].(string)
+			if !ok {
+				t.Fatalf("expected text payload, got %#v", payload["text"])
+			}
+			if text != tc.expected {
+				t.Fatalf("expected Telegram body\n%q\ngot\n%q", tc.expected, text)
+			}
+		})
+	}
+}
+
 func TestTelegramTextFormatUsesHTMLParseMode(t *testing.T) {
 	assertTelegramFormatParity(t, "tgram://123456:abcdef/7890/?format=text", "<b>plain</b>", "Title", "text")
 }

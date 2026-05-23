@@ -22,6 +22,18 @@ var telegramHTMLBlockTags = map[string]struct{}{
 	"pre":        {},
 }
 
+var telegramHTMLParagraphTags = map[string]struct{}{
+	"blockquote": {},
+	"div":        {},
+	"h1":         {},
+	"h2":         {},
+	"h3":         {},
+	"h4":         {},
+	"h5":         {},
+	"h6":         {},
+	"p":          {},
+}
+
 func convertTelegramMessageFormat(content, inputFormat, outputFormat, markdownVersion string) (string, error) {
 	input := normalizeNotifyFormat(inputFormat)
 	output := normalizeNotifyFormat(outputFormat)
@@ -81,10 +93,11 @@ func telegramHTMLFromHTML(content string) string {
 
 func renderTelegramHTMLNode(out *strings.Builder, node *nethtml.Node, inCode bool) {
 	if node.Type == nethtml.TextNode {
-		if !inCode && strings.TrimSpace(node.Data) == "" && strings.ContainsAny(node.Data, "\r\n") {
+		data := telegramTextNodeData(node)
+		if !inCode && strings.TrimSpace(data) == "" && strings.ContainsAny(data, "\r\n") {
 			return
 		}
-		out.WriteString(html.EscapeString(node.Data))
+		out.WriteString(html.EscapeString(data))
 		return
 	}
 	if node.Type != nethtml.ElementNode {
@@ -93,8 +106,12 @@ func renderTelegramHTMLNode(out *strings.Builder, node *nethtml.Node, inCode boo
 	}
 
 	tag := strings.ToLower(node.Data)
-	if _, ok := telegramHTMLBlockTags[tag]; ok && out.Len() > 0 {
-		ensureLineBreak(out)
+	if out.Len() > 0 {
+		if _, ok := telegramHTMLParagraphTags[tag]; ok {
+			ensureParagraphBreak(out)
+		} else if _, ok := telegramHTMLBlockTags[tag]; ok {
+			ensureLineBreak(out)
+		}
 	}
 
 	switch tag {
@@ -150,7 +167,9 @@ func renderTelegramHTMLNode(out *strings.Builder, node *nethtml.Node, inCode boo
 		renderTelegramHTMLChildren(out, node, inCode)
 	}
 
-	if _, ok := telegramHTMLBlockTags[tag]; ok {
+	if _, ok := telegramHTMLParagraphTags[tag]; ok {
+		ensureParagraphBreak(out)
+	} else if _, ok := telegramHTMLBlockTags[tag]; ok {
 		ensureLineBreak(out)
 	}
 }
@@ -177,14 +196,15 @@ func telegramMarkdownFromHTML(content, markdownMode string) string {
 
 func renderTelegramMarkdownNode(out *strings.Builder, node *nethtml.Node, markdownMode string, inCode bool) {
 	if node.Type == nethtml.TextNode {
+		data := telegramTextNodeData(node)
 		if inCode {
-			out.WriteString(escapeTelegramMarkdownCodeText(node.Data, markdownMode))
+			out.WriteString(escapeTelegramMarkdownCodeText(data, markdownMode))
 			return
 		}
-		if strings.TrimSpace(node.Data) == "" && strings.ContainsAny(node.Data, "\r\n") {
+		if strings.TrimSpace(data) == "" && strings.ContainsAny(data, "\r\n") {
 			return
 		}
-		out.WriteString(escapeTelegramMarkdownText(node.Data, markdownMode))
+		out.WriteString(escapeTelegramMarkdownText(data, markdownMode))
 		return
 	}
 	if node.Type != nethtml.ElementNode {
@@ -193,8 +213,12 @@ func renderTelegramMarkdownNode(out *strings.Builder, node *nethtml.Node, markdo
 	}
 
 	tag := strings.ToLower(node.Data)
-	if _, ok := telegramHTMLBlockTags[tag]; ok && out.Len() > 0 {
-		ensureLineBreak(out)
+	if out.Len() > 0 {
+		if _, ok := telegramHTMLParagraphTags[tag]; ok {
+			ensureParagraphBreak(out)
+		} else if _, ok := telegramHTMLBlockTags[tag]; ok {
+			ensureLineBreak(out)
+		}
 	}
 
 	switch tag {
@@ -254,7 +278,9 @@ func renderTelegramMarkdownNode(out *strings.Builder, node *nethtml.Node, markdo
 		renderTelegramMarkdownChildren(out, node, markdownMode, inCode)
 	}
 
-	if _, ok := telegramHTMLBlockTags[tag]; ok {
+	if _, ok := telegramHTMLParagraphTags[tag]; ok {
+		ensureParagraphBreak(out)
+	} else if _, ok := telegramHTMLBlockTags[tag]; ok {
 		ensureLineBreak(out)
 	}
 }
@@ -330,6 +356,61 @@ func htmlAttr(node *nethtml.Node, key string) string {
 		}
 	}
 	return ""
+}
+
+// telegramTextNodeData returns node text while trimming leading CR/LF only after
+// a preceding br element, as reported by previousElementTag, to compensate for
+// markdown parsers that emit a formatting newline after <br>. Other whitespace
+// is preserved in non-br contexts.
+func telegramTextNodeData(node *nethtml.Node) string {
+	if node == nil {
+		return ""
+	}
+	data := node.Data
+	if previousElementTag(node) == "br" {
+		data = strings.TrimLeft(data, "\r\n")
+	}
+	return data
+}
+
+// previousElementTag walks previous siblings to find the nearest non-empty
+// element node. It skips whitespace-only text nodes because HTML parsers often
+// expose formatting whitespace as siblings, returns the lowercase tag name of
+// the first previous element node found, and returns an empty string for nil
+// input or when only non-whitespace text/other nodes are found.
+func previousElementTag(node *nethtml.Node) string {
+	if node == nil {
+		return ""
+	}
+	for sibling := node.PrevSibling; sibling != nil; sibling = sibling.PrevSibling {
+		if sibling.Type == nethtml.TextNode && strings.TrimSpace(sibling.Data) == "" {
+			continue
+		}
+		if sibling.Type == nethtml.ElementNode {
+			return strings.ToLower(sibling.Data)
+		}
+		return ""
+	}
+	return ""
+}
+
+// ensureParagraphBreak mutates the provided *strings.Builder in-place so it
+// ends with one paragraph break. It no-ops for empty builders or existing
+// double-newline endings, appends one newline after a single trailing newline,
+// and appends two newlines otherwise, making it safe to call multiple times.
+func ensureParagraphBreak(out *strings.Builder) {
+	if out.Len() == 0 {
+		return
+	}
+	value := out.String()
+	switch {
+	case strings.HasSuffix(value, "\n\n"):
+		return
+	case strings.HasSuffix(value, "\n"):
+		out.WriteByte('\n')
+	default:
+		out.WriteString("\n\n")
+	}
 }
 
 func ensureLineBreak(out *strings.Builder) {
