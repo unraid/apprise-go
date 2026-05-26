@@ -344,7 +344,6 @@ func escapeTelegramMarkdownText(value, markdownMode string) string {
 		"*", "\\*",
 		"_", "\\_",
 		"`", "\\`",
-		"[", "\\[",
 	)
 	return replacer.Replace(value)
 }

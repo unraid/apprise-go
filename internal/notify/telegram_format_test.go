@@ -28,6 +28,17 @@ func TestTelegramConvertsStandardMarkdownToMarkdownV1(t *testing.T) {
 	}
 }
 
+func TestTelegramMarkdownV1DoesNotEscapeLiteralBrackets(t *testing.T) {
+	payload := captureTelegramPayload(t, "tgram://123456:abcdef/7890/?format=markdown&mdv=v1", "**[status]**", "", "markdown")
+
+	if payload["parse_mode"] != "MARKDOWN" {
+		t.Fatalf("expected MARKDOWN parse mode, got %#v", payload["parse_mode"])
+	}
+	if payload["text"] != "*[status]*" {
+		t.Fatalf("expected Telegram markdown body without visible bracket escapes, got %#v", payload["text"])
+	}
+}
+
 func TestTelegramConvertsStandardMarkdownToMarkdownV2(t *testing.T) {
 	payload := captureTelegramPayload(t, "tgram://123456:abcdef/7890/?format=markdown&mdv=v2", "~~Strike~~ **Bold** _Italics_ Text", "", "markdown")
 
