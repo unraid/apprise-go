@@ -137,7 +137,7 @@ func TestTargetFormatConversionCorpusAcrossWorkflowTargets(t *testing.T) {
 			rawURL: "tgram://123456:abcdef/7890/?format=html",
 			assertBody: func(t *testing.T, converted string) {
 				t.Helper()
-				assertContainsAll(t, converted, "<b>Deploy Summary</b>", "<b>Bold</b>", "<i>Italics</i>", `<a href="https://example.com/docs">Docs</a>`, "<pre><code>if x &gt; 0 { return `tick` }\\path\n</code></pre>", "- first", "- second")
+				assertContainsAll(t, converted, "<b>Deploy Summary</b>", "<b>Bold</b>", "<i>Italics</i>", `<a href="https://example.com/docs">Docs</a>`, "<pre><code>if x &gt; 0 { return `tick` }\\path\r\n</code></pre>", "- first", "- second")
 			},
 		},
 	}

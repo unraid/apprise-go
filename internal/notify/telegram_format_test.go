@@ -56,7 +56,7 @@ func TestTelegramConvertsStandardMarkdownToTelegramHTML(t *testing.T) {
 	if payload["parse_mode"] != "HTML" {
 		t.Fatalf("expected HTML parse mode, got %#v", payload["parse_mode"])
 	}
-	if payload["text"] != "<s>Strike</s> <b>Bold</b> <i>Italics</i> Text" {
+	if payload["text"] != "<s>Strike</s> <b>Bold</b> <i>Italics</i> Text\r\n" {
 		t.Fatalf("expected Telegram HTML body, got %#v", payload["text"])
 	}
 }
@@ -67,7 +67,7 @@ func TestTelegramConvertsInlineHTMLInMarkdownInputToTelegramHTML(t *testing.T) {
 	if payload["parse_mode"] != "HTML" {
 		t.Fatalf("expected HTML parse mode, got %#v", payload["parse_mode"])
 	}
-	if payload["text"] != "<b>Bold</b> <i>Italics</i> Text" {
+	if payload["text"] != "<b>Bold</b> <i>Italics</i> Text\r\n" {
 		t.Fatalf("expected Telegram HTML body, got %#v", payload["text"])
 	}
 }
@@ -143,7 +143,7 @@ func TestTelegramConvertsMarkdownFencedCodeToTelegramHTML(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected text payload, got %#v", payload["text"])
 	}
-	for _, expected := range []string{"<b>Bold</b>", "<i>Italics</i>", "<pre><code>code\n</code></pre>"} {
+	for _, expected := range []string{"<b>Bold</b>", "<i>Italics</i>", "<pre><code>code\r\n</code></pre>"} {
 		if !strings.Contains(text, expected) {
 			t.Fatalf("expected %q in Telegram HTML body, got %q", expected, text)
 		}
@@ -249,7 +249,7 @@ func TestTelegramPreservesMarkdownParagraphSpacing(t *testing.T) {
 				"Uptime: <b>TESTER</b>",
 				"",
 				"<i>Beware of a tall blond man with one black shoe.</i>",
-			}, "\n"),
+			}, "\r\n") + "\r\n",
 		},
 	}
 

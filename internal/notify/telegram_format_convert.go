@@ -88,7 +88,7 @@ func telegramHTMLFromHTML(content string) string {
 
 	var out strings.Builder
 	renderTelegramHTMLNode(&out, root, false)
-	return strings.Trim(out.String(), "\n")
+	return normalizeTelegramHTMLLineBreaks(out.String())
 }
 
 func renderTelegramHTMLNode(out *strings.Builder, node *nethtml.Node, inCode bool) {
@@ -355,6 +355,14 @@ func htmlAttr(node *nethtml.Node, key string) string {
 		}
 	}
 	return ""
+}
+
+func normalizeTelegramHTMLLineBreaks(value string) string {
+	if strings.HasSuffix(value, "\n\n") {
+		value = value[:len(value)-1]
+	}
+	value = strings.ReplaceAll(value, "\r\n", "\n")
+	return strings.ReplaceAll(value, "\n", "\r\n")
 }
 
 // telegramTextNodeData returns node text while trimming leading CR/LF only after
