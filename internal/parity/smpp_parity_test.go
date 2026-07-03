@@ -28,7 +28,6 @@ func TestSMPPParity(t *testing.T) {
 	body := "apprise parity body"
 
 	for _, schema := range cases {
-		schema := schema
 		t.Run(schema, func(t *testing.T) {
 			url := fmt.Sprintf("%s://user:pass@%s:%s/15551231234/15551230000", schema, host, port)
 

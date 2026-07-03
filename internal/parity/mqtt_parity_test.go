@@ -25,7 +25,6 @@ func TestMQTTParity(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			capture := tc.captureFunc(t)
 			defer func() {

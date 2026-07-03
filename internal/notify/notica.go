@@ -21,7 +21,7 @@ type NoticaTarget struct {
 
 func NewNoticaTarget(target *ParsedURL) (*NoticaTarget, error) {
 	segments := splitPath(target.Path)
-	mode := "official"
+	var mode string
 	token := ""
 	host := ""
 	path := ""

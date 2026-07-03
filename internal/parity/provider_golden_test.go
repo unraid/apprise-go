@@ -33,7 +33,6 @@ func TestProviderGoldenRequests(t *testing.T) {
 		}
 
 		for _, c := range def.Cases {
-			c := c
 			t.Run(name+"/"+c.Name, func(t *testing.T) {
 				logProgress(t, "golden "+name+"/"+c.Name)
 				expected, ok := goldenByName[c.Name]

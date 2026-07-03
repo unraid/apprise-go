@@ -217,9 +217,10 @@ func addJSONSpaces(input []byte) string {
 				escape = false
 				continue
 			}
-			if c == '\\' {
+			switch c {
+			case '\\':
 				escape = true
-			} else if c == '"' {
+			case '"':
 				inString = false
 			}
 			continue

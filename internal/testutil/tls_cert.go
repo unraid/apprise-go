@@ -17,10 +17,10 @@ import (
 )
 
 var (
-	testTLSOnce     sync.Once
-	testTLSCert     tls.Certificate
-	testTLSCertPEM  []byte
-	testTLSInitErr  error
+	testTLSOnce    sync.Once
+	testTLSCert    tls.Certificate
+	testTLSCertPEM []byte
+	testTLSInitErr error
 )
 
 func TestTLSConfig(t *testing.T) *tls.Config {

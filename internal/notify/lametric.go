@@ -197,7 +197,7 @@ func (l *LametricTarget) BuildRequest(body, title string, notifyType NotifyType)
 	}
 
 	requestURL := ""
-	payload := map[string]any{}
+	var payload map[string]any
 	if l.mode == "cloud" {
 		requestURL = fmt.Sprintf(
 			"https://developer.lametric.com/api/v1/dev/widget/update/com.lametric.%s/%s",

@@ -1,0 +1,77 @@
+# Quality workflow: Go linting, formatting, static analysis, and race-enabled
+# tests. Replaces GitHub's CodeQL default setup with faster, Go-native checks
+# that gate PRs without blocking unrelated builds.
+name: quality
+
+on:
+  pull_request:
+  # Only mainline pushes; branch pushes are already covered by pull_request,
+  # so this avoids double-running CI for every PR commit.
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Cancel superseded runs for the same ref instead of piling them up.
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # No job pushes; don't leave the token in the local git config.
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.12.2
+          # Only fail on issues introduced by the PR. Pre-existing, documented
+          # baseline findings never block builds, and a future linter upgrade
+          # can't retroactively turn every open PR red (the CodeQL failure mode).
+          only-new-issues: true
+
+      - name: Check formatting (gofmt + goimports)
+        run: |
+          # golangci-lint fmt applies the configured formatters (gofmt,
+          # goimports); --diff makes it report instead of write and exit
+          # non-zero if anything is unformatted.
+          golangci-lint fmt --diff
+
+      - name: go vet
+        run: go vet ./...
+
+  test:
+    name: Test (race)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Run tests with race detector
+        # Python/upstream parity comparisons are covered by parity.yml; those
+        # tests skip automatically here when no .venv is present.
+        run: go test -race -shuffle=on ./...

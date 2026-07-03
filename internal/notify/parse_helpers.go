@@ -86,9 +86,7 @@ func normalizeNotifyFormat(raw string) string {
 	if format == "" {
 		return ""
 	}
-	if strings.HasPrefix(format, "notifyformat.") {
-		format = strings.TrimPrefix(format, "notifyformat.")
-	}
+	format = strings.TrimPrefix(format, "notifyformat.")
 	switch format {
 	case "md":
 		return "markdown"

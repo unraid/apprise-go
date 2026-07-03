@@ -55,9 +55,7 @@ func NewPlivoTarget(target *ParsedURL) (*PlivoTarget, error) {
 	source := "+" + sourceDigits
 
 	if toValue, ok := target.Query["to"]; ok && toValue != "" {
-		for _, entry := range parseDelimitedList(toValue) {
-			targets = append(targets, entry)
-		}
+		targets = append(targets, parseDelimitedList(toValue)...)
 	}
 
 	normalizedTargets := []string{}

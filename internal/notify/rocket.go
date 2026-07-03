@@ -305,9 +305,7 @@ func (r *RocketChatTarget) webhookTargets() []string {
 	for _, channel := range r.channels {
 		targets = append(targets, "#"+channel)
 	}
-	for _, room := range r.rooms {
-		targets = append(targets, room)
-	}
+	targets = append(targets, r.rooms...)
 	return targets
 }
 

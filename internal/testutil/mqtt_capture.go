@@ -125,9 +125,10 @@ func (m *MQTTCapture) handleConn(conn net.Conn) {
 			m.messages = append(m.messages, message)
 			m.mu.Unlock()
 
-			if qos == 1 {
+			switch qos {
+			case 1:
 				writeMQTTPubAck(conn, packetID)
-			} else if qos == 2 {
+			case 2:
 				writeMQTTPubRec(conn, packetID)
 			}
 		case 0x60: // PUBREL

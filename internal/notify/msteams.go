@@ -78,13 +78,14 @@ func NewMSTeamsTarget(target *ParsedURL) (*MSTeamsTarget, error) {
 		version = 3
 	}
 	if rawVersion := strings.TrimSpace(target.Query["version"]); rawVersion != "" {
-		if rawVersion == "1" {
+		switch rawVersion {
+		case "1":
 			version = 1
-		} else if rawVersion == "2" {
+		case "2":
 			version = 2
-		} else if rawVersion == "3" {
+		case "3":
 			version = 3
-		} else {
+		default:
 			return nil, fmt.Errorf("invalid version: %s", rawVersion)
 		}
 	}
@@ -131,7 +132,7 @@ func (m *MSTeamsTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		return RequestSpec{}, fmt.Errorf("missing tokens")
 	}
 
-	payload := map[string]any{}
+	var payload map[string]any
 	if strings.TrimSpace(m.templatePath) != "" {
 		templatePayload, err := m.buildTemplatePayload(body, title, notifyType)
 		if err != nil {
@@ -195,9 +196,7 @@ func (m *MSTeamsTarget) BuildRequest(body, title string, notifyType NotifyType) 
 
 func (m *MSTeamsTarget) buildTemplatePayload(body, title string, notifyType NotifyType) (map[string]any, error) {
 	path := strings.TrimSpace(m.templatePath)
-	if strings.HasPrefix(path, "file://") {
-		path = strings.TrimPrefix(path, "file://")
-	}
+	path = strings.TrimPrefix(path, "file://")
 	if path != "" && !filepath.IsAbs(path) {
 		if moduleRoot, ok := findModuleRoot(); ok {
 			path = filepath.Join(moduleRoot, path)
