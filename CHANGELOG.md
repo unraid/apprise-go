@@ -3,6 +3,12 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.2.7 (2026-07-03)
+
+### Features
+
+- support html and markdown message formats (#69)
+
 ## 0.2.6 (2026-05-21)
 
 ### Fixes
