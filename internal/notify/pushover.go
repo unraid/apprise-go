@@ -38,6 +38,7 @@ type PushoverTarget struct {
 	supplementalURLTitle string
 	retry                int
 	expire               int
+	format               string
 }
 
 func NewPushoverTarget(target *ParsedURL) (*PushoverTarget, error) {
@@ -100,6 +101,7 @@ func NewPushoverTarget(target *ParsedURL) (*PushoverTarget, error) {
 		supplementalURLTitle: strings.TrimSpace(target.Query["url_title"]),
 		retry:                retry,
 		expire:               expire,
+		format:               normalizeNotifyFormat(target.Query["format"]),
 	}, nil
 }
 
@@ -122,6 +124,13 @@ func (p *PushoverTarget) BuildRequest(body, title string, notifyType NotifyType)
 	}
 	if p.supplementalURLTitle != "" {
 		values.Set("url_title", p.supplementalURLTitle)
+	}
+	switch p.format {
+	case "html":
+		values.Set("html", "1")
+	case "markdown":
+		values.Set("message", markdownToHTML(body))
+		values.Set("html", "1")
 	}
 	if p.priority == 2 {
 		values.Set("retry", fmt.Sprintf("%d", p.retry))
