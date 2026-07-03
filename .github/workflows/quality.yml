@@ -5,21 +5,32 @@ name: quality
 
 on:
   pull_request:
+  # Only mainline pushes; branch pushes are already covered by pull_request,
+  # so this avoids double-running CI for every PR commit.
   push:
     branches:
-      - "**"
+      - main
   workflow_dispatch:
 
 permissions:
   contents: read
 
+# Cancel superseded runs for the same ref instead of piling them up.
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint & format
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # No job pushes; don't leave the token in the local git config.
+          persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -48,9 +59,12 @@ jobs:
   test:
     name: Test (race)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@v6
