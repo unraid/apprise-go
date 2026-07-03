@@ -87,7 +87,6 @@ func TestSchemaInputsParityAllSchemas(t *testing.T) {
 	}
 
 	for _, entry := range cases {
-		entry := entry
 		t.Run(entry.Schema, func(t *testing.T) {
 			python := loadPythonSchemaInputs(t, entry.Schema, entry.URL)
 

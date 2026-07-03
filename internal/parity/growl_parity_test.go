@@ -76,7 +76,7 @@ func assertGrowlMessagesMatch(t *testing.T, pythonMessages, goMessages []testuti
 	for i := range pythonMessages {
 		py := pythonMessages[i]
 		goMsg := goMessages[i]
-		if strings.ToUpper(py.Type) != strings.ToUpper(goMsg.Type) {
+		if !strings.EqualFold(py.Type, goMsg.Type) {
 			t.Fatalf("growl type mismatch: python=%s go=%s", py.Type, goMsg.Type)
 		}
 

@@ -224,9 +224,7 @@ func (w *WorkflowsTarget) buildPayload(body, title string, notifyType NotifyType
 
 func (w *WorkflowsTarget) buildTemplatePayload(body, title string, notifyType NotifyType) (map[string]any, error) {
 	path := strings.TrimSpace(w.templatePath)
-	if strings.HasPrefix(path, "file://") {
-		path = strings.TrimPrefix(path, "file://")
-	}
+	path = strings.TrimPrefix(path, "file://")
 	if path != "" && !filepath.IsAbs(path) {
 		if moduleRoot, ok := findModuleRoot(); ok {
 			path = filepath.Join(moduleRoot, path)

@@ -328,10 +328,6 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func printUsage(w io.Writer) {
-	fmt.Fprint(w, usageText)
-}
-
 func printHelp(w io.Writer) {
 	fmt.Fprint(w, helpText)
 }

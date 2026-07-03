@@ -1,0 +1,138 @@
+# golangci-lint configuration (schema v2).
+# Docs: https://golangci-lint.run/usage/configuration/
+version: "2"
+
+run:
+  # Build tags used across the project (e.g. live integration tests).
+  build-tags:
+    - live
+  # Allow ample time in CI for the security/analysis linters.
+  timeout: 5m
+
+issues:
+  # Report every finding; don't collapse duplicates or cap per-linter output.
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  # Start from the curated default set (errcheck, govet, ineffassign,
+  # staticcheck, unused) and add the extras below.
+  default: standard
+  enable:
+    - errcheck      # unchecked errors
+    - govet         # go vet analyzers
+    - ineffassign   # ineffectual assignments
+    - staticcheck   # staticcheck + gosimple + stylecheck (bundled in v2)
+    - unused        # unused code
+    - revive        # golint replacement / style
+    - gosec         # security analysis
+    - bodyclose     # unclosed HTTP response bodies
+    - errorlint     # correct errors.Is/As/wrapping usage
+    - misspell      # common English misspellings
+    - unconvert     # redundant type conversions
+    - copyloopvar   # loop variable copy issues
+    - nilerr        # returning nil when err is non-nil
+    - whitespace    # leading/trailing whitespace
+
+  settings:
+    govet:
+      # Default vet analyzers plus a few high-signal extras. `enable-all` is
+      # intentionally avoided (shadow/fieldalignment are too noisy here).
+      enable:
+        - nilness
+        - unusedwrite
+    misspell:
+      locale: US
+      ignore-rules:
+        # Proper noun: "Africas Talking" (AfricasTalking) is a real SMS service;
+        # misspell otherwise "corrects" it to "Africans".
+        - africas
+        # "colour" is the Revolt chat API's actual JSON field name (British
+        # spelling is part of the wire protocol); it must not be Americanised.
+        - colour
+    gosec:
+      excludes:
+        - G104  # duplicate of errcheck (unhandled errors)
+        # Weak-crypto rules are excluded globally: this project implements many
+        # upstream notification protocols that MANDATE MD5/SHA1 as part of their
+        # wire format (Emby auth, Growl/GNTP, OAuth1 HMAC-SHA1, SimplePush). These
+        # are protocol requirements, not security choices.
+        - G401  # use of weak crypto primitive (protocol-mandated MD5/SHA1)
+        - G501  # blocklisted import crypto/md5 (protocol-mandated)
+        - G505  # blocklisted import crypto/sha1 (protocol-mandated)
+        # Integer-overflow conversions are all deliberate protocol byte-packing
+        # (MQTT/SMPP/SimplePush) with bounded inputs; G115 is false-positive noise.
+        - G115  # integer overflow conversion
+    revive:
+      rules:
+        - name: exported
+          disabled: true  # not every exported symbol needs a doc comment yet
+    staticcheck:
+      checks:
+        - all
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - std-error-handling
+    rules:
+      # Test files: relax security/error-checking noise and allow helper
+      # scaffolding that may not be referenced by every test yet.
+      - path: _test\.go
+        linters:
+          - gosec
+          - errcheck
+          - unused
+      # Parity/report tooling and test capture harnesses are developer tooling,
+      # not shipped runtime code.
+      - path: internal/(tools|testutil)/
+        linters:
+          - gosec
+
+      # --- Documented, by-design gosec exceptions -------------------------------
+      # Desktop-notification targets must exec the platform notifier binary
+      # (terminal-notifier / notify-send / SnoreToast); subprocess use is the
+      # whole point of these files, and args are validated before exec.
+      - path: internal/notify/(local_notify_target|macosx_target|windows_target)\.go
+        text: "G204"
+      # Reading a user-specified config, credential, template, TLS cert/key, or
+      # VAPID key file by path is core behaviour, not an injection vector.
+      # G304 (file inclusion) and G703 (path-traversal taint) are the same read.
+      - path: internal/(cli/config|notify/fcm_oauth|notify/msteams|notify/workflows|notify/tls_helpers|notify/vapid)\.go
+        text: "(G304|G703)"
+      # Hardcoded-credential false positives on OAuth grant-type/token-type
+      # string constants (no real secrets).
+      - path: internal/notify/fcm_oauth\.go
+        text: "G101"
+      # InsecureSkipVerify is gated behind an explicit user opt-in (verify=no),
+      # matching upstream Apprise behaviour; it is never unconditionally true.
+      - path: internal/notify/(mailto_target|mqtt_target)\.go
+        text: "G402"
+      # False positive: idx ranges over the slice it indexes, so it is in bounds.
+      - path: internal/cli/config\.go
+        text: "G602"
+
+      # --- Documented, tracked tech-debt exceptions -----------------------------
+      # dirSize() is a best-effort accumulator; the filepath.Walk callback
+      # intentionally returns nil on per-entry errors to keep walking.
+      - path: internal/cli/storage\.go
+        linters:
+          - nilerr
+      # vapid.go uses the deprecated crypto/elliptic Marshal/Unmarshal/GenerateKey.
+      # Migrating to crypto/ecdh is a separate, security-sensitive change.
+      - path: internal/notify/vapid\.go
+        text: "SA1019"
+      # HTTPSMSTarget/NewHTTPSMSTarget is the correct name, but renaming the
+      # exported symbols is a breaking API change tracked separately.
+      - path: internal/notify/httpsms\.go
+        text: "ST1003"
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/unraid/apprise-go

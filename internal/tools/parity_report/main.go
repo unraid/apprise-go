@@ -430,38 +430,38 @@ func loadHTTPSchemas(nonHTTPSchemas []string) []string {
 func renderMarkdown(rep report, jsonPath string) string {
 	var b strings.Builder
 	b.WriteString("# Parity Report\n\n")
-	b.WriteString(fmt.Sprintf("- Generated: %s\n", rep.GeneratedAt.Format(time.RFC3339)))
-	b.WriteString(fmt.Sprintf("- Package: `%s`\n", rep.Package))
+	fmt.Fprintf(&b, "- Generated: %s\n", rep.GeneratedAt.Format(time.RFC3339))
+	fmt.Fprintf(&b, "- Package: `%s`\n", rep.Package)
 	if jsonPath != "" {
-		b.WriteString(fmt.Sprintf("- Raw test log: `%s`\n", jsonPath))
+		fmt.Fprintf(&b, "- Raw test log: `%s`\n", jsonPath)
 	}
-	b.WriteString(fmt.Sprintf("- Providers: %d\n\n", rep.ProviderCount))
+	fmt.Fprintf(&b, "- Providers: %d\n\n", rep.ProviderCount)
 
 	b.WriteString("## Summary\n\n")
-	b.WriteString(fmt.Sprintf("- Package status: %s\n", strings.ToUpper(rep.PackageStatus)))
-	b.WriteString(fmt.Sprintf("- Tests passed: %d\n", rep.PassedCount))
-	b.WriteString(fmt.Sprintf("- Tests failed: %d\n", rep.FailedCount))
-	b.WriteString(fmt.Sprintf("- Tests skipped: %d\n", rep.SkippedCount))
-	b.WriteString(fmt.Sprintf("- Schema coverage: %s\n", rep.SchemaCoverage))
-	b.WriteString(fmt.Sprintf("- Golden update check: %s\n", rep.GoldenCheck))
-	b.WriteString(fmt.Sprintf("- Provider parity: %s\n", rep.ProviderParity))
-	b.WriteString(fmt.Sprintf("- Golden parity: %s\n\n", rep.GoldenParity))
+	fmt.Fprintf(&b, "- Package status: %s\n", strings.ToUpper(rep.PackageStatus))
+	fmt.Fprintf(&b, "- Tests passed: %d\n", rep.PassedCount)
+	fmt.Fprintf(&b, "- Tests failed: %d\n", rep.FailedCount)
+	fmt.Fprintf(&b, "- Tests skipped: %d\n", rep.SkippedCount)
+	fmt.Fprintf(&b, "- Schema coverage: %s\n", rep.SchemaCoverage)
+	fmt.Fprintf(&b, "- Golden update check: %s\n", rep.GoldenCheck)
+	fmt.Fprintf(&b, "- Provider parity: %s\n", rep.ProviderParity)
+	fmt.Fprintf(&b, "- Golden parity: %s\n\n", rep.GoldenParity)
 
 	b.WriteString("## Schema Coverage Details\n\n")
 	if rep.SchemaDiffErr != "" {
-		b.WriteString(fmt.Sprintf("- Apprise schemas: ERROR (%s)\n\n", rep.SchemaDiffErr))
+		fmt.Fprintf(&b, "- Apprise schemas: ERROR (%s)\n\n", rep.SchemaDiffErr)
 	} else {
 		if rep.AppriseRoot != "" {
-			b.WriteString(fmt.Sprintf("- Apprise source root: `%s`\n", rep.AppriseRoot))
+			fmt.Fprintf(&b, "- Apprise source root: `%s`\n", rep.AppriseRoot)
 		}
-		b.WriteString(fmt.Sprintf("- Python schemas: %d\n", len(rep.PythonSchemas)))
-		b.WriteString(fmt.Sprintf("- Go schemas: %d\n", len(rep.GoSchemas)))
-		b.WriteString(fmt.Sprintf("- Missing in Go: %d\n", len(rep.MissingSchemas)))
-		b.WriteString(fmt.Sprintf("- Extra in Go: %d\n\n", len(rep.ExtraSchemas)))
+		fmt.Fprintf(&b, "- Python schemas: %d\n", len(rep.PythonSchemas))
+		fmt.Fprintf(&b, "- Go schemas: %d\n", len(rep.GoSchemas))
+		fmt.Fprintf(&b, "- Missing in Go: %d\n", len(rep.MissingSchemas))
+		fmt.Fprintf(&b, "- Extra in Go: %d\n\n", len(rep.ExtraSchemas))
 		b.WriteString("| Type | Schemas |\n")
 		b.WriteString("| --- | --- |\n")
-		b.WriteString(fmt.Sprintf("| Missing in Go | %s |\n", strings.Join(rep.MissingSchemas, ", ")))
-		b.WriteString(fmt.Sprintf("| Extra in Go | %s |\n\n", strings.Join(rep.ExtraSchemas, ", ")))
+		fmt.Fprintf(&b, "| Missing in Go | %s |\n", strings.Join(rep.MissingSchemas, ", "))
+		fmt.Fprintf(&b, "| Extra in Go | %s |\n\n", strings.Join(rep.ExtraSchemas, ", "))
 	}
 
 	b.WriteString("## HTTP Coverage\n\n")
@@ -475,7 +475,7 @@ func renderMarkdown(rep report, jsonPath string) string {
 	}
 	for _, schema := range rep.HTTPSchemas {
 		status := coverageStatus(rep.TopLevel, httpTests)
-		b.WriteString(fmt.Sprintf("| %s | %s | %s |\n", schema, strings.Join(httpTests, ", "), status))
+		fmt.Fprintf(&b, "| %s | %s | %s |\n", schema, strings.Join(httpTests, ", "), status)
 	}
 
 	b.WriteString("## Non-HTTP Coverage\n\n")
@@ -484,7 +484,7 @@ func renderMarkdown(rep report, jsonPath string) string {
 	for _, schema := range rep.NonHTTPSchemas {
 		tests := coverageTests(schema)
 		status := coverageStatus(rep.TopLevel, tests)
-		b.WriteString(fmt.Sprintf("| %s | %s | %s |\n", schema, strings.Join(tests, ", "), status))
+		fmt.Fprintf(&b, "| %s | %s | %s |\n", schema, strings.Join(tests, ", "), status)
 	}
 
 	b.WriteString("\n## Parity Tests\n\n")
@@ -497,7 +497,7 @@ func renderMarkdown(rep report, jsonPath string) string {
 	sort.Strings(tests)
 	for _, name := range tests {
 		result := rep.TopLevel[name]
-		b.WriteString(fmt.Sprintf("| %s | %s | %.3f |\n", name, strings.ToUpper(result.Status), result.Elapsed))
+		fmt.Fprintf(&b, "| %s | %s | %.3f |\n", name, strings.ToUpper(result.Status), result.Elapsed)
 	}
 
 	return b.String()

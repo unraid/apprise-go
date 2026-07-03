@@ -28,7 +28,6 @@ func TestLocalNotifyParity(t *testing.T) {
 	}
 
 	for _, schema := range cases {
-		schema := schema
 		t.Run(schema, func(t *testing.T) {
 			url := schema + "://"
 			body := "apprise parity body"

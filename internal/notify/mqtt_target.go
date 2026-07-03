@@ -274,9 +274,10 @@ func (m *MQTTTarget) readConnAck(conn net.Conn) error {
 
 func (m *MQTTTarget) publish(conn net.Conn, topic, payload string, packetID uint16) error {
 	flags := byte(0x30)
-	if m.qos == 1 {
+	switch m.qos {
+	case 1:
 		flags = 0x32
-	} else if m.qos == 2 {
+	case 2:
 		flags = 0x34
 	}
 	if m.retain {

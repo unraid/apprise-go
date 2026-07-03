@@ -180,7 +180,7 @@ func TestSchemaInputsParityApprise(t *testing.T) {
 	if pythonString(t, python.Values, "token") != goString(t, goValues, "token") {
 		t.Fatalf("token mismatch: python=%s go=%s", python.Values["token"], goValues["token"])
 	}
-	if strings.ToLower(pythonString(t, python.Values, "method")) != strings.ToLower(goString(t, goValues, "method")) {
+	if !strings.EqualFold(pythonString(t, python.Values, "method"), goString(t, goValues, "method")) {
 		t.Fatalf("method mismatch: python=%s go=%s", python.Values["method"], goValues["method"])
 	}
 	if !reflect.DeepEqual(python.Kwargs["headers"], inputs.Kwargs["headers"]) {
@@ -229,7 +229,7 @@ func TestSchemaInputsParitySlack(t *testing.T) {
 	if pythonString(t, python.Values, "token_c") != goString(t, goValues, "token_c") {
 		t.Fatalf("token_c mismatch: python=%s go=%s", python.Values["token_c"], goValues["token_c"])
 	}
-	if strings.ToLower(pythonString(t, python.Values, "mode")) != strings.ToLower(goString(t, goValues, "mode")) {
+	if !strings.EqualFold(pythonString(t, python.Values, "mode"), goString(t, goValues, "mode")) {
 		t.Fatalf("mode mismatch: python=%s go=%s", python.Values["mode"], goValues["mode"])
 	}
 	if python.Values["user"] != nil {
@@ -262,7 +262,7 @@ func TestSchemaInputsParityNtfy(t *testing.T) {
 	inputs := loadGoSchemaInputs(t, "ntfy", url)
 	goValues := inputs.ValuesMap()
 
-	if strings.ToLower(pythonString(t, python.Values, "mode")) != strings.ToLower(goString(t, goValues, "mode")) {
+	if !strings.EqualFold(pythonString(t, python.Values, "mode"), goString(t, goValues, "mode")) {
 		t.Fatalf("mode mismatch: python=%s go=%s", python.Values["mode"], goValues["mode"])
 	}
 	if pythonBool(t, python.Values, "include_image") != goBool(t, goValues, "include_image") {
@@ -279,7 +279,7 @@ func TestSchemaInputsParityJSON(t *testing.T) {
 	inputs := loadGoSchemaInputs(t, "json", url)
 	goValues := inputs.ValuesMap()
 
-	if strings.ToUpper(pythonString(t, python.Values, "method")) != strings.ToUpper(goString(t, goValues, "method")) {
+	if !strings.EqualFold(pythonString(t, python.Values, "method"), goString(t, goValues, "method")) {
 		t.Fatalf("method mismatch: python=%s go=%s", python.Values["method"], goValues["method"])
 	}
 	if !reflect.DeepEqual(python.Kwargs["headers"], inputs.Kwargs["headers"]) {
@@ -299,7 +299,7 @@ func TestSchemaInputsParityXML(t *testing.T) {
 	inputs := loadGoSchemaInputs(t, "xml", url)
 	goValues := inputs.ValuesMap()
 
-	if strings.ToUpper(pythonString(t, python.Values, "method")) != strings.ToUpper(goString(t, goValues, "method")) {
+	if !strings.EqualFold(pythonString(t, python.Values, "method"), goString(t, goValues, "method")) {
 		t.Fatalf("method mismatch: python=%s go=%s", python.Values["method"], goValues["method"])
 	}
 	if !reflect.DeepEqual(python.Kwargs["headers"], inputs.Kwargs["headers"]) {

@@ -1,0 +1,63 @@
+# Quality workflow: Go linting, formatting, static analysis, and race-enabled
+# tests. Replaces GitHub's CodeQL default setup with faster, Go-native checks
+# that gate PRs without blocking unrelated builds.
+name: quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - "**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.12.2
+          # Only fail on issues introduced by the PR. Pre-existing, documented
+          # baseline findings never block builds, and a future linter upgrade
+          # can't retroactively turn every open PR red (the CodeQL failure mode).
+          only-new-issues: true
+
+      - name: Check formatting (gofmt + goimports)
+        run: |
+          # golangci-lint fmt applies the configured formatters (gofmt,
+          # goimports); --diff makes it report instead of write and exit
+          # non-zero if anything is unformatted.
+          golangci-lint fmt --diff
+
+      - name: go vet
+        run: go vet ./...
+
+  test:
+    name: Test (race)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Run tests with race detector
+        # Python/upstream parity comparisons are covered by parity.yml; those
+        # tests skip automatically here when no .venv is present.
+        run: go test -race -shuffle=on ./...

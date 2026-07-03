@@ -8,8 +8,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/unraid/apprise-go/internal/testutil"
 	"gopkg.in/yaml.v3"
+
+	"github.com/unraid/apprise-go/internal/testutil"
 )
 
 func TestLoadTaggedURLsSkipsMissingAndDirectoryPaths(t *testing.T) {

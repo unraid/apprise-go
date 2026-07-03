@@ -82,7 +82,7 @@ func (x *XBMCTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 		"params": map[string]any{
 			"title":       title,
 			"message":     body,
-			"displaytime": int(x.duration * 1000),
+			"displaytime": x.duration * 1000,
 		},
 		"id": 1,
 	}

@@ -266,7 +266,7 @@ func loadVapidKey(path string) (*ecdsa.PrivateKey, string, error) {
 		return nil, "", fmt.Errorf("invalid key")
 	}
 
-	publicKeyBytes := elliptic.Marshal(elliptic.P256(), key.PublicKey.X, key.PublicKey.Y)
+	publicKeyBytes := elliptic.Marshal(elliptic.P256(), key.X, key.Y)
 	publicKeyStr := base64.RawURLEncoding.EncodeToString(publicKeyBytes)
 	return key, publicKeyStr, nil
 }
@@ -406,7 +406,7 @@ func encryptWebPush(message []byte, publicKey *ecdsa.PublicKey, authSecret []byt
 		return nil, err
 	}
 
-	sharedX, _ := publicKey.Curve.ScalarMult(publicKey.X, publicKey.Y, ephemeralPriv)
+	sharedX, _ := publicKey.ScalarMult(publicKey.X, publicKey.Y, ephemeralPriv)
 	sharedSecret := padBytes(sharedX.Bytes(), 32)
 
 	recipientPub := elliptic.Marshal(elliptic.P256(), publicKey.X, publicKey.Y)

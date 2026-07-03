@@ -233,7 +233,7 @@ func awsQuote(value, safe string) string {
 			b.WriteRune(r)
 			continue
 		}
-		b.WriteString(fmt.Sprintf("%%%02X", r))
+		fmt.Fprintf(&b, "%%%02X", r)
 	}
 	return b.String()
 }
@@ -278,7 +278,7 @@ func encodeRFC2047(value string) string {
 		case (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9'):
 			b.WriteByte(ch)
 		default:
-			b.WriteString(fmt.Sprintf("=%02X", ch))
+			fmt.Fprintf(&b, "=%02X", ch)
 		}
 	}
 	return "=?utf-8?q?" + b.String() + "?="

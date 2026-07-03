@@ -237,7 +237,7 @@ func (m *MatrixTarget) sendServer(body, title string, notifyType NotifyType) err
 }
 
 func (m *MatrixTarget) buildWebhookRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	payload := map[string]any{}
+	var payload map[string]any
 	urlStr := ""
 	switch m.mode {
 	case matrixModeT2Bot:
@@ -482,10 +482,11 @@ func (m *MatrixTarget) sendMessage(roomID, body, title string, notifyType Notify
 		"body":    matrixBodyWithTitle(title, body),
 	}
 
-	if m.notifyFormat == "html" {
+	switch m.notifyFormat {
+	case "html":
 		payload["format"] = "org.matrix.custom.html"
 		payload["formatted_body"] = matrixHTMLBody(title, body)
-	} else if m.notifyFormat == "markdown" {
+	case "markdown":
 		payload["format"] = "org.matrix.custom.html"
 		payload["formatted_body"] = matrixMarkdownBody(title, body)
 	}

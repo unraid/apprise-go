@@ -34,9 +34,7 @@ func NewNextcloudTarget(target *ParsedURL) (*NextcloudTarget, error) {
 		if entry == "" {
 			continue
 		}
-		if strings.HasPrefix(entry, "@") {
-			entry = strings.TrimPrefix(entry, "@")
-		}
+		entry = strings.TrimPrefix(entry, "@")
 		if entry == "" {
 			continue
 		}
