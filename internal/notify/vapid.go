@@ -3,8 +3,8 @@ package notify
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/ecdh"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -45,7 +45,7 @@ type VapidTarget struct {
 }
 
 type vapidSubscription struct {
-	publicKey  *ecdsa.PublicKey
+	publicKey  *ecdh.PublicKey
 	authSecret []byte
 }
 
@@ -266,8 +266,11 @@ func loadVapidKey(path string) (*ecdsa.PrivateKey, string, error) {
 		return nil, "", fmt.Errorf("invalid key")
 	}
 
-	publicKeyBytes := elliptic.Marshal(elliptic.P256(), key.X, key.Y)
-	publicKeyStr := base64.RawURLEncoding.EncodeToString(publicKeyBytes)
+	ecdhPub, err := key.PublicKey.ECDH()
+	if err != nil {
+		return nil, "", err
+	}
+	publicKeyStr := base64.RawURLEncoding.EncodeToString(ecdhPub.Bytes())
 	return key, publicKeyStr, nil
 }
 
@@ -309,8 +312,8 @@ func parseVapidSubscriptions(input map[string]vapidSubscriptionFile) (map[string
 		if err != nil {
 			return nil, err
 		}
-		x, y := elliptic.Unmarshal(elliptic.P256(), publicKeyBytes)
-		if x == nil || y == nil {
+		publicKey, err := ecdh.P256().NewPublicKey(publicKeyBytes)
+		if err != nil {
 			return nil, fmt.Errorf("invalid public key")
 		}
 
@@ -320,7 +323,7 @@ func parseVapidSubscriptions(input map[string]vapidSubscriptionFile) (map[string
 		}
 
 		subscriptions[strings.ToLower(name)] = vapidSubscription{
-			publicKey:  &ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y},
+			publicKey:  publicKey,
 			authSecret: authSecret,
 		}
 	}
@@ -394,22 +397,25 @@ func signVapid(privateKey *ecdsa.PrivateKey, input string) ([]byte, error) {
 	return signature, nil
 }
 
-func encryptWebPush(message []byte, publicKey *ecdsa.PublicKey, authSecret []byte) ([]byte, error) {
-	ephemeralPriv, ephemeralX, ephemeralY, err := elliptic.GenerateKey(elliptic.P256(), rand.Reader)
+func encryptWebPush(message []byte, publicKey *ecdh.PublicKey, authSecret []byte) ([]byte, error) {
+	ephemeralKey, err := ecdh.P256().GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, err
 	}
-	ephemeralPub := elliptic.Marshal(elliptic.P256(), ephemeralX, ephemeralY)
+	ephemeralPub := ephemeralKey.PublicKey().Bytes()
 
 	salt := make([]byte, 16)
 	if _, err := rand.Read(salt); err != nil {
 		return nil, err
 	}
 
-	sharedX, _ := publicKey.ScalarMult(publicKey.X, publicKey.Y, ephemeralPriv)
-	sharedSecret := padBytes(sharedX.Bytes(), 32)
+	// ECDH returns the shared secret as the fixed-length (32-byte) X coordinate.
+	sharedSecret, err := ephemeralKey.ECDH(publicKey)
+	if err != nil {
+		return nil, err
+	}
 
-	recipientPub := elliptic.Marshal(elliptic.P256(), publicKey.X, publicKey.Y)
+	recipientPub := publicKey.Bytes()
 	info := append([]byte("WebPush: info\x00"), recipientPub...)
 	info = append(info, ephemeralPub...)
 
@@ -443,15 +449,6 @@ func encryptWebPush(message []byte, publicKey *ecdsa.PublicKey, authSecret []byt
 	header = append(header, ephemeralPub...)
 	header = append(header, ciphertext...)
 	return header, nil
-}
-
-func padBytes(value []byte, size int) []byte {
-	if len(value) >= size {
-		return value
-	}
-	padded := make([]byte, size)
-	copy(padded[size-len(value):], value)
-	return padded
 }
 
 func encryptAES128GCM(key, nonce, plaintext []byte) ([]byte, error) {

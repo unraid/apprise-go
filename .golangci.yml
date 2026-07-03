@@ -119,10 +119,6 @@ linters:
       - path: internal/cli/storage\.go
         linters:
           - nilerr
-      # vapid.go uses the deprecated crypto/elliptic Marshal/Unmarshal/GenerateKey.
-      # Migrating to crypto/ecdh is a separate, security-sensitive change.
-      - path: internal/notify/vapid\.go
-        text: "SA1019"
       # HTTPSMSTarget/NewHTTPSMSTarget is the correct name, but renaming the
       # exported symbols is a breaking API change tracked separately.
       - path: internal/notify/httpsms\.go
