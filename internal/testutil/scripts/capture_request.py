@@ -94,7 +94,7 @@ DROP_HEADERS = {"x-apprise-id", "x-apprise-recursion-count"}
 KEEP_HEADERS = {"content-type", "accept", "accepts", "authorization"}
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
-CACHE_VERSION = 10
+CACHE_VERSION = 11
 CACHE_ENV = "APPRISE_CAPTURE_CACHE"
 CACHE_DIR_ENV = "APPRISE_CAPTURE_CACHE_DIR"
 CACHE_SUBDIR = ".tmp/pycapture"
@@ -446,6 +446,7 @@ def capture_request(url, body, title, notify_type, body_format=None, attachments
             data=kwargs.get("data"),
             params=kwargs.get("params"),
             json=kwargs.get("json"),
+            files=kwargs.get("files"),
             auth=kwargs.get("auth"),
         )
         prepared = self.prepare_request(req)
@@ -657,6 +658,10 @@ def capture_request(url, body, title, notify_type, body_format=None, attachments
         asset = AppriseAsset(**asset_kwargs)
         service = apprise.Apprise(asset=asset)
         service.add(url)
+        if len(service) == 0:
+            instance = apprise.Apprise.instantiate(url, asset=asset)
+            if instance:
+                service.servers.append(instance)
         success = service.notify(
             body=body,
             title=title,

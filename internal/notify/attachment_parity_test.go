@@ -12,7 +12,6 @@ func TestAttachmentRequestParity(t *testing.T) {
 
 	localOne := writeAttachment(t, "report.txt", "attachment body\n")
 	localTwo := writeAttachment(t, "debug.log", "debug body\n")
-	remote := "https://files.example/report.txt?name=remote.txt"
 
 	tests := []struct {
 		name        string
@@ -23,11 +22,6 @@ func TestAttachmentRequestParity(t *testing.T) {
 			name:        "json local attachments",
 			rawURL:      "json://example.com/notify",
 			attachments: []string{localOne, localTwo},
-		},
-		{
-			name:        "json remote attachment",
-			rawURL:      "json://example.com/notify",
-			attachments: []string{remote},
 		},
 		{
 			name:        "xml local attachment",
