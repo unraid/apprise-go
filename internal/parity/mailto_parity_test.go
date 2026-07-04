@@ -38,6 +38,15 @@ type normalizedSMTP struct {
 }
 
 func TestMailtoSMTPParity(t *testing.T) {
+	testMailtoSMTPParity(t, nil)
+}
+
+func TestMailtoSMTPAttachmentParity(t *testing.T) {
+	attachment := testutil.WriteAttachmentFixture(t, "report.txt", "attachment body\n")
+	testMailtoSMTPParity(t, []string{attachment})
+}
+
+func testMailtoSMTPParity(t *testing.T, attachmentPaths []string) {
 	capture := testutil.StartSMTPCapture(t)
 	defer func() {
 		_ = capture.Close()
@@ -61,7 +70,11 @@ func TestMailtoSMTPParity(t *testing.T) {
 	t.Setenv("PYTHONPATH", appriseRoot)
 
 	script := filepath.Join(testutil.RepoRoot(t), "internal", "testutil", "scripts", "capture_smtp.py")
-	stdout, stderr, err := testutil.RunPythonScript(t, script, "--url", url, "--body", body, "--title", title)
+	args := []string{"--url", url, "--body", body, "--title", title}
+	for _, attachment := range attachmentPaths {
+		args = append(args, "--attach", attachment)
+	}
+	stdout, stderr, err := testutil.RunPythonScript(t, script, args...)
 	if err != nil {
 		t.Fatalf("python smtp send failed: %v (stderr: %s)", err, strings.TrimSpace(stderr))
 	}
@@ -90,7 +103,11 @@ func TestMailtoSMTPParity(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build mailto target: %v", err)
 	}
-	if err := target.Send(body, title, notify.NotifyInfo); err != nil {
+	attachments, err := notify.ParseAttachments(attachmentPaths)
+	if err != nil {
+		t.Fatalf("parse attachments: %v", err)
+	}
+	if err := target.SendWithAttachments(body, title, notify.NotifyInfo, attachments); err != nil {
 		t.Fatalf("go mailto send failed: %v", err)
 	}
 
@@ -273,6 +290,14 @@ func decodeSMTPPartBody(t *testing.T, header mail.Header, body io.Reader) string
 	raw, err := io.ReadAll(body)
 	if err != nil {
 		t.Fatalf("read smtp part body failed: %v", err)
+	}
+
+	contentType := header.Get("Content-Type")
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err == nil && strings.HasPrefix(strings.ToLower(mediaType), "multipart/") {
+		if boundary := params["boundary"]; boundary != "" {
+			return decodeMultipartBody(t, boundary, raw)
+		}
 	}
 
 	encoding := strings.ToLower(strings.TrimSpace(header.Get("Content-Transfer-Encoding")))

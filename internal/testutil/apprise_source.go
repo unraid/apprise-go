@@ -9,6 +9,13 @@ import (
 func AppriseSourceRoot(t *testing.T) string {
 	t.Helper()
 
+	if override := os.Getenv("APPRISE_SOURCE_ROOT"); override != "" {
+		if fileExists(filepath.Join(override, "pyproject.toml")) {
+			return override
+		}
+		t.Fatalf("APPRISE_SOURCE_ROOT does not point to an Apprise source repo: %s", override)
+	}
+
 	root := RepoRoot(t)
 	candidate := filepath.Clean(filepath.Join(root, "..", "apprise"))
 
