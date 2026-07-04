@@ -11,7 +11,7 @@ func TestAttachmentRequestParity(t *testing.T) {
 	testutil.RequirePythonApprise(t)
 
 	localOne := writeAttachment(t, "report.txt", "attachment body\n")
-	localTwo := writeAttachment(t, "debug.log", "debug body\n")
+	localTwo := writeAttachment(t, "debug.bin", "\x00\x01debug body\n")
 
 	tests := []struct {
 		name        string
