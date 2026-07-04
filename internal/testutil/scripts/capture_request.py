@@ -94,7 +94,7 @@ DROP_HEADERS = {"x-apprise-id", "x-apprise-recursion-count"}
 KEEP_HEADERS = {"content-type", "accept", "accepts", "authorization"}
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
-CACHE_VERSION = 9
+CACHE_VERSION = 10
 CACHE_ENV = "APPRISE_CAPTURE_CACHE"
 CACHE_DIR_ENV = "APPRISE_CAPTURE_CACHE_DIR"
 CACHE_SUBDIR = ".tmp/pycapture"
@@ -163,7 +163,7 @@ def apprise_git_sha():
     return output.decode("utf-8", "replace").strip()
 
 
-def cache_key(url, body, title, notify_type, body_format):
+def cache_key(url, body, title, notify_type, body_format, attachments):
     notify_name = notify_type.name if hasattr(notify_type, "name") else str(notify_type)
     try:
         import apprise as apprise_module
@@ -178,6 +178,7 @@ def cache_key(url, body, title, notify_type, body_format):
         "title": title,
         "notify_type": notify_name,
         "body_format": body_format,
+        "attachments": attachments,
         "apprise_version": apprise_version,
         "apprise_sha": apprise_git_sha(),
         "python_version": sys.version,
@@ -204,10 +205,10 @@ def cache_key(url, body, title, notify_type, body_format):
     return digest
 
 
-def load_cache(url, body, title, notify_type, body_format):
+def load_cache(url, body, title, notify_type, body_format, attachments):
     if not cache_enabled():
         return None, None
-    digest = cache_key(url, body, title, notify_type, body_format)
+    digest = cache_key(url, body, title, notify_type, body_format, attachments)
     root = cache_dir()
     path = root / f"{digest}.json"
     if not path.exists():
@@ -414,8 +415,11 @@ def apply_simplepush_fixes():
         pass
 
 
-def capture_request(url, body, title, notify_type, body_format=None):
-    cached, cache_path = load_cache(url, body, title, notify_type, body_format)
+def capture_request(url, body, title, notify_type, body_format=None, attachments=None):
+    attachments = attachments or []
+    cached, cache_path = load_cache(
+        url, body, title, notify_type, body_format, attachments
+    )
     if cached is not None:
         return cached
 
@@ -657,6 +661,7 @@ def capture_request(url, body, title, notify_type, body_format=None):
             body=body,
             title=title,
             notify_type=notify_type,
+            attach=attachments or None,
         )
     finally:
         requests.sessions.Session.request = original_request
@@ -673,6 +678,7 @@ def main():
     parser.add_argument("--title", default="")
     parser.add_argument("--type", default="info")
     parser.add_argument("--body-format", default="")
+    parser.add_argument("--attach", action="append", default=[])
     args = parser.parse_args()
 
     notify_type = NotifyType.INFO
@@ -684,7 +690,14 @@ def main():
         notify_type = NotifyType.FAILURE
 
     body_format = args.body_format.strip().lower() or None
-    payload = capture_request(args.url, args.body, args.title, notify_type, body_format)
+    payload = capture_request(
+        args.url,
+        args.body,
+        args.title,
+        notify_type,
+        body_format,
+        args.attach,
+    )
     print(json.dumps(payload))
 
 

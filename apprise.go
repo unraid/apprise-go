@@ -30,9 +30,11 @@ var ErrNoTargets = errors.New("apprise: no notification URLs configured")
 type Option func(*notifyOptions)
 
 type notifyOptions struct {
-	title       string
-	notifyType  NotifyType
-	inputFormat string
+	title         string
+	notifyType    NotifyType
+	inputFormat   string
+	attachments   []notify.Attachment
+	attachmentErr error
 }
 
 // Apprise stores notification target URLs and sends messages to them.
@@ -93,6 +95,18 @@ func WithNotifyType(notifyType NotifyType) Option {
 func WithInputFormat(inputFormat string) Option {
 	return func(opts *notifyOptions) {
 		opts.inputFormat = inputFormat
+	}
+}
+
+// WithAttachments attaches one or more local file paths or attachment URLs to the notification.
+func WithAttachments(rawAttachments ...string) Option {
+	return func(opts *notifyOptions) {
+		attachments, err := notify.ParseAttachments(rawAttachments)
+		if err != nil {
+			opts.attachmentErr = err
+			return
+		}
+		opts.attachments = append(opts.attachments, attachments...)
 	}
 }
 
@@ -165,9 +179,13 @@ func (a *Apprise) Send(body string, options ...Option) error {
 		}
 	}
 
+	if opts.attachmentErr != nil {
+		return opts.attachmentErr
+	}
+
 	var errs []error
 	for _, rawURL := range urls {
-		if err := notify.SendTargetURL(rawURL, body, opts.title, opts.inputFormat, opts.notifyType); err != nil {
+		if err := notify.SendTargetURLWithAttachments(rawURL, body, opts.title, opts.inputFormat, opts.notifyType, opts.attachments); err != nil {
 			errs = append(errs, &TargetError{
 				URL: rawURL,
 				Err: err,

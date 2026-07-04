@@ -1,7 +1,10 @@
 package notify
 
 import (
+	"bytes"
 	"fmt"
+	"mime/multipart"
+	"net/textproto"
 	"net/url"
 	"strings"
 )
@@ -22,6 +25,8 @@ type FormTarget struct {
 	params        map[string]string
 	payloadExtras map[string]string
 	payloadMap    map[string]string
+	attachAs      string
+	attachMulti   bool
 }
 
 func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
@@ -57,11 +62,17 @@ func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
 		params:        cloneMap(target.QueryDel),
 		payloadExtras: payloadExtras,
 		payloadMap:    payloadMap,
+		attachAs:      parseFormAttachAs(target.Query["attach-as"]),
+		attachMulti:   formAttachAsMulti(target.Query["attach-as"]),
 	}, nil
 }
 
 func (f *FormTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := f.BuildRequest(body, title, notifyType)
+	return f.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (f *FormTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	spec, err := f.BuildRequestWithAttachments(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -70,6 +81,10 @@ func (f *FormTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (f *FormTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return f.BuildRequestWithAttachments(body, title, notifyType, nil)
+}
+
+func (f *FormTarget) BuildRequestWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
 	payload := map[string]string{}
 
 	base := map[string]string{
@@ -122,12 +137,21 @@ func (f *FormTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 	}
 
 	bodyPayload := ""
+	contentType := "application/x-www-form-urlencoded"
 	if f.method != "GET" {
-		values := url.Values{}
-		for key, value := range payload {
-			values.Set(key, value)
+		if len(attachments) > 0 {
+			var err error
+			bodyPayload, contentType, err = f.buildMultipartPayload(payload, attachments)
+			if err != nil {
+				return RequestSpec{}, err
+			}
+		} else {
+			values := url.Values{}
+			for key, value := range payload {
+				values.Set(key, value)
+			}
+			bodyPayload = values.Encode()
 		}
-		bodyPayload = values.Encode()
 	}
 
 	if f.method != "GET" && len(f.params) > 0 {
@@ -142,8 +166,11 @@ func (f *FormTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 		"User-Agent": "Apprise",
 		"Accept":     "*/*",
 	}
-	if f.method != "GET" {
-		headers["Content-Type"] = "application/x-www-form-urlencoded"
+	if f.method != "GET" && len(attachments) == 0 {
+		headers["Content-Type"] = contentType
+	}
+	if f.method != "GET" && len(attachments) > 0 {
+		headers["Content-Type"] = contentType
 	}
 	for key, value := range f.headers {
 		headers[key] = value
@@ -162,6 +189,56 @@ func (f *FormTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 		Headers: headers,
 		Body:    bodyPayload,
 	}, nil
+}
+
+func (f *FormTarget) buildMultipartPayload(payload map[string]string, attachments []Attachment) (string, string, error) {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	for key, value := range payload {
+		if err := writer.WriteField(key, value); err != nil {
+			return "", "", err
+		}
+	}
+	for i, attachment := range attachments {
+		fieldName := f.attachAs
+		if f.attachMulti {
+			fieldName = fmt.Sprintf(f.attachAs, i+1)
+		}
+		if strings.TrimSpace(fieldName) == "" {
+			fieldName = "file"
+		}
+		header := textproto.MIMEHeader{}
+		header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeMultipartParam(fieldName), escapeMultipartParam(attachment.Name)))
+		header.Set("Content-Type", attachment.MIMEType)
+		part, err := writer.CreatePart(header)
+		if err != nil {
+			return "", "", err
+		}
+		if _, err := part.Write(attachment.Data); err != nil {
+			return "", "", err
+		}
+	}
+	if err := writer.Close(); err != nil {
+		return "", "", err
+	}
+	return body.String(), writer.FormDataContentType(), nil
+}
+
+func parseFormAttachAs(raw string) string {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return "file%02d"
+	}
+	if strings.ContainsAny(value, "*?+$:.%") {
+		replacer := strings.NewReplacer("*", "%02d", "?", "%02d", "+", "%02d", "$", "%02d", ":", "%02d", ".", "%02d", "%", "%02d")
+		return replacer.Replace(value)
+	}
+	return value
+}
+
+func formAttachAsMulti(raw string) bool {
+	value := strings.TrimSpace(raw)
+	return value == "" || strings.ContainsAny(value, "*?+$:.%")
 }
 
 func init() {

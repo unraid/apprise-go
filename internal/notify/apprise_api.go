@@ -1,9 +1,12 @@
 package notify
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"mime/multipart"
+	"net/textproto"
 	"net/url"
 	"regexp"
 	"sort"
@@ -68,6 +71,10 @@ func NewAppriseTarget(target *ParsedURL) (*AppriseTarget, error) {
 }
 
 func (a *AppriseTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return a.BuildRequestWithAttachments(body, title, notifyType, nil)
+}
+
+func (a *AppriseTarget) BuildRequestWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
 	scheme := "http"
 	if strings.ToLower(a.target.Scheme) == "apprises" {
 		scheme = "https"
@@ -107,6 +114,20 @@ func (a *AppriseTarget) BuildRequest(body, title string, notifyType NotifyType) 
 			values.Add("tag", tag)
 		}
 
+		if len(attachments) > 0 {
+			payload, contentType, err := buildAppriseMultipart(values, attachments)
+			if err != nil {
+				return RequestSpec{}, err
+			}
+			headers["Content-Type"] = contentType
+			return RequestSpec{
+				Method:  "POST",
+				URL:     u.String(),
+				Headers: headers,
+				Body:    payload,
+			}, nil
+		}
+
 		headers["Content-Type"] = "application/x-www-form-urlencoded"
 		return RequestSpec{
 			Method:  "POST",
@@ -125,6 +146,9 @@ func (a *AppriseTarget) BuildRequest(body, title string, notifyType NotifyType) 
 	if len(a.tags) > 0 {
 		payload["tag"] = a.tags
 	}
+	if len(attachments) > 0 {
+		payload["attachments"] = attachmentPayloads(attachments)
+	}
 
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -141,12 +165,44 @@ func (a *AppriseTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (a *AppriseTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := a.BuildRequest(body, title, notifyType)
+	return a.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (a *AppriseTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	spec, err := a.BuildRequestWithAttachments(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
 
 	return SendRequest(spec)
+}
+
+func buildAppriseMultipart(values url.Values, attachments []Attachment) (string, string, error) {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	for key, entries := range values {
+		for _, value := range entries {
+			if err := writer.WriteField(key, value); err != nil {
+				return "", "", err
+			}
+		}
+	}
+	for i, attachment := range attachments {
+		header := textproto.MIMEHeader{}
+		header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file%02d"; filename="%s"`, i+1, escapeMultipartParam(attachment.Name)))
+		header.Set("Content-Type", attachment.MIMEType)
+		part, err := writer.CreatePart(header)
+		if err != nil {
+			return "", "", err
+		}
+		if _, err := part.Write(attachment.Data); err != nil {
+			return "", "", err
+		}
+	}
+	if err := writer.Close(); err != nil {
+		return "", "", err
+	}
+	return body.String(), writer.FormDataContentType(), nil
 }
 
 func splitPath(pathValue string) []string {

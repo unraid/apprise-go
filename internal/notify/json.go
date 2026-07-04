@@ -43,7 +43,11 @@ func NewJSONTarget(target *ParsedURL) (*JSONTarget, error) {
 }
 
 func (j *JSONTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := j.BuildRequest(body, title, notifyType)
+	return j.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (j *JSONTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	spec, err := j.BuildRequestWithAttachments(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -52,11 +56,15 @@ func (j *JSONTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (j *JSONTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return j.BuildRequestWithAttachments(body, title, notifyType, nil)
+}
+
+func (j *JSONTarget) BuildRequestWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
 	payload := map[string]any{
 		"version":     "1.0",
 		"title":       title,
 		"message":     body,
-		"attachments": []any{},
+		"attachments": attachmentPayloads(attachments),
 		"type":        string(notifyType),
 	}
 

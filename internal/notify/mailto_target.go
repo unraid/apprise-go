@@ -2,6 +2,7 @@ package notify
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"net/mail"
@@ -204,6 +205,10 @@ func parseMailtoEmailList(inputs []string) []string {
 }
 
 func (m *MailtoTarget) Send(body, title string, notifyType NotifyType) error {
+	return m.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (m *MailtoTarget) SendWithAttachments(body, title string, _ NotifyType, attachments []Attachment) error {
 	client, err := m.connect()
 	if err != nil {
 		return err
@@ -212,7 +217,7 @@ func (m *MailtoTarget) Send(body, title string, notifyType NotifyType) error {
 		_ = client.Quit()
 	}()
 
-	messages, err := m.buildMessages(body, title)
+	messages, err := m.buildMessagesWithAttachments(body, title, attachments)
 	if err != nil {
 		return err
 	}
@@ -304,6 +309,10 @@ func (m *MailtoTarget) authenticate(client *smtp.Client) (*smtp.Client, error) {
 }
 
 func (m *MailtoTarget) buildMessages(body, title string) ([]mailtoMessage, error) {
+	return m.buildMessagesWithAttachments(body, title, nil)
+}
+
+func (m *MailtoTarget) buildMessagesWithAttachments(body, title string, attachments []Attachment) ([]mailtoMessage, error) {
 	if len(m.targets) == 0 {
 		return nil, fmt.Errorf("missing targets")
 	}
@@ -327,6 +336,9 @@ func (m *MailtoTarget) buildMessages(body, title string) ([]mailtoMessage, error
 		reply := filterEmailList(m.replyTo, nil, target)
 
 		contentTypeHeader, transferHeader, messageBody := buildMailtoBody(body, format)
+		if len(attachments) > 0 {
+			contentTypeHeader, transferHeader, messageBody = buildMailtoMixedBody(contentTypeHeader, transferHeader, messageBody, attachments)
+		}
 		headers := []string{
 			fmt.Sprintf("Subject: %s", subject),
 			fmt.Sprintf("From: %s", fromHeader),
@@ -462,6 +474,57 @@ func buildMultipartAlternative(boundary, plain, html string) string {
 		html,
 		"--" + boundary + "--",
 		"",
+	}
+	return strings.Join(lines, "\r\n")
+}
+
+func buildMailtoMixedBody(contentTypeHeader, transferHeader, messageBody string, attachments []Attachment) (string, string, string) {
+	boundary := fmt.Sprintf("===============%d==", time.Now().UnixNano())
+	lines := []string{
+		"--" + boundary,
+		fmt.Sprintf("Content-Type: %s", contentTypeHeader),
+		"MIME-Version: 1.0",
+	}
+	if transferHeader != "" {
+		lines = append(lines, fmt.Sprintf("Content-Transfer-Encoding: %s", transferHeader))
+	}
+	lines = append(lines, "", messageBody)
+
+	for i, attachment := range attachments {
+		filename := attachment.Name
+		if strings.TrimSpace(filename) == "" {
+			filename = fmt.Sprintf("file%03d.dat", i+1)
+		}
+		lines = append(lines,
+			"--"+boundary,
+			fmt.Sprintf("Content-Type: %s", attachment.MIMEType),
+			"MIME-Version: 1.0",
+			"Content-Transfer-Encoding: base64",
+			fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"", escapeMailtoHeaderParam(filename)),
+			"",
+			wrapBase64(base64.StdEncoding.EncodeToString(attachment.Data)),
+		)
+	}
+	lines = append(lines, "--"+boundary+"--", "")
+	return fmt.Sprintf("multipart/mixed; boundary=\"%s\"", boundary), "", strings.Join(lines, "\r\n")
+}
+
+func escapeMailtoHeaderParam(value string) string {
+	value = strings.ReplaceAll(value, "\\", "\\\\")
+	return strings.ReplaceAll(value, "\"", "\\\"")
+}
+
+func wrapBase64(value string) string {
+	if len(value) <= 76 {
+		return value
+	}
+	lines := make([]string, 0, (len(value)/76)+1)
+	for len(value) > 76 {
+		lines = append(lines, value[:76])
+		value = value[76:]
+	}
+	if value != "" {
+		lines = append(lines, value)
 	}
 	return strings.Join(lines, "\r\n")
 }

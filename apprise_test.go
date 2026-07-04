@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -27,6 +29,26 @@ func TestAppriseSendJSONTarget(t *testing.T) {
 			return err
 		}
 		return client.Send(body, WithTitle(title))
+	})
+
+	testutil.AssertRequestSpecSequenceMatches(t, pythonRequests, goRequests)
+}
+
+func TestAppriseSendJSONTargetWithAttachmentMatchesPython(t *testing.T) {
+	testutil.RequirePythonApprise(t)
+
+	attachment := writeAttachmentFixture(t, "report.txt", "attachment body\n")
+	targetURL := "json://example.com/notify"
+	body := "hello"
+	title := "Greeting"
+
+	pythonRequests := testutil.CapturePythonRequestsWithAttachments(t, targetURL, body, title, []string{attachment})
+	goRequests := testutil.CaptureGoRequests(t, func() error {
+		client := New()
+		if err := client.Add(targetURL); err != nil {
+			return err
+		}
+		return client.Send(body, WithTitle(title), WithAttachments(attachment))
 	})
 
 	testutil.AssertRequestSpecSequenceMatches(t, pythonRequests, goRequests)
@@ -75,6 +97,16 @@ func TestAppriseAddRejectsUnsupportedSchema(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "unsupported URL scheme: unknown") {
 		t.Fatalf("error = %v, want unsupported schema", err)
 	}
+}
+
+func writeAttachmentFixture(t *testing.T, name, body string) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), name)
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatalf("write attachment fixture: %v", err)
+	}
+	return path
 }
 
 func captureRequestSpec(t *testing.T, r *http.Request) notify.RequestSpec {

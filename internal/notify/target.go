@@ -10,6 +10,10 @@ type Sender interface {
 	Send(body, title string, notifyType NotifyType) error
 }
 
+type AttachmentSender interface {
+	SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error
+}
+
 type buildTargetFunc func(*ParsedURL) (Sender, error)
 
 type UnsupportedSchemaError struct {
@@ -37,6 +41,10 @@ func NewTarget(parsed *ParsedURL) (Sender, error) {
 }
 
 func SendTargetURL(rawURL, body, title, inputFormat string, notifyType NotifyType) error {
+	return SendTargetURLWithAttachments(rawURL, body, title, inputFormat, notifyType, nil)
+}
+
+func SendTargetURLWithAttachments(rawURL, body, title, inputFormat string, notifyType NotifyType, attachments []Attachment) error {
 	parsed, err := ParseURL(rawURL)
 	if err != nil {
 		return err
@@ -50,6 +58,9 @@ func SendTargetURL(rawURL, body, title, inputFormat string, notifyType NotifyTyp
 	target, err := NewTarget(parsed)
 	if err != nil {
 		return err
+	}
+	if sender, ok := target.(AttachmentSender); ok {
+		return sender.SendWithAttachments(sendBody, title, notifyType, attachments)
 	}
 	return target.Send(sendBody, title, notifyType)
 }

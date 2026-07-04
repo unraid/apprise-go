@@ -216,6 +216,74 @@ func TestRunConvertsMarkdownInputForHTMLTargetFormat(t *testing.T) {
 	testutil.AssertRequestSpecSequenceMatches(t, pythonRequests, goRequests)
 }
 
+func TestRunAttachJSONMatchesPythonApprise(t *testing.T) {
+	testutil.RequirePythonApprise(t)
+
+	attachment := filepath.Join(t.TempDir(), "report.txt")
+	if err := os.WriteFile(attachment, []byte("attachment body\n"), 0o600); err != nil {
+		t.Fatalf("write attachment fixture: %v", err)
+	}
+
+	targetURL := "json://example.com/notify"
+	body := "hello"
+	title := "Greeting"
+	pythonSpecs := testutil.CapturePythonRequestsWithAttachments(t, targetURL, body, title, []string{attachment})
+
+	goSpecs := testutil.CaptureGoRequests(t, func() error {
+		stdout := &bytes.Buffer{}
+		stderr := &bytes.Buffer{}
+		code := Run([]string{"-b", body, "-t", title, "--attach", attachment, targetURL}, stdout, stderr)
+		if code != 0 {
+			return fmt.Errorf("Run failed with code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+		}
+		return nil
+	})
+
+	testutil.AssertRequestSpecSequenceMatches(t, pythonSpecs, goSpecs)
+}
+
+func TestRunAttachMailtoMatchesPythonApprise(t *testing.T) {
+	testutil.RequirePythonApprise(t)
+
+	attachment := filepath.Join(t.TempDir(), "report.txt")
+	if err := os.WriteFile(attachment, []byte("attachment body\n"), 0o600); err != nil {
+		t.Fatalf("write attachment fixture: %v", err)
+	}
+
+	capture := testutil.StartSMTPCapture(t)
+	defer func() {
+		_ = capture.Close()
+	}()
+
+	rawURL := "mailto://" + capture.Addr() + "/recipient@example.com?from=sender@example.com&format=text&mode=insecure"
+	body := "hello"
+	title := "Greeting"
+
+	pyStdout, pyStderr, err := testutil.RunApprise(t, "-b", body, "-t", title, "--attach", attachment, rawURL)
+	if err != nil {
+		t.Fatalf("python apprise failed: %v stdout=%s stderr=%s", err, pyStdout, pyStderr)
+	}
+	pythonMessages := capture.Messages()
+	if len(pythonMessages) == 0 {
+		t.Fatalf("no smtp message captured from python")
+	}
+
+	capture.Reset()
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	code := Run([]string{"-b", body, "-t", title, "--attach", attachment, rawURL}, stdout, stderr)
+	if code != 0 {
+		t.Fatalf("expected success, got code=%d stdout=%s stderr=%s", code, stdout.String(), stderr.String())
+	}
+	goMessages := capture.Messages()
+	if len(goMessages) == 0 {
+		t.Fatalf("no smtp message captured from go")
+	}
+
+	testutil.AssertSMTPMessageSequencesMatch(t, pythonMessages, goMessages)
+}
+
 func helpWorkflowCases() []struct {
 	name string
 	args []string
