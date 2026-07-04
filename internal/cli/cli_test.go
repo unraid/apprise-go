@@ -219,10 +219,7 @@ func TestRunConvertsMarkdownInputForHTMLTargetFormat(t *testing.T) {
 func TestRunAttachJSONMatchesPythonApprise(t *testing.T) {
 	testutil.RequirePythonApprise(t)
 
-	attachment := filepath.Join(t.TempDir(), "report.txt")
-	if err := os.WriteFile(attachment, []byte("attachment body\n"), 0o600); err != nil {
-		t.Fatalf("write attachment fixture: %v", err)
-	}
+	attachment := testutil.WriteAttachmentFixture(t, "report.txt", "attachment body\n")
 
 	targetURL := "json://example.com/notify"
 	body := "hello"
@@ -245,10 +242,7 @@ func TestRunAttachJSONMatchesPythonApprise(t *testing.T) {
 func TestRunAttachMailtoMatchesPythonApprise(t *testing.T) {
 	testutil.RequirePythonApprise(t)
 
-	attachment := filepath.Join(t.TempDir(), "report.txt")
-	if err := os.WriteFile(attachment, []byte("attachment body\n"), 0o600); err != nil {
-		t.Fatalf("write attachment fixture: %v", err)
-	}
+	attachment := testutil.WriteAttachmentFixture(t, "report.txt", "attachment body\n")
 
 	capture := testutil.StartSMTPCapture(t)
 	defer func() {

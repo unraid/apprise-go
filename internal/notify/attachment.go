@@ -10,7 +10,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
+
+const maxAttachmentBytes int64 = 25 * 1024 * 1024
+
+var attachmentHTTPClient = &http.Client{Timeout: 30 * time.Second}
 
 type Attachment struct {
 	Source   string
@@ -52,6 +57,7 @@ func ParseAttachment(raw string) (Attachment, error) {
 	case "file":
 		data, location, err = readFileURLAttachment(location)
 	default:
+		// #nosec G304 -- attachment paths are explicitly supplied by the caller.
 		data, err = os.ReadFile(location)
 	}
 	if err != nil {
@@ -128,7 +134,15 @@ func attachmentScheme(raw string) string {
 }
 
 func readHTTPAttachment(raw string) ([]byte, error) {
-	resp, err := http.Get(raw)
+	return readHTTPAttachmentWithClient(raw, attachmentHTTPClient, maxAttachmentBytes)
+}
+
+func readHTTPAttachmentWithClient(raw string, client *http.Client, maxBytes int64) ([]byte, error) {
+	req, err := http.NewRequest(http.MethodGet, raw, nil) // #nosec G107 -- attachment URLs are explicitly supplied by the caller.
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +151,14 @@ func readHTTPAttachment(raw string) ([]byte, error) {
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, &HTTPStatusError{StatusCode: resp.StatusCode}
 	}
-	return io.ReadAll(resp.Body)
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > maxBytes {
+		return nil, fmt.Errorf("attachment exceeds maximum size of %d bytes", maxBytes)
+	}
+	return data, nil
 }
 
 func readFileURLAttachment(raw string) ([]byte, string, error) {
@@ -149,6 +170,7 @@ func readFileURLAttachment(raw string) ([]byte, string, error) {
 	if path == "" && parsed.Host != "" {
 		path = parsed.Host
 	}
+	// #nosec G304 -- file:// attachment paths are explicitly supplied by the caller.
 	data, err := os.ReadFile(path)
 	return data, path, err
 }

@@ -1,8 +1,6 @@
 package notify_test
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/unraid/apprise-go/internal/notify"
@@ -56,6 +54,11 @@ func TestAttachmentRequestParity(t *testing.T) {
 			rawURL:      "ntfy://example.com/topic",
 			attachments: []string{localOne},
 		},
+		{
+			name:        "ntfy multiple local attachments",
+			rawURL:      "ntfy://example.com/topic",
+			attachments: []string{localOne, localTwo},
+		},
 	}
 
 	for _, tt := range tests {
@@ -79,10 +82,5 @@ func TestAttachmentRequestParity(t *testing.T) {
 
 func writeAttachment(t *testing.T, name, body string) string {
 	t.Helper()
-
-	path := filepath.Join(t.TempDir(), name)
-	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
-		t.Fatalf("write attachment fixture: %v", err)
-	}
-	return path
+	return testutil.WriteAttachmentFixture(t, name, body)
 }

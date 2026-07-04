@@ -5,8 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -101,12 +99,7 @@ func TestAppriseAddRejectsUnsupportedSchema(t *testing.T) {
 
 func writeAttachmentFixture(t *testing.T, name, body string) string {
 	t.Helper()
-
-	path := filepath.Join(t.TempDir(), name)
-	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
-		t.Fatalf("write attachment fixture: %v", err)
-	}
-	return path
+	return testutil.WriteAttachmentFixture(t, name, body)
 }
 
 func captureRequestSpec(t *testing.T, r *http.Request) notify.RequestSpec {

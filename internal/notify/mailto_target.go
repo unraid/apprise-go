@@ -308,10 +308,6 @@ func (m *MailtoTarget) authenticate(client *smtp.Client) (*smtp.Client, error) {
 	return client, nil
 }
 
-func (m *MailtoTarget) buildMessages(body, title string) ([]mailtoMessage, error) {
-	return m.buildMessagesWithAttachments(body, title, nil)
-}
-
 func (m *MailtoTarget) buildMessagesWithAttachments(body, title string, attachments []Attachment) ([]mailtoMessage, error) {
 	if len(m.targets) == 0 {
 		return nil, fmt.Errorf("missing targets")

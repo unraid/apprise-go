@@ -55,6 +55,11 @@ func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
 		delete(payloadExtras, key)
 	}
 
+	attachAs, attachMulti, err := parseFormAttachAs(target.Query["attach-as"])
+	if err != nil {
+		return nil, err
+	}
+
 	return &FormTarget{
 		target:        target,
 		method:        method,
@@ -62,8 +67,8 @@ func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
 		params:        cloneMap(target.QueryDel),
 		payloadExtras: payloadExtras,
 		payloadMap:    payloadMap,
-		attachAs:      parseFormAttachAs(target.Query["attach-as"]),
-		attachMulti:   formAttachAsMulti(target.Query["attach-as"]),
+		attachAs:      attachAs,
+		attachMulti:   attachMulti,
 	}, nil
 }
 
@@ -166,10 +171,7 @@ func (f *FormTarget) BuildRequestWithAttachments(body, title string, notifyType 
 		"User-Agent": "Apprise",
 		"Accept":     "*/*",
 	}
-	if f.method != "GET" && len(attachments) == 0 {
-		headers["Content-Type"] = contentType
-	}
-	if f.method != "GET" && len(attachments) > 0 {
+	if f.method != "GET" {
 		headers["Content-Type"] = contentType
 	}
 	for key, value := range f.headers {
@@ -224,21 +226,32 @@ func (f *FormTarget) buildMultipartPayload(payload map[string]string, attachment
 	return body.String(), writer.FormDataContentType(), nil
 }
 
-func parseFormAttachAs(raw string) string {
+func parseFormAttachAs(raw string) (string, bool, error) {
 	value := strings.TrimSpace(raw)
 	if value == "" {
-		return "file%02d"
+		return "file%02d", true, nil
 	}
-	if strings.ContainsAny(value, "*?+$:.%") {
-		replacer := strings.NewReplacer("*", "%02d", "?", "%02d", "+", "%02d", "$", "%02d", ":", "%02d", ".", "%02d", "%", "%02d")
-		return replacer.Replace(value)
+	if strings.Count(value, "%02d") > 1 {
+		return "", false, fmt.Errorf("attach-as supports only one placeholder")
 	}
-	return value
-}
+	if strings.Contains(value, "%02d") {
+		return value, true, nil
+	}
 
-func formAttachAsMulti(raw string) bool {
-	value := strings.TrimSpace(raw)
-	return value == "" || strings.ContainsAny(value, "*?+$:.%")
+	wildcard := -1
+	for i, ch := range value {
+		if !strings.ContainsRune("*?+$:.%", ch) {
+			continue
+		}
+		if wildcard >= 0 {
+			return "", false, fmt.Errorf("attach-as supports only one wildcard")
+		}
+		wildcard = i
+	}
+	if wildcard < 0 {
+		return value, false, nil
+	}
+	return value[:wildcard] + "%02d" + value[wildcard+1:], true, nil
 }
 
 func init() {

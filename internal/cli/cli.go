@@ -320,11 +320,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 			continue
 		}
 
-		if sender, ok := target.(notify.AttachmentSender); ok {
-			err = sender.SendWithAttachments(sendBody, title, nt, attachments)
-		} else {
-			err = target.Send(sendBody, title, nt)
-		}
+		err = notify.DispatchSend(target, sendBody, title, nt, attachments)
 		if err != nil {
 			fmt.Fprintf(stderr, "%s notify error: %s\n", notify.TargetSchemaName(parsed.Scheme), err)
 			failed = true
