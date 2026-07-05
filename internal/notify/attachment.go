@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-// DefaultMaxAttachmentBytes is the default cap used when fetching remote attachments.
-const DefaultMaxAttachmentBytes int64 = 25 * 1024 * 1024
+// DefaultMaxAttachmentBytes matches Python Apprise's default attachment cap.
+const DefaultMaxAttachmentBytes int64 = 1048576000
 
 var attachmentHTTPClient = &http.Client{Timeout: 30 * time.Second}
 
