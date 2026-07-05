@@ -1,6 +1,8 @@
 package notify_test
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/unraid/apprise-go/internal/notify"
@@ -12,16 +14,29 @@ func TestAttachmentRequestParity(t *testing.T) {
 
 	localOne := writeAttachment(t, "report.txt", "attachment body\n")
 	localTwo := writeAttachment(t, "debug.bin", "\x00\x01debug body\n")
+	remoteServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer remoteServer.Close()
+	remoteOne := remoteServer.URL + "/report.txt"
 
 	tests := []struct {
-		name        string
-		rawURL      string
-		attachments []string
+		name             string
+		rawURL           string
+		attachments      []string
+		compareFinalOnly bool
 	}{
 		{
 			name:        "json local attachments",
 			rawURL:      "json://example.com/notify",
 			attachments: []string{localOne, localTwo},
+		},
+		{
+			name:             "json remote attachment",
+			rawURL:           "json://example.com/notify",
+			attachments:      []string{remoteOne},
+			compareFinalOnly: true,
 		},
 		{
 			name:        "xml local attachment",
@@ -69,9 +84,21 @@ func TestAttachmentRequestParity(t *testing.T) {
 				return notify.SendTargetURLWithAttachments(tt.rawURL, body, title, "text", notify.NotifyInfo, attachments)
 			})
 
+			if tt.compareFinalOnly {
+				pythonSpecs = finalRequestSpec(t, pythonSpecs)
+				goSpecs = finalRequestSpec(t, goSpecs)
+			}
 			testutil.AssertRequestSpecSequenceMatches(t, pythonSpecs, goSpecs)
 		})
 	}
+}
+
+func finalRequestSpec(t *testing.T, specs []notify.RequestSpec) []notify.RequestSpec {
+	t.Helper()
+	if len(specs) == 0 {
+		t.Fatalf("no request specs captured")
+	}
+	return []notify.RequestSpec{specs[len(specs)-1]}
 }
 
 func writeAttachment(t *testing.T, name, body string) string {

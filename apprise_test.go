@@ -52,6 +52,22 @@ func TestAppriseSendJSONTargetWithAttachmentMatchesPython(t *testing.T) {
 	testutil.AssertRequestSpecSequenceMatches(t, pythonRequests, goRequests)
 }
 
+func TestAppriseSendAttachmentMaxBytes(t *testing.T) {
+	attachmentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("12345"))
+	}))
+	defer attachmentServer.Close()
+
+	client := New()
+	if err := client.Add("json://example.com/notify"); err != nil {
+		t.Fatalf("add target: %v", err)
+	}
+	err := client.Send("hello", WithAttachments(attachmentServer.URL), WithAttachmentMaxBytes(4))
+	if err == nil || !strings.Contains(err.Error(), "attachment exceeds maximum size") {
+		t.Fatalf("error = %v, want maximum size error", err)
+	}
+}
+
 func TestAppriseSendConvertsInputFormat(t *testing.T) {
 	testutil.RequirePythonApprise(t)
 

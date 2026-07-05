@@ -13,7 +13,8 @@ import (
 	"time"
 )
 
-const maxAttachmentBytes int64 = 25 * 1024 * 1024
+// DefaultMaxAttachmentBytes is the default cap used when fetching remote attachments.
+const DefaultMaxAttachmentBytes int64 = 25 * 1024 * 1024
 
 var attachmentHTTPClient = &http.Client{Timeout: 30 * time.Second}
 
@@ -25,9 +26,17 @@ type Attachment struct {
 }
 
 func ParseAttachments(rawValues []string) ([]Attachment, error) {
+	return ParseAttachmentsWithMaxBytes(rawValues, DefaultMaxAttachmentBytes)
+}
+
+// ParseAttachmentsWithMaxBytes parses attachments using maxBytes for each remote attachment fetch.
+func ParseAttachmentsWithMaxBytes(rawValues []string, maxBytes int64) ([]Attachment, error) {
+	if maxBytes <= 0 {
+		return nil, fmt.Errorf("maximum attachment size must be positive")
+	}
 	attachments := make([]Attachment, 0, len(rawValues))
 	for _, raw := range rawValues {
-		attachment, err := ParseAttachment(raw)
+		attachment, err := ParseAttachmentWithMaxBytes(raw, maxBytes)
 		if err != nil {
 			return nil, err
 		}
@@ -37,9 +46,17 @@ func ParseAttachments(rawValues []string) ([]Attachment, error) {
 }
 
 func ParseAttachment(raw string) (Attachment, error) {
+	return ParseAttachmentWithMaxBytes(raw, DefaultMaxAttachmentBytes)
+}
+
+// ParseAttachmentWithMaxBytes parses an attachment using maxBytes for a remote attachment fetch.
+func ParseAttachmentWithMaxBytes(raw string, maxBytes int64) (Attachment, error) {
 	source := strings.TrimSpace(raw)
 	if source == "" {
 		return Attachment{}, fmt.Errorf("empty attachment")
+	}
+	if maxBytes <= 0 {
+		return Attachment{}, fmt.Errorf("maximum attachment size must be positive")
 	}
 
 	location, params := splitAttachmentParams(source)
@@ -53,7 +70,7 @@ func ParseAttachment(raw string) (Attachment, error) {
 	var err error
 	switch strings.ToLower(attachmentScheme(location)) {
 	case "http", "https":
-		data, err = readHTTPAttachment(location)
+		data, err = readHTTPAttachment(location, maxBytes)
 	case "file":
 		data, location, err = readFileURLAttachment(location)
 	default:
@@ -133,11 +150,14 @@ func attachmentScheme(raw string) string {
 	return parsed.Scheme
 }
 
-func readHTTPAttachment(raw string) ([]byte, error) {
-	return readHTTPAttachmentWithClient(raw, attachmentHTTPClient, maxAttachmentBytes)
+func readHTTPAttachment(raw string, maxBytes int64) ([]byte, error) {
+	return readHTTPAttachmentWithClient(raw, attachmentHTTPClient, maxBytes)
 }
 
 func readHTTPAttachmentWithClient(raw string, client *http.Client, maxBytes int64) ([]byte, error) {
+	// Attachment URLs are explicit caller input, matching Python Apprise's
+	// trusted-URL behavior. Do not pass untrusted end-user URLs here without
+	// applying application-level SSRF policy before calling WithAttachments.
 	req, err := http.NewRequest(http.MethodGet, raw, nil) // #nosec G107 -- attachment URLs are explicitly supplied by the caller.
 	if err != nil {
 		return nil, err
