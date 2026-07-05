@@ -38,16 +38,33 @@ func CapturePythonRequestsWithFormat(t *testing.T, url, body, title, bodyFormat 
 func CapturePythonRequestsWithFormatAndTypeResult(t *testing.T, url, body, title, bodyFormat string, notifyType notify.NotifyType) ([]notify.RequestSpec, *bool) {
 	t.Helper()
 
+	return CapturePythonRequestsWithFormatTypeAndAttachmentsResult(t, url, body, title, bodyFormat, notifyType, nil)
+}
+
+func CapturePythonRequestsWithAttachments(t *testing.T, url, body, title string, attachments []string) []notify.RequestSpec {
+	t.Helper()
+
+	specs, _ := CapturePythonRequestsWithFormatTypeAndAttachmentsResult(t, url, body, title, "", notify.NotifyInfo, attachments)
+	return specs
+}
+
+func CapturePythonRequestsWithFormatTypeAndAttachmentsResult(t *testing.T, url, body, title, bodyFormat string, notifyType notify.NotifyType, attachments []string) ([]notify.RequestSpec, *bool) {
+	t.Helper()
+
 	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
-	stdout, stderr, err := RunPythonScript(
-		t,
-		script,
+	args := []string{
 		"--url", url,
 		"--body", body,
 		"--title", title,
 		"--type", string(notifyType),
-		"--body-format", bodyFormat,
-	)
+	}
+	if bodyFormat != "" {
+		args = append(args, "--body-format", bodyFormat)
+	}
+	for _, attachment := range attachments {
+		args = append(args, "--attach", attachment)
+	}
+	stdout, stderr, err := RunPythonScript(t, script, args...)
 	if err != nil {
 		t.Fatalf("capture request failed: %v (stderr: %s)", err, strings.TrimSpace(stderr))
 	}

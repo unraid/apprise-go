@@ -13,3 +13,5 @@ fi
 go run ./internal/tools/parity_report \
   -out reports/parity_report.md \
   -json reports/parity_report.json
+
+go test ./internal/notify -run TestAttachmentRequestParity -count=1 -v

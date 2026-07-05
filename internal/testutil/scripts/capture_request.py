@@ -94,7 +94,7 @@ DROP_HEADERS = {"x-apprise-id", "x-apprise-recursion-count"}
 KEEP_HEADERS = {"content-type", "accept", "accepts", "authorization"}
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
-CACHE_VERSION = 9
+CACHE_VERSION = 12
 CACHE_ENV = "APPRISE_CAPTURE_CACHE"
 CACHE_DIR_ENV = "APPRISE_CAPTURE_CACHE_DIR"
 CACHE_SUBDIR = ".tmp/pycapture"
@@ -163,7 +163,37 @@ def apprise_git_sha():
     return output.decode("utf-8", "replace").strip()
 
 
-def cache_key(url, body, title, notify_type, body_format):
+def stable_attachment_cache_entries(attachments):
+    entries = []
+    for attachment in attachments or []:
+        parsed = urlparse(attachment)
+        if parsed.scheme in ("http", "https"):
+            entries.append({"kind": "url", "value": attachment})
+            continue
+
+        path = Path(parsed.path) if parsed.scheme == "file" else Path(attachment)
+        if path.is_file():
+            try:
+                data = path.read_bytes()
+            except OSError:
+                entries.append({"kind": "path", "name": path.name})
+                continue
+            entries.append(
+                {
+                    "kind": "file",
+                    "name": path.name,
+                    "size": len(data),
+                    "sha256": hashlib.sha256(data).hexdigest(),
+                    "query": parsed.query,
+                }
+            )
+            continue
+
+        entries.append({"kind": "path", "name": path.name or attachment})
+    return entries
+
+
+def cache_key(url, body, title, notify_type, body_format, attachments):
     notify_name = notify_type.name if hasattr(notify_type, "name") else str(notify_type)
     try:
         import apprise as apprise_module
@@ -178,6 +208,7 @@ def cache_key(url, body, title, notify_type, body_format):
         "title": title,
         "notify_type": notify_name,
         "body_format": body_format,
+        "attachments": stable_attachment_cache_entries(attachments),
         "apprise_version": apprise_version,
         "apprise_sha": apprise_git_sha(),
         "python_version": sys.version,
@@ -204,10 +235,10 @@ def cache_key(url, body, title, notify_type, body_format):
     return digest
 
 
-def load_cache(url, body, title, notify_type, body_format):
+def load_cache(url, body, title, notify_type, body_format, attachments):
     if not cache_enabled():
         return None, None
-    digest = cache_key(url, body, title, notify_type, body_format)
+    digest = cache_key(url, body, title, notify_type, body_format, attachments)
     root = cache_dir()
     path = root / f"{digest}.json"
     if not path.exists():
@@ -414,8 +445,11 @@ def apply_simplepush_fixes():
         pass
 
 
-def capture_request(url, body, title, notify_type, body_format=None):
-    cached, cache_path = load_cache(url, body, title, notify_type, body_format)
+def capture_request(url, body, title, notify_type, body_format=None, attachments=None):
+    attachments = attachments or []
+    cached, cache_path = load_cache(
+        url, body, title, notify_type, body_format, attachments
+    )
     if cached is not None:
         return cached
 
@@ -442,6 +476,7 @@ def capture_request(url, body, title, notify_type, body_format=None):
             data=kwargs.get("data"),
             params=kwargs.get("params"),
             json=kwargs.get("json"),
+            files=kwargs.get("files"),
             auth=kwargs.get("auth"),
         )
         prepared = self.prepare_request(req)
@@ -642,6 +677,8 @@ def capture_request(url, body, title, notify_type, body_format=None):
             response._content = b'{"success":true}'
         else:
             response._content = b"ok"
+        response.headers.setdefault("Content-Type", "text/plain")
+        response.headers["Content-Length"] = str(len(response.content))
         response.url = prepared.url
         return response
 
@@ -653,10 +690,19 @@ def capture_request(url, body, title, notify_type, body_format=None):
         asset = AppriseAsset(**asset_kwargs)
         service = apprise.Apprise(asset=asset)
         service.add(url)
+        if len(service) == 0:
+            # Some providers can instantiate successfully even when add() leaves
+            # the service list empty in this editable test environment. Fall
+            # back to explicit instantiation so the capture path still exercises
+            # the provider's normal notify flow.
+            instance = apprise.Apprise.instantiate(url, asset=asset)
+            if instance:
+                service.servers.append(instance)
         success = service.notify(
             body=body,
             title=title,
             notify_type=notify_type,
+            attach=attachments or None,
         )
     finally:
         requests.sessions.Session.request = original_request
@@ -673,6 +719,7 @@ def main():
     parser.add_argument("--title", default="")
     parser.add_argument("--type", default="info")
     parser.add_argument("--body-format", default="")
+    parser.add_argument("--attach", action="append", default=[])
     args = parser.parse_args()
 
     notify_type = NotifyType.INFO
@@ -684,7 +731,14 @@ def main():
         notify_type = NotifyType.FAILURE
 
     body_format = args.body_format.strip().lower() or None
-    payload = capture_request(args.url, args.body, args.title, notify_type, body_format)
+    payload = capture_request(
+        args.url,
+        args.body,
+        args.title,
+        notify_type,
+        body_format,
+        args.attach,
+    )
     print(json.dumps(payload))
 
 

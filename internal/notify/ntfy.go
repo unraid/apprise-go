@@ -109,13 +109,44 @@ func NewNtfyTarget(target *ParsedURL) (*NtfyTarget, error) {
 }
 
 func (n *NtfyTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	requests, err := n.BuildRequestsWithAttachments(body, title, notifyType, nil)
+	if err != nil {
+		return RequestSpec{}, err
+	}
+	if len(requests) == 0 {
+		return RequestSpec{}, fmt.Errorf("no requests")
+	}
+	return requests[0], nil
+}
+
+func (n *NtfyTarget) BuildRequestsWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) ([]RequestSpec, error) {
 	if len(n.topics) == 0 {
-		return RequestSpec{}, fmt.Errorf("no topics")
+		return nil, fmt.Errorf("no topics")
+	}
+
+	if len(attachments) > 0 {
+		specs := []RequestSpec{}
+		for _, topic := range n.topics {
+			for i, attachment := range attachments {
+				sendBody := ""
+				sendTitle := ""
+				if i == 0 {
+					sendBody = body
+					sendTitle = title
+				}
+				spec, err := n.buildAttachmentRequest(topic, attachment, sendBody, sendTitle, notifyType)
+				if err != nil {
+					return nil, err
+				}
+				specs = append(specs, spec)
+			}
+		}
+		return specs, nil
 	}
 
 	urlStr, err := n.notifyURL()
 	if err != nil {
-		return RequestSpec{}, err
+		return nil, err
 	}
 
 	payload := map[string]any{
@@ -132,13 +163,24 @@ func (n *NtfyTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 
 	data, err := json.Marshal(payload)
 	if err != nil {
-		return RequestSpec{}, err
+		return nil, err
 	}
 
+	headers := n.headers(notifyType)
+	headers["Content-Type"] = "application/json"
+
+	return []RequestSpec{{
+		Method:  "POST",
+		URL:     urlStr,
+		Headers: headers,
+		Body:    string(data),
+	}}, nil
+}
+
+func (n *NtfyTarget) headers(notifyType NotifyType) map[string]string {
 	headers := map[string]string{
-		"User-Agent":   "Apprise",
-		"Accept":       "*/*",
-		"Content-Type": "application/json",
+		"User-Agent": "Apprise",
+		"Accept":     "*/*",
 	}
 
 	if n.mode == NtfyModePrivate {
@@ -183,22 +225,53 @@ func (n *NtfyTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 	if n.actions != "" {
 		headers["X-Actions"] = n.actions
 	}
+	return headers
+}
+
+func (n *NtfyTarget) buildAttachmentRequest(topic string, attachment Attachment, body, title string, notifyType NotifyType) (RequestSpec, error) {
+	urlStr, err := n.attachmentURL(topic)
+	if err != nil {
+		return RequestSpec{}, err
+	}
+
+	u, err := url.Parse(urlStr)
+	if err != nil {
+		return RequestSpec{}, err
+	}
+	values := u.Query()
+	values.Set("filename", attachment.Name)
+	if title != "" {
+		values.Set("title", title)
+	}
+	if body != "" {
+		values.Set("message", body)
+	}
+	u.RawQuery = values.Encode()
 
 	return RequestSpec{
 		Method:  "POST",
-		URL:     urlStr,
-		Headers: headers,
-		Body:    string(data),
+		URL:     u.String(),
+		Headers: n.headers(notifyType),
+		Body:    string(attachment.Data),
 	}, nil
 }
 
 func (n *NtfyTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := n.BuildRequest(body, title, notifyType)
+	return n.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (n *NtfyTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	specs, err := n.BuildRequestsWithAttachments(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
 
-	return SendRequest(spec)
+	for _, spec := range specs {
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (n *NtfyTarget) notifyURL() (string, error) {
@@ -221,6 +294,27 @@ func (n *NtfyTarget) notifyURL() (string, error) {
 	}
 
 	u := url.URL{Scheme: scheme, Host: host, Path: "/"}
+	return u.String(), nil
+}
+
+func (n *NtfyTarget) attachmentURL(topic string) (string, error) {
+	if n.mode == NtfyModeCloud {
+		u := url.URL{Scheme: "https", Host: "ntfy.sh", Path: "/" + topic}
+		return u.String(), nil
+	}
+
+	scheme := "http"
+	if strings.ToLower(n.target.Scheme) == "ntfys" {
+		scheme = "https"
+	}
+	host := n.target.Host
+	if host == "" {
+		return "", fmt.Errorf("missing host")
+	}
+	if n.target.Port != 0 {
+		host = fmt.Sprintf("%s:%d", host, n.target.Port)
+	}
+	u := url.URL{Scheme: scheme, Host: host, Path: "/" + topic}
 	return u.String(), nil
 }
 

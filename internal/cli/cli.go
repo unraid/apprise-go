@@ -272,9 +272,14 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
+	attachments, err := notify.ParseAttachments(opts.attachments)
+	if err != nil {
+		fmt.Fprintf(stderr, "attachment error: %s\n", err)
+		return 2
+	}
+
 	// TODO: Wire these options into CLI behavior once the runtime supports them.
 	_ = opts.disableAsync
-	_ = opts.attachments
 	_ = opts.pluginPaths
 	_ = opts.theme
 	_ = opts.recursionDepth
@@ -315,7 +320,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 			continue
 		}
 
-		if err := target.Send(sendBody, title, nt); err != nil {
+		err = notify.DispatchSend(target, sendBody, title, nt, attachments)
+		if err != nil {
 			fmt.Fprintf(stderr, "%s notify error: %s\n", notify.TargetSchemaName(parsed.Scheme), err)
 			failed = true
 		}

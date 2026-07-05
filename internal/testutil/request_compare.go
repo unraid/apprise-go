@@ -1,7 +1,12 @@
 package testutil
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
+	"io"
+	"mime"
+	"mime/multipart"
 	"net/url"
 	"reflect"
 	"sort"
@@ -88,6 +93,10 @@ func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpe
 		assertRequestQueryEqual(t, pythonBody, goBody)
 		return
 	}
+	if shouldCompareRequestMultipart(pythonHeaders) {
+		assertRequestMultipartEqual(t, pythonSpec, goSpec)
+		return
+	}
 
 	if pythonBody != goBody {
 		t.Fatalf("body mismatch: python=%s go=%s", pythonBody, goBody)
@@ -102,7 +111,7 @@ func NormalizeRequestHeaders(headers map[string]string) map[string]string {
 			continue
 		}
 		if _, keep := requestHeaderKeep[lower]; keep || strings.HasPrefix(lower, "x-") {
-			normalized[lower] = normalizeAppriseURL(value)
+			normalized[lower] = normalizeRequestHeaderValue(lower, value)
 		}
 	}
 
@@ -118,6 +127,16 @@ func NormalizeRequestHeaders(headers map[string]string) map[string]string {
 	}
 
 	return ordered
+}
+
+func normalizeRequestHeaderValue(key, value string) string {
+	if key == "content-type" {
+		mediaType, _, err := mime.ParseMediaType(value)
+		if err == nil && strings.HasPrefix(strings.ToLower(mediaType), "multipart/") {
+			return strings.ToLower(mediaType)
+		}
+	}
+	return normalizeAppriseURL(value)
 }
 
 func normalizeRequestBody(spec notify.RequestSpec) string {
@@ -142,6 +161,11 @@ func shouldCompareRequestForm(headers map[string]string, body string) bool {
 		return false
 	}
 	return strings.Contains(body, "=")
+}
+
+func shouldCompareRequestMultipart(headers map[string]string) bool {
+	contentType := strings.ToLower(headers["content-type"])
+	return strings.Contains(contentType, "multipart/form-data")
 }
 
 func shouldCompareRequestBodyAsJSON(pythonBody, goBody string) bool {
@@ -197,6 +221,70 @@ func assertRequestQueryEqual(t *testing.T, pythonBody, goBody string) {
 	if pythonNormalized.Encode() != goNormalized.Encode() {
 		t.Fatalf("query mismatch: python=%s go=%s", pythonNormalized.Encode(), goNormalized.Encode())
 	}
+}
+
+func assertRequestMultipartEqual(t *testing.T, pythonSpec, goSpec notify.RequestSpec) {
+	t.Helper()
+
+	pythonParts := normalizeMultipartParts(t, pythonSpec)
+	goParts := normalizeMultipartParts(t, goSpec)
+	if !reflect.DeepEqual(pythonParts, goParts) {
+		t.Fatalf("multipart mismatch: python=%v go=%v", pythonParts, goParts)
+	}
+}
+
+func normalizeMultipartParts(t *testing.T, spec notify.RequestSpec) []map[string]string {
+	t.Helper()
+
+	contentType := spec.Headers["content-type"]
+	if contentType == "" {
+		contentType = spec.Headers["Content-Type"]
+	}
+	_, params, err := mime.ParseMediaType(contentType)
+	if err != nil || params["boundary"] == "" {
+		t.Fatalf("parse multipart content-type: %v headers=%v", err, spec.Headers)
+	}
+
+	reader := multipart.NewReader(bytes.NewReader([]byte(spec.Body)), params["boundary"])
+	parts := []map[string]string{}
+	for {
+		part, err := reader.NextPart()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatalf("read multipart part: %v", err)
+		}
+		data, err := io.ReadAll(part)
+		if err != nil {
+			t.Fatalf("read multipart data: %v", err)
+		}
+		parts = append(parts, map[string]string{
+			"name":     part.FormName(),
+			"filename": part.FileName(),
+			"type":     normalizeMultipartContentType(part.Header.Get("Content-Type")),
+			"body":     string(data),
+		})
+	}
+
+	sort.Slice(parts, func(i, j int) bool {
+		if parts[i]["name"] != parts[j]["name"] {
+			return parts[i]["name"] < parts[j]["name"]
+		}
+		if parts[i]["filename"] != parts[j]["filename"] {
+			return parts[i]["filename"] < parts[j]["filename"]
+		}
+		return parts[i]["body"] < parts[j]["body"]
+	})
+	return parts
+}
+
+func normalizeMultipartContentType(value string) string {
+	mediaType, _, err := mime.ParseMediaType(value)
+	if err != nil {
+		return strings.ToLower(strings.TrimSpace(value))
+	}
+	return strings.ToLower(mediaType)
 }
 
 func normalizeRequestQueryValues(values url.Values) url.Values {

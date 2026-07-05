@@ -201,6 +201,15 @@ func decodeSMTPPartBody(t *testing.T, header mail.Header, body io.Reader) string
 	if err != nil {
 		t.Fatalf("read smtp part body failed: %v", err)
 	}
+
+	contentType := header.Get("Content-Type")
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err == nil && strings.HasPrefix(strings.ToLower(mediaType), "multipart/") {
+		if boundary := params["boundary"]; boundary != "" {
+			return decodeMultipartBody(t, boundary, raw)
+		}
+	}
+
 	raw = decodeSMTPTransfer(t, header, raw)
 
 	out := string(raw)
