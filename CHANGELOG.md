@@ -3,6 +3,12 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.2.8 (2026-07-05)
+
+### Features
+
+- support notification attachments (#74)
+
 ## 0.2.7 (2026-07-03)
 
 ### Features
