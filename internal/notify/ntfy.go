@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"cmp"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -101,10 +102,11 @@ func NewNtfyTarget(target *ParsedURL) (*NtfyTarget, error) {
 		delay:        strings.TrimSpace(target.Query["delay"]),
 		click:        strings.TrimSpace(target.Query["click"]),
 		email:        strings.TrimSpace(target.Query["email"]),
-		tags:         parseDelimitedList(target.Query["tags"]),
-		actions:      strings.TrimSpace(target.Query["actions"]),
-		attach:       strings.TrimSpace(target.Query["attach"]),
-		filename:     strings.TrimSpace(target.Query["filename"]),
+		// Upstream renamed this to xtags and keeps tags as a legacy alias.
+		tags:     parseDelimitedList(cmp.Or(target.Query["xtags"], target.Query["tags"])),
+		actions:  strings.TrimSpace(target.Query["actions"]),
+		attach:   strings.TrimSpace(target.Query["attach"]),
+		filename: strings.TrimSpace(target.Query["filename"]),
 	}, nil
 }
 

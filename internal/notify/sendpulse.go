@@ -567,7 +567,7 @@ func init() {
 					"map_to":   "user",
 					"name":     "User Name",
 					"private":  false,
-					"required": false,
+					"required": true,
 					"type":     "string",
 				},
 			},

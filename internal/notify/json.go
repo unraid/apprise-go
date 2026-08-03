@@ -8,12 +8,14 @@ import (
 )
 
 var jsonMethods = map[string]struct{}{
-	"POST":   {},
-	"GET":    {},
-	"DELETE": {},
-	"PUT":    {},
-	"HEAD":   {},
-	"PATCH":  {},
+	"POST":    {},
+	"GET":     {},
+	"DELETE":  {},
+	"PUT":     {},
+	"HEAD":    {},
+	"PATCH":   {},
+	"UPDATE":  {},
+	"OPTIONS": {},
 }
 
 type JSONTarget struct {

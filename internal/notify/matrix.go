@@ -969,7 +969,7 @@ func init() {
 					"map_to":   "host",
 					"name":     "Hostname",
 					"private":  false,
-					"required": false,
+					"required": true,
 					"type":     "string",
 				},
 				"password": map[string]any{
@@ -1033,7 +1033,7 @@ func init() {
 					"map_to":   "password",
 					"name":     "Access Token",
 					"private":  true,
-					"required": false,
+					"required": true,
 					"type":     "string",
 				},
 				"user": map[string]any{

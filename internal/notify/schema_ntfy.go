@@ -151,8 +151,8 @@ func init() {
 					"required": false,
 					"type":     "bool",
 				},
-				"tags": map[string]any{
-					"map_to":   "tags",
+				"xtags": map[string]any{
+					"map_to":   "xtags",
 					"name":     "Tags",
 					"private":  false,
 					"required": false,
@@ -232,7 +232,7 @@ func init() {
 					"map_to":   "targets",
 					"name":     "Targets",
 					"private":  false,
-					"required": false,
+					"required": true,
 					"type":     "list:string",
 				},
 				"token": map[string]any{

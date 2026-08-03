@@ -356,6 +356,28 @@ func init() {
 		"category":           "native",
 		"details": map[string]any{
 			"args": map[string]any{
+				"batch": map[string]any{
+					"default":  false,
+					"map_to":   "batch",
+					"name":     "Batch Mode",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"prefix": map[string]any{
+					"map_to":   "prefix",
+					"name":     "Path Prefix",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"to": map[string]any{
+					"alias_of": "targets",
+					"delim":    []string{",", " "},
+				},
+				"token": map[string]any{
+					"alias_of": "accesstoken",
+				},
 				"cto": map[string]any{
 					"default":  4,
 					"map_to":   "cto",
@@ -432,7 +454,7 @@ func init() {
 				},
 			},
 			"kwargs":    map[string]any{},
-			"templates": []string{"{schema}://{host}/{accesstoken}", "{schema}://{host}:{port}/{accesstoken}", "{schema}://{user}@{host}/{accesstoken}", "{schema}://{user}@{host}:{port}/{accesstoken}", "{schema}://{user}:{password}@{host}/{accesstoken}", "{schema}://{user}:{password}@{host}:{port}/{accesstoken}"},
+			"templates": []string{"{schema}://{host}/{accesstoken}", "{schema}://{host}/{accesstoken}/{targets}", "{schema}://{host}:{port}/{accesstoken}", "{schema}://{host}:{port}/{accesstoken}/{targets}", "{schema}://{user}@{host}/{accesstoken}", "{schema}://{user}@{host}/{accesstoken}/{targets}", "{schema}://{user}@{host}:{port}/{accesstoken}", "{schema}://{user}@{host}:{port}/{accesstoken}/{targets}", "{schema}://{user}:{password}@{host}/{accesstoken}", "{schema}://{user}:{password}@{host}/{accesstoken}/{targets}", "{schema}://{user}:{password}@{host}:{port}/{accesstoken}", "{schema}://{user}:{password}@{host}:{port}/{accesstoken}/{targets}"},
 			"tokens": map[string]any{
 				"accesstoken": map[string]any{
 					"map_to":   "accesstoken",
@@ -471,6 +493,22 @@ func init() {
 					"required": true,
 					"type":     "choice:string",
 					"values":   []string{"hassio", "hassios"},
+				},
+				"target_device": map[string]any{
+					"map_to":   "targets",
+					"name":     "Target Device",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"targets": map[string]any{
+					"delim":    []string{"/"},
+					"group":    []string{"target_device"},
+					"map_to":   "targets",
+					"name":     "Targets",
+					"private":  false,
+					"required": false,
+					"type":     "list:string",
 				},
 				"user": map[string]any{
 					"map_to":   "user",

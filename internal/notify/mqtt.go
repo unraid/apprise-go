@@ -166,7 +166,7 @@ func init() {
 					"map_to":   "targets",
 					"name":     "Target Queue",
 					"private":  false,
-					"required": false,
+					"required": true,
 					"type":     "string",
 				},
 				"user": map[string]any{

@@ -248,7 +248,7 @@ func init() {
 					"name":     "From Phone No",
 					"private":  false,
 					"regex":    []string{"^\\+?[0-9\\s)(+-]+$", "i"},
-					"required": false,
+					"required": true,
 					"type":     "string",
 				},
 				"password": map[string]any{

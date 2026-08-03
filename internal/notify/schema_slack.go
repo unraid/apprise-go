@@ -211,7 +211,7 @@ func init() {
 					"name":     "Token A",
 					"private":  true,
 					"regex":    []string{"^[A-Z0-9]+$", "i"},
-					"required": false,
+					"required": true,
 					"type":     "string",
 				},
 				"token_b": map[string]any{
@@ -219,7 +219,7 @@ func init() {
 					"name":     "Token B",
 					"private":  true,
 					"regex":    []string{"^[A-Z0-9]+$", "i"},
-					"required": false,
+					"required": true,
 					"type":     "string",
 				},
 				"token_c": map[string]any{
@@ -227,7 +227,7 @@ func init() {
 					"name":     "Token C",
 					"private":  true,
 					"regex":    []string{"^[A-Za-z0-9]+$", "i"},
-					"required": false,
+					"required": true,
 					"type":     "string",
 				},
 			},
