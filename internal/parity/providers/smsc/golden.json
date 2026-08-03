@@ -1,0 +1,30 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "login=login&psw=password&phones=15551234567&fmt=3&mes=apprise+parity%0D%0Ahello+from+python",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "method": "POST",
+        "url": "https://smsc.ru/sys/send.php"
+      }
+    ]
+  },
+  {
+    "name": "sender-and-translit",
+    "requests": [
+      {
+        "body": "login=login&psw=password&phones=15551234567%2C15559876543&fmt=3&sender=Apprise&translit=1&mes=body",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "method": "POST",
+        "url": "https://smsc.ru/sys/send.php"
+      }
+    ]
+  }
+]

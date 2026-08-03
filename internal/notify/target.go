@@ -540,6 +540,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"sinch": func(parsed *ParsedURL) (Sender, error) {
 		return NewSinchTarget(parsed)
 	},
+	"smsc": func(parsed *ParsedURL) (Sender, error) {
+		return NewSMSCTarget(parsed)
+	},
 	"notifyre": func(parsed *ParsedURL) (Sender, error) {
 		return NewNotifyreTarget(parsed)
 	},
