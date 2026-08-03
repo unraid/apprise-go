@@ -1,0 +1,32 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "{\"bot_id\": \"botid123456789\", \"text\": \"apprise parity\\r\\nhello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.groupme.com/v3/bots/post"
+      }
+    ]
+  },
+  {
+    "name": "bot-id-query",
+    "requests": [
+      {
+        "body": "{\"bot_id\": \"botid123456789\", \"text\": \"body only\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.groupme.com/v3/bots/post"
+      }
+    ]
+  }
+]

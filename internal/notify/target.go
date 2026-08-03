@@ -540,6 +540,12 @@ var targetBuilders = map[string]buildTargetFunc{
 	"sinch": func(parsed *ParsedURL) (Sender, error) {
 		return NewSinchTarget(parsed)
 	},
+	"pushward": func(parsed *ParsedURL) (Sender, error) {
+		return NewPushWardTarget(parsed)
+	},
+	"groupme": func(parsed *ParsedURL) (Sender, error) {
+		return NewGroupMeTarget(parsed)
+	},
 	"zoom": func(parsed *ParsedURL) (Sender, error) {
 		return NewZoomTarget(parsed)
 	},

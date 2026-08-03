@@ -1,0 +1,16 @@
+[
+  {
+    "name": "default",
+    "url": "groupme://botid123456789",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "bot-id-query",
+    "url": "groupme://ignored?bot_id=botid123456789",
+    "body": "body only",
+    "title": "",
+    "type": "info"
+  }
+]

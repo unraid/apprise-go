@@ -135,6 +135,12 @@ var providerBuilders = map[string]buildTargetFunc{
 	"whatsapp": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewWhatsAppTarget(parsed)
 	},
+	"pushward": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewPushWardTarget(parsed)
+	},
+	"groupme": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewGroupMeTarget(parsed)
+	},
 	"zoom": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewZoomTarget(parsed)
 	},
