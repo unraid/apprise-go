@@ -95,6 +95,50 @@ KEEP_HEADERS = {"content-type", "accept", "accepts", "authorization"}
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
 CACHE_VERSION = 9
+# A recipient device for Matrix end-to-end encryption. Upstream verifies the
+# signatures on device keys and one-time keys before it will encrypt to a
+# device, so the mock signs them with upstream's own account implementation
+# rather than returning fixed strings that would be rejected.
+_MATRIX_E2EE_USER = "@target:example.com"
+_MATRIX_E2EE_DEVICE = "TARGETDEVICE"
+_matrix_e2ee_account = None
+
+
+def matrix_e2ee_account():
+    global _matrix_e2ee_account
+    if _matrix_e2ee_account is None:
+        from apprise.plugins.matrix.e2ee import MatrixOlmAccount
+
+        _matrix_e2ee_account = MatrixOlmAccount()
+    return _matrix_e2ee_account
+
+
+def matrix_e2ee_device_keys():
+    account = matrix_e2ee_account()
+    return {
+        "device_keys": {
+            _MATRIX_E2EE_USER: {
+                _MATRIX_E2EE_DEVICE: account.device_keys_payload(
+                    _MATRIX_E2EE_USER, _MATRIX_E2EE_DEVICE
+                )
+            }
+        }
+    }
+
+
+def matrix_e2ee_claimed_key():
+    account = matrix_e2ee_account()
+    otks = account.one_time_keys_payload(
+        _MATRIX_E2EE_USER, _MATRIX_E2EE_DEVICE, count=1
+    )
+    key_id, key_obj = next(iter(otks.items()))
+    return {
+        "one_time_keys": {
+            _MATRIX_E2EE_USER: {_MATRIX_E2EE_DEVICE: {key_id: key_obj}}
+        }
+    }
+
+
 CACHE_ENV = "APPRISE_CAPTURE_CACHE"
 CACHE_DIR_ENV = "APPRISE_CAPTURE_CACHE_DIR"
 CACHE_SUBDIR = ".tmp/pycapture"
@@ -545,6 +589,37 @@ def capture_request(url, body, title, notify_type, body_format=None):
                 b"arn:aws:sns:us-east-1:000000000000:topic"
                 b"</TopicArn></CreateTopicResult></CreateTopicResponse>"
             )
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith(
+            "/state/m.room.encryption"
+        ):
+            # Advertising encryption is what makes upstream take the E2EE path
+            response._content = b'{"algorithm":"m.megolm.v1.aes-sha2"}'
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith(
+            "/joined_members"
+        ):
+            response._content = json.dumps(
+                {"joined": {_MATRIX_E2EE_USER: {"display_name": "Target"}}}
+            ).encode("utf-8")
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith(
+            "/keys/upload"
+        ):
+            response._content = (
+                b'{"one_time_key_counts":{"signed_curve25519":50}}'
+            )
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith(
+            "/keys/query"
+        ):
+            response._content = json.dumps(matrix_e2ee_device_keys()).encode(
+                "utf-8"
+            )
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith(
+            "/keys/claim"
+        ):
+            response._content = json.dumps(matrix_e2ee_claimed_key()).encode(
+                "utf-8"
+            )
+        elif "/_matrix/client/" in parsed.path and "/sendToDevice/" in parsed.path:
+            response._content = b"{}"
         elif parsed.path == "/.well-known/matrix/client":
             base_url = f"{parsed.scheme}://{parsed.netloc}"
             response._content = json.dumps(
@@ -559,6 +634,9 @@ def capture_request(url, body, title, notify_type, body_format=None):
                     "access_token": "token",
                     "home_server": host,
                     "user_id": f"@user:{host}",
+                    # E2EE key upload is keyed on the device the server
+                    # assigns at login, so the mock must return one.
+                    "device_id": "APPRISEDEVICE",
                 }
             ).encode("utf-8")
         elif "/_matrix/client/" in parsed.path and parsed.path.endswith("/register"):
