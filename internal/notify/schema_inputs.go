@@ -800,7 +800,10 @@ func applyTokenDefaults(specs map[string]map[string]any, templates []string, val
 		if isListType(spec) {
 			continue
 		}
-		if mapTo == "targets" || mapTo == "channels" {
+		// These are filled in from the path by the plugin rather than named
+		// by any template, so upstream never emits them as an unset token.
+		switch mapTo {
+		case "targets", "channels", "workflow_path":
 			continue
 		}
 		values[name] = nil

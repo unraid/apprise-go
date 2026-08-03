@@ -8,10 +8,10 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-sogs-nonce": "nOMEJwa22+Ibdr8kj/mKrA==",
+          "x-sogs-nonce": "<volatile>",
           "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
-          "x-sogs-signature": "qigJb6m28FC/o6HcHFrX9X0EsSSP07YSkygvVIjLUnYRXRY4NIfHVQbNQ1sBMjIl+FUJ2BvvjWN5BT7w6Q+TDA==",
-          "x-sogs-timestamp": "1704067200"
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
         },
         "method": "POST",
         "url": "https://sogs.example.com/room/general/message"
@@ -27,10 +27,10 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-sogs-nonce": "lOicgdzjjzyGHM3f2dFLNA==",
+          "x-sogs-nonce": "<volatile>",
           "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
-          "x-sogs-signature": "bBzdPPENuC4bEES5Ivc2bNN5UqX+ZBlCdJUzmH7kYke1LppfIsIZqs5RfPRAQ1Vkr+h/5zJO+4ummukassXwCA==",
-          "x-sogs-timestamp": "1704067200"
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
         },
         "method": "POST",
         "url": "https://sogs.example.com/room/general/message"
@@ -41,10 +41,10 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-sogs-nonce": "UFb4YDl05h+yWupdLC9phw==",
+          "x-sogs-nonce": "<volatile>",
           "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
-          "x-sogs-signature": "MTEl60wPgJQMCQJpbcWmBOQTfuD3LpQmQOAj6tX+CYD6iFV8TgjY8MDgZFZ2kC1TlTufTkKLn3uDpNplgqWJDw==",
-          "x-sogs-timestamp": "1704067200"
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
         },
         "method": "POST",
         "url": "https://sogs.example.com/room/lounge/message"
@@ -60,10 +60,10 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-sogs-nonce": "FyFfGcBmXCnAmP/yvmsIgw==",
+          "x-sogs-nonce": "<volatile>",
           "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
-          "x-sogs-signature": "p9z0zjahnTWVQ8S2zLU94qLONoXngqs5xeg9IoP4t77Hy3C3b1dc6RCzRyZR3Ep3llyHofNnzrWZep74Fs7VAg==",
-          "x-sogs-timestamp": "1704067200"
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
         },
         "method": "POST",
         "url": "http://sogs.example.com:8080/room/general/message"
@@ -79,10 +79,10 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-sogs-nonce": "y3LtZyyFHBRsWRb/WhqEmA==",
+          "x-sogs-nonce": "<volatile>",
           "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
-          "x-sogs-signature": "1RCdMsSMoF/BlPkAF5kssys0hFXvJVA8A/caaToFzN+LeQKcywmNv0O/kqiMoOu5NY+002nLVxmIWuJT2toCDw==",
-          "x-sogs-timestamp": "1704067200"
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
         },
         "method": "POST",
         "url": "https://sogs.example.com/room/general/message"
@@ -98,10 +98,10 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-sogs-nonce": "awxV5qCl7S9X1SyOeDBbxQ==",
+          "x-sogs-nonce": "<volatile>",
           "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
-          "x-sogs-signature": "NSN+FyC15USjRvmr9Y6n7VpAcZzwC3KkhtKNbf5ifT8kPRvuJ+mvVjyL+zkco8xJx5x+p0rE1AEPIu1/YZWXDQ==",
-          "x-sogs-timestamp": "1704067200"
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
         },
         "method": "POST",
         "url": "https://sogs.example.com/room/general/message"
@@ -112,10 +112,10 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-sogs-nonce": "0yd5GtuwbD/n4k/Y5amiFg==",
+          "x-sogs-nonce": "<volatile>",
           "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
-          "x-sogs-signature": "y80vLIeBKW6FIYxUtlosSf0hJh4XU0ZUIwzHtJ3rydZMfGG7KLQNqa3HP36gw9PoremUrKHAh3FFKeGt+uF+CQ==",
-          "x-sogs-timestamp": "1704067200"
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
         },
         "method": "POST",
         "url": "https://sogs.example.com/room/lounge/message"

@@ -119,6 +119,20 @@ def main():
         if not cases:
             raise SystemExit(f"No cases in {cases_path}")
 
+        # Headers the provider cannot reproduce across runs — a signature over
+        # a random nonce, say — are written as a placeholder. Without this the
+        # golden differs on every capture and --check can never pass. The Go
+        # side only asserts these are present, never equal; what they contain
+        # is pinned by a vector test instead.
+        manifest_path = provider_dir / "manifest.json"
+        volatile_headers = set()
+        if manifest_path.exists():
+            manifest = json.loads(manifest_path.read_text())
+            volatile_headers = {
+                str(h).strip().lower()
+                for h in (manifest.get("volatile_headers") or [])
+            }
+
         golden_cases = []
         for case in cases:
             # {repo} keeps a template path in a fixture portable; apprise
@@ -132,10 +146,14 @@ def main():
                 case.get("title", ""),
                 parse_notify_type(case.get("type")),
             )
-            specs = payload.get("requests", [])
-            golden_cases.append(
-                {"name": case["name"], "requests": rewrite_values(specs)}
-            )
+            specs = rewrite_values(payload.get("requests", []))
+            if volatile_headers:
+                for spec in specs:
+                    headers = spec.get("headers") or {}
+                    for name in list(headers):
+                        if name.strip().lower() in volatile_headers:
+                            headers[name] = "<volatile>"
+            golden_cases.append({"name": case["name"], "requests": specs})
 
         golden_path = provider_dir / "golden.json"
         rendered = json.dumps(golden_cases, indent=2, sort_keys=True)
