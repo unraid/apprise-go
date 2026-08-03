@@ -1,0 +1,58 @@
+[
+  {
+    "name": "cloud-text",
+    "url": "fluxer://1234567890/abcdefghijklmnopqrstuvwxyz",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "cloud-markdown",
+    "url": "fluxer://1234567890/abcdefghijklmnopqrstuvwxyz?format=markdown",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "warning"
+  },
+  {
+    "name": "markdown-no-title",
+    "url": "fluxer://1234567890/abcdefghijklmnopqrstuvwxyz?format=markdown",
+    "body": "body only",
+    "title": "",
+    "type": "info"
+  },
+  {
+    "name": "private-host-and-port",
+    "url": "fluxers://fluxer.example.com:8443/1234567890/abcdefghijklmnopqrstuvwxyz",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "botname-tts-and-flags",
+    "url": "fluxer://bot@1234567890/abcdefghijklmnopqrstuvwxyz?tts=yes&flags=4",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "avatar-disabled",
+    "url": "fluxer://1234567890/abcdefghijklmnopqrstuvwxyz?avatar=no",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "thread-forces-markdown",
+    "url": "fluxer://1234567890/abcdefghijklmnopqrstuvwxyz?thread=999&thread_name=chat",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "href-footer-and-image",
+    "url": "fluxer://1234567890/abcdefghijklmnopqrstuvwxyz?href=https%3A%2F%2Fexample.com&footer=yes&image=yes",
+    "body": "body",
+    "title": "t",
+    "type": "success"
+  }
+]

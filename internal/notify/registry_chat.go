@@ -31,6 +31,8 @@ var chatSchemas = map[string]struct{}{
 	"session":    {},
 	"sessions":   {},
 	"sogs":       {},
+	"fluxer":     {},
+	"fluxers":    {},
 	"stackfield": {},
 	"revolt":     {},
 	"mmost":      {},

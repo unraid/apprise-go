@@ -246,6 +246,21 @@ func adjustSchemaValues(specs schemaSpecs, target *ParsedURL, values map[string]
 				values["link"] = schemaValueAny(baseURL)
 			}
 		}
+	case "ringc":
+		// Upstream always resolves a mode while parsing, guessing from the
+		// token's length when ?mode= is absent, so it is never unset.
+		if _, ok := values["mode"]; !ok {
+			token := target.Password
+			if !target.HasPassword || token == "" {
+				token = target.User
+			}
+			if override := strings.TrimSpace(target.Query["token"]); override != "" {
+				token = override
+			}
+			if mode, err := ringCentralMode("", token); err == nil {
+				values["mode"] = schemaValueAny(mode)
+			}
+		}
 	}
 }
 

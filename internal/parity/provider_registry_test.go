@@ -237,6 +237,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"sogs": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewSOGSTarget(parsed)
 	},
+	"fluxer": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewFluxerTarget(parsed)
+	},
 	"matrix": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewMatrixTarget(parsed)
 	},

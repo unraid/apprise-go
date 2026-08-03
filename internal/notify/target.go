@@ -437,6 +437,12 @@ var targetBuilders = map[string]buildTargetFunc{
 	"sogs": func(parsed *ParsedURL) (Sender, error) {
 		return NewSOGSTarget(parsed)
 	},
+	"fluxer": func(parsed *ParsedURL) (Sender, error) {
+		return NewFluxerTarget(parsed)
+	},
+	"fluxers": func(parsed *ParsedURL) (Sender, error) {
+		return NewFluxerTarget(parsed)
+	},
 	"jira": func(parsed *ParsedURL) (Sender, error) {
 		return NewJiraTarget(parsed)
 	},

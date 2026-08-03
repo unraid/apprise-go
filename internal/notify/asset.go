@@ -10,6 +10,17 @@ import (
 const appriseImageURLMask = "https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-%s-%s.png"
 const appriseDefaultColor = "#888888"
 const appriseAppURL = "https://github.com/unraid/apprise-go"
+const appriseAppDesc = "Apprise Notifications"
+
+// appriseLogoURL is the themed logo, as opposed to the per-notify-type icon
+// appriseImageURL returns. Embeds use it for a footer badge.
+func appriseLogoURL(notifyType NotifyType) string {
+	_ = notifyType
+
+	return appriseLogoImageURL
+}
+
+const appriseLogoImageURL = "https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-logo.png"
 
 func appriseImageURL(notifyType NotifyType, size string) string {
 	if size == "" {

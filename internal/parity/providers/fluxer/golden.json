@@ -1,0 +1,122 @@
+[
+  {
+    "name": "cloud-text",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"content\": \"apprise parity\\r\\nhello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.fluxer.app/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      }
+    ]
+  },
+  {
+    "name": "cloud-markdown",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-256x256.png\", \"embeds\": [{\"author\": {\"name\": \"Apprise\", \"url\": \"https://github.com/unraid/apprise-go\"}, \"description\": \"hello from python\", \"color\": 13291305, \"title\": \"apprise parity\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.fluxer.app/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      }
+    ]
+  },
+  {
+    "name": "markdown-no-title",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"embeds\": [{\"author\": {\"name\": \"Apprise\", \"url\": \"https://github.com/unraid/apprise-go\"}, \"description\": \"body only\", \"color\": 3843043}]}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.fluxer.app/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      }
+    ]
+  },
+  {
+    "name": "private-host-and-port",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"content\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://fluxer.example.com:8443/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      }
+    ]
+  },
+  {
+    "name": "botname-tts-and-flags",
+    "requests": [
+      {
+        "body": "{\"tts\": true, \"wait\": false, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"username\": \"bot\", \"content\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.fluxer.app/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      }
+    ]
+  },
+  {
+    "name": "avatar-disabled",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"content\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.fluxer.app/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      }
+    ]
+  },
+  {
+    "name": "thread-forces-markdown",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"thread_name\": \"chat\", \"embeds\": [{\"author\": {\"name\": \"Apprise\", \"url\": \"https://github.com/unraid/apprise-go\"}, \"description\": \"body\", \"color\": 3843043, \"title\": \"t\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.fluxer.app/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz?thread_id=999"
+      }
+    ]
+  },
+  {
+    "name": "href-footer-and-image",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-success-256x256.png\", \"embeds\": [{\"author\": {\"name\": \"Apprise\", \"url\": \"https://github.com/unraid/apprise-go\"}, \"description\": \"body\", \"color\": 3842871, \"title\": \"t\", \"url\": \"https://example.com\", \"footer\": {\"text\": \"Apprise Notifications\", \"icon_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-logo.png\"}, \"thumbnail\": {\"url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-success-256x256.png\", \"height\": 256, \"width\": 256}}]}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.fluxer.app/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      }
+    ]
+  }
+]
