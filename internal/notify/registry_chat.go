@@ -18,6 +18,7 @@ var chatSchemas = map[string]struct{}{
 	"rocket":     {},
 	"rockets":    {},
 	"slack":      {},
+	"chime":      {},
 	"flowtriq":   {},
 	"flowtriqs":  {},
 	"stackfield": {},

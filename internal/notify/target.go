@@ -540,6 +540,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"sinch": func(parsed *ParsedURL) (Sender, error) {
 		return NewSinchTarget(parsed)
 	},
+	"chime": func(parsed *ParsedURL) (Sender, error) {
+		return NewChimeTarget(parsed)
+	},
 	"flowtriq": func(parsed *ParsedURL) (Sender, error) {
 		return NewFlowtriqTarget(parsed)
 	},

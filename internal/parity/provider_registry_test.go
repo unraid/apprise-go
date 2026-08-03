@@ -135,6 +135,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"whatsapp": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewWhatsAppTarget(parsed)
 	},
+	"chime": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewChimeTarget(parsed)
+	},
 	"flowtriq": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewFlowtriqTarget(parsed)
 	},
