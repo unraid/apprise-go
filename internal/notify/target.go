@@ -364,9 +364,6 @@ var targetBuilders = map[string]buildTargetFunc{
 	"msgbird": func(parsed *ParsedURL) (Sender, error) {
 		return NewMessageBirdTarget(parsed)
 	},
-	"msteams": func(parsed *ParsedURL) (Sender, error) {
-		return NewMSTeamsTarget(parsed)
-	},
 	"napi": func(parsed *ParsedURL) (Sender, error) {
 		return NewNotificationAPITarget(parsed)
 	},
@@ -438,9 +435,6 @@ var targetBuilders = map[string]buildTargetFunc{
 	},
 	"plivo": func(parsed *ParsedURL) (Sender, error) {
 		return NewPlivoTarget(parsed)
-	},
-	"popcorn": func(parsed *ParsedURL) (Sender, error) {
-		return NewPopcornTarget(parsed)
 	},
 	"pover": func(parsed *ParsedURL) (Sender, error) {
 		return NewPushoverTarget(parsed)

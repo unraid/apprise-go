@@ -66,9 +66,6 @@ var providerBuilders = map[string]buildTargetFunc{
 	"nctalk": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewNextcloudTalkTarget(parsed)
 	},
-	"popcorn": func(parsed *notify.ParsedURL) (requestSender, error) {
-		return notify.NewPopcornTarget(parsed)
-	},
 	"httpsms": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewHttpSMSTarget(parsed)
 	},
@@ -149,9 +146,6 @@ var providerBuilders = map[string]buildTargetFunc{
 	},
 	"slack": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewSlackTarget(parsed)
-	},
-	"msteams": func(parsed *notify.ParsedURL) (requestSender, error) {
-		return notify.NewMSTeamsTarget(parsed)
 	},
 	"revolt": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewRevoltTarget(parsed)

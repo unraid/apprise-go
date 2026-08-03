@@ -35,7 +35,6 @@ var pushSchemas = map[string]struct{}{
 	"parseps":         {},
 	"notifiarr":       {},
 	"pbul":            {},
-	"popcorn":         {},
 	"pover":           {},
 	"prowl":           {},
 	"push":            {},

@@ -208,14 +208,6 @@ func adjustSchemaValues(specs schemaSpecs, target *ParsedURL, values map[string]
 		if _, ok := values["channels"]; !ok {
 			values["channels"] = schemaValueList([]string{})
 		}
-	case "msteams":
-		if _, ok := values["version"]; !ok {
-			if spec, ok := specs.args["version"]; ok {
-				if def, ok := specDefault(spec); ok {
-					values["version"] = schemaValueInt(coerceInt(def))
-				}
-			}
-		}
 	case "napi", "notificationapi", "sendpulse":
 		if _, ok := values["from_addr"]; !ok {
 			values["from_addr"] = schemaValueAny(nil)

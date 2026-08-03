@@ -18,7 +18,6 @@ var chatSchemas = map[string]struct{}{
 	"rocket":   {},
 	"rockets":  {},
 	"slack":    {},
-	"msteams":  {},
 	"revolt":   {},
 	"mmost":    {},
 	"mmosts":   {},
