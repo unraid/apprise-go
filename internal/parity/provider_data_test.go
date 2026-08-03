@@ -145,6 +145,16 @@ func loadProviderCases(t *testing.T, providerDir, providerName string) []provide
 		t.Fatalf("cases %s empty", casesPath)
 	}
 
+	// A case that points at a checked-in file — a payload template, say —
+	// needs an absolute path, because apprise resolves a relative one against
+	// the home directory rather than the working directory. {repo} keeps the
+	// fixture portable and is expanded before either side sees the URL.
+	repoRoot := testutil.RepoRoot(t)
+	for i := range cases {
+		cases[i].URL = strings.ReplaceAll(cases[i].URL, "%7Brepo%7D", repoRoot)
+		cases[i].URL = strings.ReplaceAll(cases[i].URL, "{repo}", repoRoot)
+	}
+
 	seen := map[string]struct{}{}
 	for _, c := range cases {
 		if strings.TrimSpace(c.Name) == "" {

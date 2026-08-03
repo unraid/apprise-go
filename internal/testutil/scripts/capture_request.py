@@ -94,7 +94,7 @@ DROP_HEADERS = {"x-apprise-id", "x-apprise-recursion-count"}
 KEEP_HEADERS = {"content-type", "accept", "accepts", "authorization"}
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
-CACHE_VERSION = 9
+CACHE_VERSION = 10
 # A recipient device for Matrix end-to-end encryption. Upstream verifies the
 # signatures on device keys and one-time keys before it will encrypt to a
 # device, so the mock signs them with upstream's own account implementation
@@ -214,6 +214,37 @@ def script_sha():
         return ""
 
 
+def referenced_file_shas(url):
+    """Return a sha for every local file the URL's query points at.
+
+    Only readable regular files are considered, so an ordinary query value
+    that happens to look like a path costs nothing.
+    """
+    try:
+        query = urlparse(url).query
+    except ValueError:
+        return {}
+
+    shas = {}
+    for key, values in parse_qs(query, keep_blank_values=True).items():
+        for value in values:
+            candidate = value.strip()
+            if not candidate:
+                continue
+            candidate = candidate[len("file://"):] if candidate.startswith("file://") else candidate
+            path = Path(candidate)
+            if not path.is_absolute():
+                path = Path.cwd() / path
+            try:
+                if not path.is_file():
+                    continue
+                shas[f"{key}:{value}"] = hashlib.sha256(path.read_bytes()).hexdigest()
+            except OSError:
+                continue
+
+    return shas
+
+
 def cache_key(url, body, title, notify_type, body_format):
     notify_name = notify_type.name if hasattr(notify_type, "name") else str(notify_type)
     try:
@@ -234,6 +265,10 @@ def cache_key(url, body, title, notify_type, body_format):
         # The mocked responses live in this script, so a change to it must
         # invalidate cached captures.
         "script_sha": script_sha(),
+        # A URL may point at a local file whose contents shape the request —
+        # a payload template, for instance. Editing that file changes the
+        # capture without changing the URL, so it has to be part of the key.
+        "referenced_files": referenced_file_shas(url),
         "python_version": sys.version,
         "requests_version": getattr(requests, "__version__", ""),
         "env": {

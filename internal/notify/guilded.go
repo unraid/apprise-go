@@ -11,15 +11,18 @@ import (
 const guildedWebhookBase = "https://media.guilded.gg/webhooks"
 
 type GuildedTarget struct {
-	webhookID    string
-	webhookToken string
-	username     string
-	tts          bool
-	avatar       bool
-	avatarURL    string
-	threadID     string
-	flags        int
-	format       string
+	webhookID      string
+	webhookToken   string
+	username       string
+	tts            bool
+	avatar         bool
+	avatarURL      string
+	threadID       string
+	flags          int
+	format         string
+	batch          bool
+	templatePath   string
+	templateTokens map[string]string
 }
 
 func NewGuildedTarget(target *ParsedURL) (*GuildedTarget, error) {
@@ -59,6 +62,12 @@ func NewGuildedTarget(target *ParsedURL) (*GuildedTarget, error) {
 		flags = value
 	}
 
+	// :key=value pairs are substituted into the template.
+	templateTokens := map[string]string{}
+	for key, value := range target.QueryPayload {
+		templateTokens[key] = value
+	}
+
 	return &GuildedTarget{
 		webhookID:    webhookID,
 		webhookToken: webhookToken,
@@ -69,6 +78,11 @@ func NewGuildedTarget(target *ParsedURL) (*GuildedTarget, error) {
 		threadID:     threadID,
 		flags:        flags,
 		format:       format,
+		// Batching only affects how attachments are grouped, which this port
+		// does not send; it is accepted so the URL round-trips.
+		batch:          parseBoolWithDefault(target.Query["batch"], true),
+		templatePath:   strings.TrimSpace(target.Query["template"]),
+		templateTokens: templateTokens,
 	}, nil
 }
 
@@ -94,7 +108,17 @@ func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		payload["username"] = g.username
 	}
 
-	if g.format == "markdown" {
+	// A template defines the whole message, so the embed and content the
+	// plugin would otherwise build are skipped entirely.
+	if g.templatePath != "" {
+		rendered, err := renderNotifyTemplate(g.templatePath, g.templateTokens, body, title, notifyType, "256x256")
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		for key, value := range rendered {
+			payload[key] = value
+		}
+	} else if g.format == "markdown" {
 		embed := map[string]any{
 			"author": map[string]any{
 				"name": "Apprise",
@@ -231,6 +255,21 @@ func init() {
 					"type":     "choice:string",
 					"values":   []string{"html", "markdown", "text"},
 				},
+				"batch": map[string]any{
+					"default":  true,
+					"map_to":   "batch",
+					"name":     "Batch Attachments",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"template": map[string]any{
+					"map_to":   "template",
+					"name":     "Template Path",
+					"private":  true,
+					"required": false,
+					"type":     "string",
+				},
 				"href": map[string]any{
 					"map_to":   "href",
 					"name":     "URL",
@@ -315,7 +354,16 @@ func init() {
 					"type":     "bool",
 				},
 			},
-			"kwargs":    map[string]any{},
+			"kwargs": map[string]any{
+				"tokens": map[string]any{
+					"map_to":   "tokens",
+					"name":     "Template Tokens",
+					"prefix":   ":",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+			},
 			"templates": []string{"{schema}://{webhook_id}/{webhook_token}", "{schema}://{botname}@{webhook_id}/{webhook_token}"},
 			"tokens": map[string]any{
 				"botname": map[string]any{

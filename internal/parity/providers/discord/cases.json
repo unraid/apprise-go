@@ -12,5 +12,19 @@
     "body": "body",
     "title": "",
     "type": "info"
+  },
+  {
+    "name": "template-payload",
+    "url": "discord://1234567890/abcdefghijklmnopqrstuvwxyz?template=%7Brepo%7D%2Finternal%2Fparity%2Ffixtures%2Fdiscord_template.json&:mytoken=hello",
+    "body": "body text",
+    "title": "the title",
+    "type": "warning"
+  },
+  {
+    "name": "batch-off",
+    "url": "discord://1234567890/abcdefghijklmnopqrstuvwxyz?batch=no",
+    "body": "body",
+    "title": "t",
+    "type": "info"
   }
 ]

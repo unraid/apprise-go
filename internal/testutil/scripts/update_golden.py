@@ -121,8 +121,13 @@ def main():
 
         golden_cases = []
         for case in cases:
+            # {repo} keeps a template path in a fixture portable; apprise
+            # resolves a relative path against the home directory, so the URL
+            # has to carry an absolute one by the time it is parsed.
+            case_url = case["url"].replace("%7Brepo%7D", str(repo_root))
+            case_url = case_url.replace("{repo}", str(repo_root))
             payload = capture_request(
-                case["url"],
+                case_url,
                 case.get("body", ""),
                 case.get("title", ""),
                 parse_notify_type(case.get("type")),

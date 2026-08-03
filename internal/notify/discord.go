@@ -11,15 +11,18 @@ import (
 const discordWebhookBase = "https://discord.com/api/webhooks"
 
 type DiscordTarget struct {
-	webhookID    string
-	webhookToken string
-	username     string
-	tts          bool
-	avatar       bool
-	avatarURL    string
-	threadID     string
-	flags        int
-	format       string
+	webhookID      string
+	webhookToken   string
+	username       string
+	tts            bool
+	avatar         bool
+	avatarURL      string
+	threadID       string
+	flags          int
+	format         string
+	batch          bool
+	templatePath   string
+	templateTokens map[string]string
 }
 
 func NewDiscordTarget(target *ParsedURL) (*DiscordTarget, error) {
@@ -59,6 +62,12 @@ func NewDiscordTarget(target *ParsedURL) (*DiscordTarget, error) {
 		flags = value
 	}
 
+	// :key=value pairs are substituted into the template.
+	templateTokens := map[string]string{}
+	for key, value := range target.QueryPayload {
+		templateTokens[key] = value
+	}
+
 	return &DiscordTarget{
 		webhookID:    webhookID,
 		webhookToken: webhookToken,
@@ -69,6 +78,11 @@ func NewDiscordTarget(target *ParsedURL) (*DiscordTarget, error) {
 		threadID:     threadID,
 		flags:        flags,
 		format:       format,
+		// Batching only affects how attachments are grouped, which this port
+		// does not send; it is accepted so the URL round-trips.
+		batch:          parseBoolWithDefault(target.Query["batch"], true),
+		templatePath:   strings.TrimSpace(target.Query["template"]),
+		templateTokens: templateTokens,
 	}, nil
 }
 
@@ -94,7 +108,17 @@ func (d *DiscordTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		payload["username"] = d.username
 	}
 
-	if d.format == "markdown" {
+	// A template defines the whole message, so the embed and content the
+	// plugin would otherwise build are skipped entirely.
+	if d.templatePath != "" {
+		rendered, err := renderNotifyTemplate(d.templatePath, d.templateTokens, body, title, notifyType, "256x256")
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		for key, value := range rendered {
+			payload[key] = value
+		}
+	} else if d.format == "markdown" {
 		embed := map[string]any{
 			"author": map[string]any{
 				"name": "Apprise",
