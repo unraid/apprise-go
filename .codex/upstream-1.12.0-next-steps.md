@@ -2,7 +2,7 @@
 
 Branch: `feat/upstream-1.12.0` (PR #84). Everything described as done is pushed.
 
-Where things stand: 22 services ported this pass, missing schemas 36 → 10.
+Where things stand: 26 services ported this pass, missing schemas 36 → 5.
 `TestProviderRequestParity` and `TestProviderGoldenRequests` have been green
 after every commit, and that is the bar for anything added below.
 
@@ -30,56 +30,60 @@ Fixtures have caught a wrong assumption on nearly every provider — a missing
 `charset=utf-8`, a 201 instead of 200, a default mode that was not the one in
 the docs. Write the case first and let it tell you.
 
-## Remaining 10, by what they actually cost
+## Remaining 5, by what they actually cost
 
-`kook`, `jira`, `wechat` and `ringc` are done. The token-lifecycle worry about
-the latter two turned out to be smaller than it looked: both fetch their token
-in the same send, so a single-shot case captures the whole flow. Neither
-caches, matching what upstream does against a cold store.
+Everything that was a straightforward HTTP port is done. `kook`, `jira`,
+`wechat`, `ringc`, `sogs`/`session`/`sessions` and `fluxer`/`fluxers` all
+landed with full request parity.
 
-### Larger (2 schemas)
+### irc / ircs — no dependency needed after all (2 schemas)
 
-`fluxer` / `fluxers`, 1122 lines. No new mechanism, just volume.
+Correcting an earlier note in this file: this does **not** need an IRC client
+library. Upstream implements the protocol itself across `protocol.py`,
+`state.py` and `client.py` — 1442 lines, no `packages_required`. So the pure-Go
+static build is not at risk, and no decision is needed to start.
 
-### Request signing (3 schemas)
+What it does need is real work, because IRC is stateful in a way none of the
+ported providers are:
 
-`sogs`, `session` / `sessions` — Ed25519 plus blake2b in `X-SOGS-*` headers.
+- Registration: `PASS` (server/znc auth modes only), `NICK`, `USER`, then wait
+  for the welcome numeric.
+- Nick collision — retry with a modified nick on 433.
+- `PING`/`PONG` keepalive throughout.
+- `JOIN` per channel, waiting for confirmation and handling the join-error
+  numerics in `state.py`'s `JOIN_ERRORS`.
+- NickServ auth mode: no `PASS` at registration, `PRIVMSG NickServ :IDENTIFY`
+  afterwards.
+- `PRIVMSG` per target, then `QUIT`.
 
-Better news than expected after reading it: `golang.org/x/crypto` is already a
-dependency so blake2b is free, the protobuf message build has no random
-padding, and Ed25519 signing is deterministic — which makes the whole request
-*body* byte-comparable.
+Parity needs a fake IRC server rather than the HTTP harness — but that pattern
+already exists. `internal/parity/smpp_parity_test.go` stands up a Go listener,
+runs both implementations against it and compares the captured frames;
+`capture_smpp.py` and `capture_rsyslog.py` are the Python halves. IRC is a
+plain-text line protocol, so the comparison is easier than SMPP's binary PDUs.
+The fake server has to answer with the right numerics or neither side gets
+past registration.
 
-What is not comparable is the four `X-SOGS-*` headers: the signature covers a
-random 16-byte nonce and the current timestamp. The harness compares every
-`x-`-prefixed header strictly, so it needs a way to assert a header is present
-without pinning its value, plus a checked-in vector — nonce and timestamp
-pinned on both sides — proving the signing construction itself. That is the
-Matrix technique, and it is the only thing that catches a wrong signature: the
-server rejects it, a diff does not show it.
+Budget this as its own session. It is the largest remaining item.
 
-### Token lifecycle: resolved
+### Needs a decision from you (3 schemas)
 
-Worth recording since the concern was raised and turned out wrong. Neither
-`wechat` nor `ringc` needed a multi-send harness mode. Upstream caches in its
-persistent store, the Go port has none, and a fresh store behaves identically —
-so the two agree request-for-request on a single send. If a store ever lands,
-these are the two to revisit.
+These two genuinely cost the pure-Go static build, which is why I have not
+picked for you:
 
-### Needs a dependency decision from you (5 schemas)
+- `blink1` — upstream requires `hidapi`. USB HID means cgo, or reimplementing
+  HID in userspace. It is a physical USB light on the machine running Apprise,
+  so it is also the least likely of anything here to be used through a Go
+  port in a container.
+- `xmpp` / `xmpps` — upstream requires `slixmpp`, 1730 lines around it. A Go
+  XMPP library exists but is a real dependency; writing enough XMPP in-tree is
+  considerably more than IRC.
 
-These are blocked on a call I should not make alone, because each one costs
-the static cross-compile story that makes this port deployable:
-
-- `blink1` — USB HID. Needs a HID library with cgo, or a userspace
-  reimplementation.
-- `irc` / `ircs` — an IRC client library, or writing enough of the protocol.
-- `xmpp` / `xmpps` — same shape, larger protocol.
-
-Options, roughly: take the dependency and lose pure-Go static builds; build
-minimal protocol clients in-tree; or declare these three out of scope and
-document them as unsupported. Worth noting the schema-coverage test will keep
-failing until they are either ported or explicitly excluded.
+The options are the same for both: take the dependency, build it in-tree, or
+declare them unsupported and exclude them from `TestSchemaCoverage` so the
+test goes green on a documented gap rather than an open one. My read is that
+`blink1` is the easiest to drop and `xmpp` the most defensible to take a
+dependency for, but it is your call.
 
 ## Two things not in the schema count
 
@@ -102,6 +106,11 @@ Do not remove these; each one exists because something got through.
   ways. Before this, an empty golden was always treated as a broken capture,
   which made "upstream deliberately sends no request" untestable — and that is
   exactly where the Opsgenie action-mapping bug was hiding.
+- A manifest may declare `volatile_headers` for values that cannot be
+  reproduced across runs, such as SOGS signing a random nonce and the current
+  time. They are asserted present, never equal. Anything listed there owes a
+  pinned vector test proving how it is built — `sogs_vectors_test.go` is the
+  model — because nothing else checks its contents.
 - `internal/tools/parity_report` — writes a "Work Outstanding" section listing
   failing providers, and the sync workflow puts it in the PR body. The drift
   to 1.12.0 happened in the first place because the sync workflow was disabled
