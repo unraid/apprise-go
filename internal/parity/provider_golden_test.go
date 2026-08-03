@@ -21,7 +21,7 @@ func TestProviderGoldenRequests(t *testing.T) {
 
 	for _, name := range sortedProviderNames(defs) {
 		def := defs[name]
-		golden := loadProviderGolden(t, def.Dir)
+		golden := loadProviderGolden(t, def.Dir, def.Cases)
 		goldenByName := map[string]goldenCase{}
 		for _, g := range golden {
 			goldenByName[g.Name] = g
@@ -69,8 +69,13 @@ func TestProviderGoldenRequests(t *testing.T) {
 	}
 }
 
-func loadProviderGolden(t *testing.T, providerDir string) []goldenCase {
+func loadProviderGolden(t *testing.T, providerDir string, defined []providerCase) []goldenCase {
 	t.Helper()
+
+	sendsNothing := map[string]bool{}
+	for _, c := range defined {
+		sendsNothing[c.Name] = c.SendsNothing
+	}
 
 	goldenPath := filepath.Join(providerDir, "golden.json")
 	data, err := os.ReadFile(goldenPath)
@@ -96,8 +101,13 @@ func loadProviderGolden(t *testing.T, providerDir string) []goldenCase {
 			t.Fatalf("golden %s has duplicate name %s", goldenPath, c.Name)
 		}
 		seen[c.Name] = struct{}{}
-		if len(c.Requests) == 0 {
-			t.Fatalf("golden %s missing requests for %s", goldenPath, c.Name)
+		switch {
+		case len(c.Requests) == 0 && !sendsNothing[c.Name]:
+			t.Fatalf("golden %s missing requests for %s; if upstream really "+
+				"sends nothing here, mark the case sends_nothing", goldenPath, c.Name)
+		case len(c.Requests) > 0 && sendsNothing[c.Name]:
+			t.Fatalf("golden %s has %d requests for %s but the case is marked "+
+				"sends_nothing", goldenPath, len(c.Requests), c.Name)
 		}
 	}
 

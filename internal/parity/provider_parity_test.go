@@ -13,7 +13,7 @@ func TestProviderRequestParity(t *testing.T) {
 
 	for _, name := range sortedProviderNames(defs) {
 		def := defs[name]
-		golden := loadProviderGolden(t, def.Dir)
+		golden := loadProviderGolden(t, def.Dir, def.Cases)
 		goldenByName := map[string]goldenCase{}
 		for _, g := range golden {
 			goldenByName[g.Name] = g
