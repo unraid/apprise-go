@@ -2,7 +2,7 @@
 
 Branch: `feat/upstream-1.12.0` (PR #84). Everything described as done is pushed.
 
-Where things stand: 26 services ported this pass, missing schemas 36 → 5.
+Where things stand: 27 services ported this pass, missing schemas 36 → 0.
 `TestProviderRequestParity` and `TestProviderGoldenRequests` have been green
 after every commit, and that is the bar for anything added below.
 
@@ -30,105 +30,68 @@ Fixtures have caught a wrong assumption on nearly every provider — a missing
 `charset=utf-8`, a 201 instead of 200, a default mode that was not the one in
 the docs. Write the case first and let it tell you.
 
-## Remaining 5, by what they actually cost
+## What is left
 
-Everything that was a straightforward HTTP port is done. `kook`, `jira`,
-`wechat`, `ringc`, `sogs`/`session`/`sessions` and `fluxer`/`fluxers` all
-landed with full request parity.
+The whole test suite passes. Missing schemas are zero, metadata drift is zero,
+and provider request parity is green.
 
-### irc / ircs — no dependency needed after all (2 schemas)
+### Deliberate gaps
 
-Correcting an earlier note in this file: this does **not** need an IRC client
-library. Upstream implements the protocol itself across `protocol.py`,
-`state.py` and `client.py` — 1442 lines, no `packages_required`. So the pure-Go
-static build is not at risk, and no decision is needed to start.
+Three schemas are declared unsupported in `internal/notify/unsupported.go`,
+which every suite defers to. Removing an entry there is how you turn one back
+into a test failure.
 
-What it does need is real work, because IRC is stateful in a way none of the
-ported providers are:
+- `blink1` — a USB HID device on the machine running Apprise. Supporting it
+  means cgo and a HID library, costing the pure-Go static build, and it is the
+  least likely of anything here to be reached through a Go port in a container.
+- `irc` / `ircs` — no dependency needed, since upstream implements the protocol
+  itself. What it needs is a stateful client (registration, nick collision,
+  PING/PONG, JOIN confirmation, NickServ) and a fake IRC server for parity.
+  `internal/parity/smpp_parity_test.go` is the pattern: stand up a Go listener,
+  run both implementations against it, compare the frames.
 
-- Registration: `PASS` (server/znc auth modes only), `NICK`, `USER`, then wait
-  for the welcome numeric.
-- Nick collision — retry with a modified nick on 433.
-- `PING`/`PONG` keepalive throughout.
-- `JOIN` per channel, waiting for confirmation and handling the join-error
-  numerics in `state.py`'s `JOIN_ERRORS`.
-- NickServ auth mode: no `PASS` at registration, `PRIVMSG NickServ :IDENTIFY`
-  afterwards.
-- `PRIVMSG` per target, then `QUIT`.
+Two comparisons also exclude `attachment_support`, because this port sends no
+attachments for any service. Implementing them is the way to remove that
+exclusion; both places say so inline.
 
-Parity needs a fake IRC server rather than the HTTP harness — but that pattern
-already exists. `internal/parity/smpp_parity_test.go` stands up a Go listener,
-runs both implementations against it and compares the captured frames;
-`capture_smpp.py` and `capture_rsyslog.py` are the Python halves. IRC is a
-plain-text line protocol, so the comparison is easier than SMPP's binary PDUs.
-The fake server has to answer with the right numerics or neither side gets
-past registration.
+### XMPP is unverified against upstream
 
-Budget this as its own session. It is the largest remaining item.
+`xmpp` and `xmpps` are implemented on `mellium.im/xmpp` and are listed in
+`non_http_schemas.go`, so no fixture compares them to upstream. That is honest
+about the harness — an XML stream over a raw socket is invisible to an HTTP
+capture — but it does mean the wire format has not been checked the way every
+HTTP provider has. A fake XMPP server, again modelled on the SMPP test, is
+what would close that.
 
-### Needs a decision from you (3 schemas)
+Not covered either: `?roster=`, `?keepalive=` and SCRAM-PLUS channel binding
+(`?scramplus=`). The arguments parse and round-trip; the behaviour behind them
+does not exist.
 
-These two genuinely cost the pure-Go static build, which is why I have not
-picked for you:
+### Matrix e2ee has one harness gap
 
-- `blink1` — upstream requires `hidapi`. USB HID means cgo, or reimplementing
-  HID in userspace. It is a physical USB light on the machine running Apprise,
-  so it is also the least likely of anything here to be used through a Go
-  port in a container.
-- `xmpp` / `xmpps` — upstream requires `slixmpp`, 1730 lines around it. A Go
-  XMPP library exists but is a real dependency; writing enough XMPP in-tree is
-  considerably more than IRC.
+The encrypted path works and is tested Go-side — request ordering, no
+plaintext leak, forged device signatures rejected — but it has no Python
+fixture. Upstream's e2ee flow does not terminate under the frozen clock the
+golden harness pins, so an encrypting capture hangs. See
+`internal/parity/providers/matrix/README.md`. A per-provider opt-out from the
+frozen clock would let that case come back.
 
-The options are the same for both: take the dependency, build it in-tree, or
-declare them unsupported and exclude them from `TestSchemaCoverage` so the
-test goes green on a documented gap rather than an open one. My read is that
-`blink1` is the easiest to drop and `xmpp` the most defensible to take a
-dependency for, but it is your call.
+### Worth doing next
 
-## Two things not in the schema count
-
-- **Matrix e2ee** — crypto is done and vector-verified, harness oracle is
-  ready, provider flow is not written. See `matrix-e2ee-wip.md`, which has the
-  traps already paid for.
-
-  The real blocker is a **persistent store**, which this port does not have.
-  Upstream keeps `e2ee_account`, `device_id`, `access_token` and
-  `transaction_id` in it. Without somewhere to keep them, every notification
-  would register a fresh device: recipients would see a new unverified device
-  each time, and nothing sent under a previous identity stays readable. So
-  the store has to land before the flow is worth writing.
-
-  This is also why the matrix schema drift is still open. Upstream defaults
-  `e2ee` to **true**, and declaring that while sending plaintext is the exact
-  thing this file warns against elsewhere. There is a decision to make and it
-  is not mine:
-
-  1. Build the persistent store, then the e2ee flow. Correct, largest.
-  2. Declare the arguments and **refuse to send** into an encrypted room when
-     e2ee is on. Honest and small, but with the default being on it would stop
-     delivery for anyone currently notifying an encrypted room — those
-     messages land today, just unencrypted.
-  3. Declare the arguments and honour `e2ee=no` only, treating unset as off.
-     Keeps everyone working, but the metadata would then claim a default the
-     implementation does not follow.
-
-  My preference is (1) if the store is wanted anyway — several providers
-  would benefit, wechat and ringc among them — and (2) otherwise. What I did
-  not want to do was pick (3) quietly.
-- **Schema drift: 17 → 2.** azure/o365 (personal mode, reply_to, savesent),
-  discord/guilded (payload templates, batch), mailto(s) (PGP shape),
-  mastodon(s)/toot(s) (ping), mmost(s) (bot mode), slack (Workflow Builder),
-  webex/wxteams (bot mode) are all done, each with the behaviour behind it and
-  request parity against upstream.
-
-  Only **matrix / matrixs** remain, and they are blocked on something
-  structural rather than on volume. See below.
+- Attachments. Ten providers advertise support upstream that this port does
+  not have, and it is the one exclusion that covers real functionality rather
+  than a single service.
+- The persistent store now exists, so `wechat` and `ringc` could cache their
+  tokens instead of refetching on every send.
 
 ## Guardrails that now exist
 
 Do not remove these; each one exists because something got through.
 
 - `registry_consistency_test.go` — the three-way registration check.
+- `internal/notify/unsupported.go` declares the schemas the port does not
+  implement, and every suite defers to it, so the reasoning lives in one place
+  rather than being re-argued per test.
 - `capture_request.py` cache key includes the harness script hash. Without it
   the cache served stale results and inflated failure counts.
 - A case may declare `sends_nothing`, and the golden loader checks it both
