@@ -90,10 +90,39 @@ dependency for, but it is your call.
 - **Matrix e2ee** — crypto is done and vector-verified, harness oracle is
   ready, provider flow is not written. See `matrix-e2ee-wip.md`, which has the
   traps already paid for.
-- **17 feature-backed schema drifts** — azure, discord, guilded, mailto(s),
-  mastodon(s)/toot(s), matrix(s), mmost(s), o365, slack, webex, wxteams. These
-  have entries but are missing 1.12.0 arguments that need real behaviour
-  behind them, not just metadata.
+
+  The real blocker is a **persistent store**, which this port does not have.
+  Upstream keeps `e2ee_account`, `device_id`, `access_token` and
+  `transaction_id` in it. Without somewhere to keep them, every notification
+  would register a fresh device: recipients would see a new unverified device
+  each time, and nothing sent under a previous identity stays readable. So
+  the store has to land before the flow is worth writing.
+
+  This is also why the matrix schema drift is still open. Upstream defaults
+  `e2ee` to **true**, and declaring that while sending plaintext is the exact
+  thing this file warns against elsewhere. There is a decision to make and it
+  is not mine:
+
+  1. Build the persistent store, then the e2ee flow. Correct, largest.
+  2. Declare the arguments and **refuse to send** into an encrypted room when
+     e2ee is on. Honest and small, but with the default being on it would stop
+     delivery for anyone currently notifying an encrypted room — those
+     messages land today, just unencrypted.
+  3. Declare the arguments and honour `e2ee=no` only, treating unset as off.
+     Keeps everyone working, but the metadata would then claim a default the
+     implementation does not follow.
+
+  My preference is (1) if the store is wanted anyway — several providers
+  would benefit, wechat and ringc among them — and (2) otherwise. What I did
+  not want to do was pick (3) quietly.
+- **Schema drift: 17 → 2.** azure/o365 (personal mode, reply_to, savesent),
+  discord/guilded (payload templates, batch), mailto(s) (PGP shape),
+  mastodon(s)/toot(s) (ping), mmost(s) (bot mode), slack (Workflow Builder),
+  webex/wxteams (bot mode) are all done, each with the behaviour behind it and
+  request parity against upstream.
+
+  Only **matrix / matrixs** remain, and they are blocked on something
+  structural rather than on volume. See below.
 
 ## Guardrails that now exist
 
