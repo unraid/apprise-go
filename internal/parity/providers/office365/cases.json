@@ -10,5 +10,41 @@
     "url": "o365://sender@example.com/tenant123/client123/secret123/target@example.com",
     "body": "hello",
     "title": "Test Subject"
+  },
+  {
+    "name": "savesent-off",
+    "url": "azure://sender@example.com/tenant123/client123/secret123/target@example.com?savesent=no",
+    "body": "hello",
+    "title": "t"
+  },
+  {
+    "name": "reply-to",
+    "url": "azure://sender@example.com/tenant123/client123/secret123/target@example.com?reply_to=reply@example.com",
+    "body": "hello",
+    "title": "t"
+  },
+  {
+    "name": "reply-to-multiple",
+    "url": "azure://sender@example.com/tenant123/client123/secret123/target@example.com?reply_to=a@example.com,b@example.com",
+    "body": "hello",
+    "title": "t"
+  },
+  {
+    "name": "personal-mode-auto-detected",
+    "url": "azure://sender@outlook.com/client123/refreshtoken123/target@example.com",
+    "body": "hello",
+    "title": "t"
+  },
+  {
+    "name": "personal-mode-explicit",
+    "url": "azure://sender@example.com/client123/refreshtoken123/target@example.com?mode=personal",
+    "body": "hello",
+    "title": "t"
+  },
+  {
+    "name": "org-mode-explicit-on-consumer-domain",
+    "url": "azure://sender@outlook.com/tenant123/client123/secret123/target@example.com?mode=org",
+    "body": "hello",
+    "title": "t"
   }
 ]
