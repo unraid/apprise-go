@@ -214,6 +214,13 @@ var targetBuilders = map[string]buildTargetFunc{
 	"elks": func(parsed *ParsedURL) (Sender, error) {
 		return NewFortySixElksTarget(parsed)
 	},
+	// Jellyfin kept Emby's endpoints, so it shares the target.
+	"jellyfin": func(parsed *ParsedURL) (Sender, error) {
+		return NewEmbyTarget(parsed)
+	},
+	"jellyfins": func(parsed *ParsedURL) (Sender, error) {
+		return NewEmbyTarget(parsed)
+	},
 	"emby": func(parsed *ParsedURL) (Sender, error) {
 		return NewEmbyTarget(parsed)
 	},

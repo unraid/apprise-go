@@ -1,0 +1,4 @@
+{
+  "name": "jellyfin",
+  "schemas": ["jellyfin", "jellyfins"]
+}

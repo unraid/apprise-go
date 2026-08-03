@@ -38,7 +38,9 @@ func NewEmbyTarget(target *ParsedURL) (*EmbyTarget, error) {
 	if user == "" {
 		return nil, fmt.Errorf("missing user")
 	}
-	secure := strings.EqualFold(target.Scheme, "embys")
+	// Jellyfin is a fork that kept Emby's endpoints, so it shares this target
+	// and only differs by scheme name.
+	secure := strings.EqualFold(target.Scheme, "embys") || strings.EqualFold(target.Scheme, "jellyfins")
 	port := target.Port
 	if port == 0 {
 		port = embyDefaultPort

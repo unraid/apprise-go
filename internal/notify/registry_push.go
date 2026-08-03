@@ -12,6 +12,8 @@ var pushSchemas = map[string]struct{}{
 	"enigma2":         {},
 	"enigma2s":        {},
 	"emby":            {},
+	"jellyfin":        {},
+	"jellyfins":       {},
 	"embys":           {},
 	"fcm":             {},
 	"hassio":          {},

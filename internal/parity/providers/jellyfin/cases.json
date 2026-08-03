@@ -1,0 +1,14 @@
+[
+  {
+    "name": "modal",
+    "url": "jellyfin://user:pass@emby.local?modal=yes",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "jellyfins-default",
+    "url": "jellyfins://user:pass@emby.local?modal=yes",
+    "body": "hello from python",
+    "title": "apprise parity"
+  }
+]
