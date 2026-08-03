@@ -12,5 +12,47 @@
     "body": "body",
     "title": "title",
     "type": "success"
+  },
+  {
+    "name": "bot-single-room",
+    "url": "wxteams://botaccesstoken123/Y2lzY29zcGFyazovL3VzL1JPT00vYWJj",
+    "body": "hello",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "bot-multiple-rooms",
+    "url": "wxteams://botaccesstoken123/room1/room2",
+    "body": "body",
+    "title": "",
+    "type": "warning"
+  },
+  {
+    "name": "bot-to-alias",
+    "url": "wxteams://botaccesstoken123?to=room1/room2",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "bot-text-format",
+    "url": "wxteams://botaccesstoken123/room1?format=text",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "explicit-webhook-mode",
+    "url": "wxteams://cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc?mode=webhook",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "webhook-text-format",
+    "url": "wxteams://dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd?format=text",
+    "body": "body",
+    "title": "t",
+    "type": "info"
   }
 ]

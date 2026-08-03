@@ -28,5 +28,121 @@
         "url": "https://api.ciscospark.com/v1/webhooks/incoming//bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       }
     ]
+  },
+  {
+    "name": "bot-single-room",
+    "requests": [
+      {
+        "body": "{\"roomId\": \"Y2lzY29zcGFyazovL3VzL1JPT00vYWJj\", \"markdown\": \"t\\r\\nhello\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      }
+    ]
+  },
+  {
+    "name": "bot-multiple-rooms",
+    "requests": [
+      {
+        "body": "{\"roomId\": \"room1\", \"markdown\": \"body\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      },
+      {
+        "body": "{\"roomId\": \"room2\", \"markdown\": \"body\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      }
+    ]
+  },
+  {
+    "name": "bot-to-alias",
+    "requests": [
+      {
+        "body": "{\"roomId\": \"room1\", \"markdown\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      },
+      {
+        "body": "{\"roomId\": \"room2\", \"markdown\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      }
+    ]
+  },
+  {
+    "name": "bot-text-format",
+    "requests": [
+      {
+        "body": "{\"roomId\": \"room1\", \"text\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      }
+    ]
+  },
+  {
+    "name": "explicit-webhook-mode",
+    "requests": [
+      {
+        "body": "{\"markdown\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.ciscospark.com/v1/webhooks/incoming//cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    ]
+  },
+  {
+    "name": "webhook-text-format",
+    "requests": [
+      {
+        "body": "{\"text\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.ciscospark.com/v1/webhooks/incoming//dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    ]
   }
 ]
