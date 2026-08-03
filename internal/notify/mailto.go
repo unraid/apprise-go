@@ -135,7 +135,7 @@ func init() {
 					"type":     "list:string",
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -192,7 +192,7 @@ func init() {
 				},
 			},
 			// The {user}@{host}/{targets} entry really is listed twice upstream.
-			"templates": []string{"{schema}://{host}", "{schema}://{host}:{port}", "{schema}://{host}/{targets}", "{schema}://{host}:{port}/{targets}", "{schema}://{user}@{host}", "{schema}://{user}@{host}:{port}", "{schema}://{user}@{host}/{targets}", "{schema}://{user}@{host}/{targets}", "{schema}://{user}@{host}:{port}/{targets}", "{schema}://{user}:{password}@{host}", "{schema}://{user}:{password}@{host}:{port}", "{schema}://{user}:{password}@{host}/{targets}", "{schema}://{user}:{password}@{host}:{port}/{targets}"},
+			"templates": []string{"{schema}://{host}", "{schema}://{host}:{port}", "{schema}://{host}:{port}/{targets}", "{schema}://{host}/{targets}", "{schema}://{user}@{host}", "{schema}://{user}@{host}/{targets}", "{schema}://{user}@{host}:{port}", "{schema}://{user}@{host}/{targets}", "{schema}://{user}@{host}:{port}/{targets}", "{schema}://{user}:{password}@{host}", "{schema}://{user}:{password}@{host}/{targets}", "{schema}://{user}:{password}@{host}:{port}", "{schema}://{user}:{password}@{host}:{port}/{targets}"},
 			"tokens": map[string]any{
 				"host": map[string]any{
 					"map_to":   "host",

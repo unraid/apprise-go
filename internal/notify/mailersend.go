@@ -342,6 +342,7 @@ func init() {
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
+		"protocols":        nil,
 		"secure_protocols": []string{"mailersend"},
 		"service_name":     "MailerSend",
 		"service_url":      "https://www.mailersend.com/",

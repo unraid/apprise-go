@@ -314,15 +314,16 @@ func init() {
 				},
 			},
 		},
-		"enabled":   true,
-		"protocols": []string{"pushward"},
+		"enabled": true,
 		"requirements": map[string]any{
 			"details":              "",
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
-		"service_name": "PushWard",
-		"service_url":  "https://pushward.app/",
-		"setup_url":    "https://appriseit.com/services/pushward/",
+		"protocols":        nil,
+		"secure_protocols": []string{"pushward"},
+		"service_name":     "PushWard",
+		"service_url":      "https://pushward.app/",
+		"setup_url":        "https://appriseit.com/services/pushward/",
 	})
 }

@@ -504,7 +504,7 @@ func init() {
 		"requirements": map[string]any{
 			"details":              "",
 			"packages_recommended": []any{},
-			"packages_required":    []any{"slixmpp"},
+			"packages_required":    []any{"slixmpp >= 1.16.0"},
 		},
 		"secure_protocols": []string{"xmpps"},
 		"service_name":     "XMPP",

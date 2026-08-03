@@ -350,15 +350,16 @@ func init() {
 				},
 			},
 		},
-		"enabled":   true,
-		"protocols": []string{"postmark"},
+		"enabled": true,
 		"requirements": map[string]any{
 			"details":              "",
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
-		"service_name": "Postmark",
-		"service_url":  "https://postmarkapp.com/",
-		"setup_url":    "https://appriseit.com/services/postmark/",
+		"protocols":        nil,
+		"secure_protocols": []string{"postmark"},
+		"service_name":     "Postmark",
+		"service_url":      "https://postmarkapp.com/",
+		"setup_url":        "https://appriseit.com/services/postmark/",
 	})
 }

@@ -7,7 +7,7 @@ func init() {
 		"details": map[string]any{
 			"args": map[string]any{
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -58,7 +58,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -134,13 +134,13 @@ func init() {
 			},
 		},
 		"enabled":   true,
-		"protocols": []string{"xbmc", "kodi"},
+		"protocols": []string{"kodi", "xbmc"},
 		"requirements": map[string]any{
 			"details":              "",
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
-		"secure_protocols": []string{"xbmcs", "kodis"},
+		"secure_protocols": []string{"kodis", "xbmcs"},
 		"service_name":     "Kodi/XBMC",
 		"service_url":      "http://kodi.tv/",
 		"setup_url":        "https://appriseit.com/services/kodi/",

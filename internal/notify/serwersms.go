@@ -331,9 +331,10 @@ func init() {
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
+		"protocols":        nil,
 		"secure_protocols": []string{"serwersms"},
 		"service_name":     "SerwerSMS",
-		"service_url":      "https://serwersms.pl/",
+		"service_url":      "https://serwersms.pl",
 		"setup_url":        "https://appriseit.com/services/serwersms/",
 	})
 }

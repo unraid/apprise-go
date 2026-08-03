@@ -395,6 +395,7 @@ func init() {
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
+		"protocols":        nil,
 		"secure_protocols": []string{"wechat"},
 		"service_name":     "WeChat (WeCom)",
 		"service_url":      "https://work.weixin.qq.com/",

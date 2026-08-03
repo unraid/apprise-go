@@ -428,7 +428,7 @@ func init() {
 		"requirements": map[string]any{
 			"details":              "",
 			"packages_recommended": []any{},
-			"packages_required":    []any{},
+			"packages_required":    []any{"cryptography"},
 		},
 		"secure_protocols": []string{"sessions", "sogs"},
 		"service_name":     "Session Open Group Server",

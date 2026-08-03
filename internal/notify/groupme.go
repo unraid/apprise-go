@@ -211,15 +211,16 @@ func init() {
 				},
 			},
 		},
-		"enabled":   true,
-		"protocols": []string{"groupme"},
+		"enabled": true,
 		"requirements": map[string]any{
 			"details":              "",
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
-		"service_name": "GroupMe",
-		"service_url":  "https://groupme.com/",
-		"setup_url":    "https://appriseit.com/services/groupme/",
+		"protocols":        nil,
+		"secure_protocols": []string{"groupme"},
+		"service_name":     "GroupMe",
+		"service_url":      "https://groupme.com/",
+		"setup_url":        "https://appriseit.com/services/groupme/",
 	})
 }

@@ -290,15 +290,16 @@ func init() {
 				},
 			},
 		},
-		"enabled":   true,
-		"protocols": []string{"viber"},
+		"enabled": true,
 		"requirements": map[string]any{
 			"details":              "",
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
-		"service_name": "Viber",
-		"service_url":  "https://www.viber.com/",
-		"setup_url":    "https://appriseit.com/services/viber/",
+		"protocols":        nil,
+		"secure_protocols": []string{"viber"},
+		"service_name":     "Viber",
+		"service_url":      "https://www.viber.com/",
+		"setup_url":        "https://appriseit.com/services/viber/",
 	})
 }

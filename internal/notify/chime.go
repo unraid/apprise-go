@@ -214,15 +214,16 @@ func init() {
 				},
 			},
 		},
-		"enabled":   true,
-		"protocols": []string{"chime"},
+		"enabled": true,
 		"requirements": map[string]any{
 			"details":              "",
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
-		"service_name": "Amazon Chime",
-		"service_url":  "https://aws.amazon.com/chime/",
-		"setup_url":    "https://appriseit.com/services/chime/",
+		"protocols":        nil,
+		"secure_protocols": []string{"chime"},
+		"service_name":     "Amazon Chime",
+		"service_url":      "https://aws.amazon.com/chime/",
+		"setup_url":        "https://appriseit.com/services/chime/",
 	})
 }

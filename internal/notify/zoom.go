@@ -251,15 +251,16 @@ func init() {
 				},
 			},
 		},
-		"enabled":   true,
-		"protocols": []string{"zoom"},
+		"enabled": true,
 		"requirements": map[string]any{
 			"details":              "",
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
-		"service_name": "Zoom",
-		"service_url":  "https://zoom.us/",
-		"setup_url":    "https://appriseit.com/services/zoom/",
+		"protocols":        nil,
+		"secure_protocols": []string{"zoom"},
+		"service_name":     "Zoom",
+		"service_url":      "https://zoom.us/",
+		"setup_url":        "https://appriseit.com/services/zoom/",
 	})
 }

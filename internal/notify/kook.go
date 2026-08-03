@@ -345,6 +345,7 @@ func init() {
 			},
 		},
 		"enabled":          true,
+		"protocols":        nil,
 		"secure_protocols": []string{"kook"},
 		"requirements": map[string]any{
 			"details":              "",

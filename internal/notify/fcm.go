@@ -328,7 +328,7 @@ func init() {
 					"type":     "string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -394,7 +394,7 @@ func init() {
 					"values":   []string{"min", "low", "normal", "high", "max"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

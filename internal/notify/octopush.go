@@ -387,9 +387,10 @@ func init() {
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
+		"protocols":        nil,
 		"secure_protocols": []string{"octopush"},
 		"service_name":     "Octopush",
-		"service_url":      "https://www.octopush.com/",
+		"service_url":      "https://octopush.com/",
 		"setup_url":        "https://appriseit.com/services/octopush/",
 	})
 }

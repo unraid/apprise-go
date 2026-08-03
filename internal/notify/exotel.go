@@ -374,6 +374,7 @@ func init() {
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
+		"protocols":        nil,
 		"secure_protocols": []string{"exotel"},
 		"service_name":     "Exotel",
 		"service_url":      "https://exotel.com/",

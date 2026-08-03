@@ -313,6 +313,7 @@ func init() {
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
+		"protocols":        nil,
 		"secure_protocols": []string{"notifyre"},
 		"service_name":     "Notifyre",
 		"service_url":      "https://notifyre.com/",

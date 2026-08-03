@@ -261,7 +261,7 @@ func init() {
 		},
 		"secure_protocols": []string{"flowtriqs"},
 		"service_name":     "Flowtriq",
-		"service_url":      "https://flowtriq.com/",
+		"service_url":      "https://flowtriq.com",
 		"setup_url":        "https://appriseit.com/services/flowtriq/",
 	})
 }

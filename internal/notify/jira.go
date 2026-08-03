@@ -361,6 +361,7 @@ func init() {
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
+		"protocols":        nil,
 		"secure_protocols": []string{"jira"},
 		"service_name":     "Jira",
 		"service_url":      "https://atlassian.com/",

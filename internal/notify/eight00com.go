@@ -295,9 +295,10 @@ func init() {
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
+		"protocols":        nil,
 		"secure_protocols": []string{"eight00com"},
 		"service_name":     "800.com",
-		"service_url":      "https://800.com/",
+		"service_url":      "https://www.800.com",
 		"setup_url":        "https://appriseit.com/services/eight00com/",
 	})
 }

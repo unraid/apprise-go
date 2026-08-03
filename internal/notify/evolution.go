@@ -310,7 +310,7 @@ func init() {
 		},
 		"secure_protocols": []string{"evolutions"},
 		"service_name":     "Evolution API",
-		"service_url":      "https://evolution-api.com/",
+		"service_url":      "https://github.com/EvolutionAPI/evolution-api",
 		"setup_url":        "https://appriseit.com/services/evolution/",
 	})
 }
