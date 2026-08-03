@@ -68,6 +68,24 @@ func NewMailtoTarget(target *ParsedURL) (*MailtoTarget, error) {
 		return nil, fmt.Errorf("invalid secure mode")
 	}
 
+	// PGP signing and encryption are not implemented here. Accepting the
+	// request and sending plaintext would be worse than refusing it: someone
+	// who asked for encryption would believe they had it.
+	if pgpMode := strings.ToLower(strings.TrimSpace(target.Query["pgp"])); pgpMode != "" {
+		switch {
+		case strings.HasPrefix("no", pgpMode):
+		case strings.HasPrefix("sign", pgpMode), strings.HasPrefix("encrypt", pgpMode):
+			return nil, fmt.Errorf("pgp %s is not supported", pgpMode)
+		default:
+			return nil, fmt.Errorf("invalid pgp mode: %s", target.Query["pgp"])
+		}
+	}
+	// wkd=yes implies encryption upstream, so it is refused for the same
+	// reason.
+	if parseBoolWithDefault(target.Query["wkd"], false) {
+		return nil, fmt.Errorf("pgp web key directory is not supported")
+	}
+
 	port := target.Port
 	if !target.HasPort {
 		port = mailtoModePorts[mode]
