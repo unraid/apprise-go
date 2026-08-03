@@ -1,0 +1,213 @@
+[
+  {
+    "name": "basic-source-in-user-field",
+    "requests": [
+      {
+        "body": "grant_type=password&username=%2B15551234567&password=secretpass&access_token_ttl=3600&refresh_token_ttl=604800",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic bXljbGllbnRpZDpteWNsaWVudHNlY3JldA==",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/oauth/token"
+      },
+      {
+        "body": "{\"from\": {\"phoneNumber\": \"+15551234567\"}, \"to\": [{\"phoneNumber\": \"+15559876543\"}], \"text\": \"apprise parity\\r\\nhello from python\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/v1.0/account/~/extension/~/sms"
+      }
+    ]
+  },
+  {
+    "name": "basic-source-in-path",
+    "requests": [
+      {
+        "body": "grant_type=password&username=%2B15551234567&password=secretpass&access_token_ttl=3600&refresh_token_ttl=604800",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic bXljbGllbnRpZDpteWNsaWVudHNlY3JldA==",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/oauth/token"
+      },
+      {
+        "body": "{\"from\": {\"phoneNumber\": \"+15551234567\"}, \"to\": [{\"phoneNumber\": \"+15559876543\"}], \"text\": \"body\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/v1.0/account/~/extension/~/sms"
+      }
+    ]
+  },
+  {
+    "name": "no-targets-loops-back-to-source",
+    "requests": [
+      {
+        "body": "grant_type=password&username=%2B15551234567&password=secretpass&access_token_ttl=3600&refresh_token_ttl=604800",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic bXljbGllbnRpZDpteWNsaWVudHNlY3JldA==",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/oauth/token"
+      },
+      {
+        "body": "{\"from\": {\"phoneNumber\": \"+15551234567\"}, \"to\": [{\"phoneNumber\": \"+15551234567\"}], \"text\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/v1.0/account/~/extension/~/sms"
+      }
+    ]
+  },
+  {
+    "name": "multiple-targets",
+    "requests": [
+      {
+        "body": "grant_type=password&username=%2B15551234567&password=secretpass&access_token_ttl=3600&refresh_token_ttl=604800",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic bXljbGllbnRpZDpteWNsaWVudHNlY3JldA==",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/oauth/token"
+      },
+      {
+        "body": "{\"from\": {\"phoneNumber\": \"+15551234567\"}, \"to\": [{\"phoneNumber\": \"+15559876543\"}], \"text\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/v1.0/account/~/extension/~/sms"
+      },
+      {
+        "body": "{\"from\": {\"phoneNumber\": \"+15551234567\"}, \"to\": [{\"phoneNumber\": \"+15551112222\"}], \"text\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/v1.0/account/~/extension/~/sms"
+      }
+    ]
+  },
+  {
+    "name": "sandbox-environment",
+    "requests": [
+      {
+        "body": "grant_type=password&username=%2B15551234567&password=secretpass&access_token_ttl=3600&refresh_token_ttl=604800",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic bXljbGllbnRpZDpteWNsaWVudHNlY3JldA==",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.devtest.ringcentral.com/restapi/oauth/token"
+      },
+      {
+        "body": "{\"from\": {\"phoneNumber\": \"+15551234567\"}, \"to\": [{\"phoneNumber\": \"+15559876543\"}], \"text\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.devtest.ringcentral.com/restapi/v1.0/account/~/extension/~/sms"
+      }
+    ]
+  },
+  {
+    "name": "jwt-mode-detected-from-token-length",
+    "requests": [
+      {
+        "body": "grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4iLCJpYXQiOjE1MTYyMzkwMjJ9.abcdefghijklmnop",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic bXljbGllbnRpZDpteWNsaWVudHNlY3JldA==",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/oauth/token"
+      },
+      {
+        "body": "{\"from\": {\"phoneNumber\": \"+15551234567\"}, \"to\": [{\"phoneNumber\": \"+15559876543\"}], \"text\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/v1.0/account/~/extension/~/sms"
+      }
+    ]
+  },
+  {
+    "name": "to-alias-and-explicit-source",
+    "requests": [
+      {
+        "body": "grant_type=password&username=%2B15551234567&password=secretpass&access_token_ttl=3600&refresh_token_ttl=604800",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic bXljbGllbnRpZDpteWNsaWVudHNlY3JldA==",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/oauth/token"
+      },
+      {
+        "body": "{\"from\": {\"phoneNumber\": \"+15551234567\"}, \"to\": [{\"phoneNumber\": \"+15559876543\"}], \"text\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/v1.0/account/~/extension/~/sms"
+      },
+      {
+        "body": "{\"from\": {\"phoneNumber\": \"+15551234567\"}, \"to\": [{\"phoneNumber\": \"+15551112222\"}], \"text\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://platform.ringcentral.com/restapi/v1.0/account/~/extension/~/sms"
+      }
+    ]
+  }
+]

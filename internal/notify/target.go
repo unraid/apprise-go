@@ -425,6 +425,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"wechat": func(parsed *ParsedURL) (Sender, error) {
 		return NewWeChatTarget(parsed)
 	},
+	"ringc": func(parsed *ParsedURL) (Sender, error) {
+		return NewRingCentralTarget(parsed)
+	},
 	"jira": func(parsed *ParsedURL) (Sender, error) {
 		return NewJiraTarget(parsed)
 	},

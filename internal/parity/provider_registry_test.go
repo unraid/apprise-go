@@ -231,6 +231,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"wechat": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewWeChatTarget(parsed)
 	},
+	"ringc": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewRingCentralTarget(parsed)
+	},
 	"matrix": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewMatrixTarget(parsed)
 	},

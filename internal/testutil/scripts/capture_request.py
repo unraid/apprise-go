@@ -741,6 +741,18 @@ def capture_request(url, body, title, notify_type, body_format=None):
             and parsed.path == "/v2/alerts"
         ):
             response._content = b'{"requestId":"request"}'
+        elif parsed.netloc in (
+            "platform.ringcentral.com",
+            "platform.devtest.ringcentral.com",
+        ):
+            if parsed.path == "/restapi/oauth/token":
+                response._content = (
+                    b'{"access_token":"token","expires_in":3600,'
+                    b'"scope":"SMS","owner_id":"owner",'
+                    b'"endpoint_id":"endpoint"}'
+                )
+            else:
+                response._content = b'{"id":"message-id"}'
         elif parsed.netloc == "qyapi.weixin.qq.com":
             # WeCom reports application errors in the body with a 200 status,
             # so both the token hop and the send need errcode 0.
