@@ -5,6 +5,7 @@ var smsSchemas = map[string]struct{}{
 	"smsc":       {},
 	"exotel":     {},
 	"eight00com": {},
+	"octopush":   {},
 	"46elks":     {},
 	"atalk":      {},
 	"clickatell": {},

@@ -540,6 +540,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"sinch": func(parsed *ParsedURL) (Sender, error) {
 		return NewSinchTarget(parsed)
 	},
+	"octopush": func(parsed *ParsedURL) (Sender, error) {
+		return NewOctopushTarget(parsed)
+	},
 	"eight00com": func(parsed *ParsedURL) (Sender, error) {
 		return NewEight00comTarget(parsed)
 	},

@@ -699,6 +699,12 @@ def capture_request(url, body, title, notify_type, body_format=None):
             response._content = b'{"code":1000,"msg":"ok"}'
         elif parsed.netloc == "www.pushplus.plus" and parsed.path == "/send":
             response._content = b'{"code":200,"msg":"ok"}'
+        elif parsed.netloc == "api.octopush.com" and parsed.path.endswith(
+            "/sms-campaign/send"
+        ):
+            # Octopush answers 201 Created on success
+            response.status_code = 201
+            response._content = b"{}"
         elif parsed.netloc == "chatapi.viber.com" and parsed.path.endswith(
             "/send_message"
         ):

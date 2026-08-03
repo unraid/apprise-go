@@ -135,6 +135,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"whatsapp": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewWhatsAppTarget(parsed)
 	},
+	"octopush": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewOctopushTarget(parsed)
+	},
 	"eight00com": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewEight00comTarget(parsed)
 	},

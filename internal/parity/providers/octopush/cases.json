@@ -1,0 +1,16 @@
+[
+  {
+    "name": "default",
+    "url": "octopush://user@example.com/apikey123/15551234567",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "batched-with-sender",
+    "url": "octopush://Sender:user@example.com/apikey123/15551234567/15559876543?batch=yes&type=sms_low_cost",
+    "body": "body",
+    "title": "",
+    "type": "info"
+  }
+]
