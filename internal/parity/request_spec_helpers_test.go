@@ -34,6 +34,14 @@ const (
 func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpec) {
 	t.Helper()
 
+	assertRequestSpecMatchesExcept(t, pythonSpec, goSpec, nil)
+}
+
+// assertRequestSpecMatchesExcept compares two requests, treating the named
+// headers as volatile: present and non-empty on both sides, but not equal.
+func assertRequestSpecMatchesExcept(t *testing.T, pythonSpec, goSpec notify.RequestSpec, volatile []string) {
+	t.Helper()
+
 	if !strings.EqualFold(pythonSpec.Method, goSpec.Method) {
 		t.Fatalf("method mismatch: python=%s go=%s", pythonSpec.Method, goSpec.Method)
 	}
@@ -60,6 +68,15 @@ func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpe
 
 	pythonHeaders := normalizeHeaders(pythonSpec.Headers)
 	goHeaders := normalizeHeaders(goSpec.Headers)
+	for _, name := range volatile {
+		name = strings.ToLower(strings.TrimSpace(name))
+		for side, headers := range map[string]map[string]string{"python": pythonHeaders, "go": goHeaders} {
+			if strings.TrimSpace(headers[name]) == "" {
+				t.Fatalf("volatile header %s missing or empty on %s side", name, side)
+			}
+			delete(headers, name)
+		}
+	}
 	if !reflect.DeepEqual(pythonHeaders, goHeaders) {
 		t.Fatalf("header mismatch: python=%v go=%v", pythonHeaders, goHeaders)
 	}
@@ -85,12 +102,18 @@ func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpe
 func assertRequestSpecSequenceMatches(t *testing.T, pythonSpecs, goSpecs []notify.RequestSpec) {
 	t.Helper()
 
+	assertRequestSpecSequenceMatchesExcept(t, pythonSpecs, goSpecs, nil)
+}
+
+func assertRequestSpecSequenceMatchesExcept(t *testing.T, pythonSpecs, goSpecs []notify.RequestSpec, volatile []string) {
+	t.Helper()
+
 	if len(pythonSpecs) != len(goSpecs) {
 		t.Fatalf("request count mismatch: python=%d go=%d", len(pythonSpecs), len(goSpecs))
 	}
 
 	for i := range pythonSpecs {
-		assertRequestSpecMatches(t, pythonSpecs[i], goSpecs[i])
+		assertRequestSpecMatchesExcept(t, pythonSpecs[i], goSpecs[i], volatile)
 	}
 }
 

@@ -428,6 +428,15 @@ var targetBuilders = map[string]buildTargetFunc{
 	"ringc": func(parsed *ParsedURL) (Sender, error) {
 		return NewRingCentralTarget(parsed)
 	},
+	"session": func(parsed *ParsedURL) (Sender, error) {
+		return NewSOGSTarget(parsed)
+	},
+	"sessions": func(parsed *ParsedURL) (Sender, error) {
+		return NewSOGSTarget(parsed)
+	},
+	"sogs": func(parsed *ParsedURL) (Sender, error) {
+		return NewSOGSTarget(parsed)
+	},
 	"jira": func(parsed *ParsedURL) (Sender, error) {
 		return NewJiraTarget(parsed)
 	},

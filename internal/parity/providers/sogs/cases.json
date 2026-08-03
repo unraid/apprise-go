@@ -1,0 +1,37 @@
+[
+  {
+    "name": "single-room",
+    "url": "sogs://abababababababababababababababababababababababababababababababab:0101010101010101010101010101010101010101010101010101010101010101@sogs.example.com/general",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "multiple-rooms",
+    "url": "sogs://abababababababababababababababababababababababababababababababab:0101010101010101010101010101010101010101010101010101010101010101@sogs.example.com/general/lounge",
+    "body": "body",
+    "title": "",
+    "type": "warning"
+  },
+  {
+    "name": "insecure-session-scheme-with-port",
+    "url": "session://abababababababababababababababababababababababababababababababab:0101010101010101010101010101010101010101010101010101010101010101@sogs.example.com:8080/general",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "secure-sessions-scheme",
+    "url": "sessions://abababababababababababababababababababababababababababababababab:0101010101010101010101010101010101010101010101010101010101010101@sogs.example.com/general",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "keys-and-rooms-from-query",
+    "url": "sogs://sogs.example.com?public_key=abababababababababababababababababababababababababababababababab&seed=0101010101010101010101010101010101010101010101010101010101010101&to=general,lounge",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  }
+]

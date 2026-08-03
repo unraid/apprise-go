@@ -63,7 +63,7 @@ func TestProviderGoldenRequests(t *testing.T) {
 					return target.Send(c.Body, c.Title, notifyType)
 				})
 
-				assertRequestSpecSequenceMatches(t, expected.Requests, goSpecs)
+				assertRequestSpecSequenceMatchesExcept(t, expected.Requests, goSpecs, def.VolatileHeaders)
 			})
 		}
 	}

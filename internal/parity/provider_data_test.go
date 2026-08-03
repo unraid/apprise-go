@@ -17,6 +17,14 @@ const providerRoot = "internal/parity/providers"
 type providerManifest struct {
 	Name    string   `json:"name"`
 	Schemas []string `json:"schemas"`
+
+	// VolatileHeaders names headers whose value cannot be reproduced across
+	// two runs — SOGS signs a random nonce and the current time, so its
+	// X-SOGS-* headers differ every request. They are asserted present and
+	// non-empty rather than equal. Nothing else re-checks their contents, so
+	// a provider listing one owes a pinned vector test proving how it is
+	// built; see sogs_vectors_test.go.
+	VolatileHeaders []string `json:"volatile_headers"`
 }
 
 type providerCase struct {
@@ -35,10 +43,11 @@ type providerCase struct {
 }
 
 type providerDefinition struct {
-	Name    string
-	Schemas []string
-	Cases   []providerCase
-	Dir     string
+	Name            string
+	Schemas         []string
+	Cases           []providerCase
+	Dir             string
+	VolatileHeaders []string
 }
 
 func loadProviderDefinitions(t *testing.T) map[string]providerDefinition {
@@ -62,10 +71,11 @@ func loadProviderDefinitions(t *testing.T) map[string]providerDefinition {
 		cases := loadProviderCases(t, providerDir, name)
 
 		def := providerDefinition{
-			Name:    name,
-			Schemas: manifest.Schemas,
-			Cases:   cases,
-			Dir:     providerDir,
+			Name:            name,
+			Schemas:         manifest.Schemas,
+			Cases:           cases,
+			Dir:             providerDir,
+			VolatileHeaders: manifest.VolatileHeaders,
 		}
 
 		if _, exists := defs[name]; exists {

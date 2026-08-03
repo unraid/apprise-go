@@ -234,6 +234,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"ringc": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewRingCentralTarget(parsed)
 	},
+	"sogs": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewSOGSTarget(parsed)
+	},
 	"matrix": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewMatrixTarget(parsed)
 	},
