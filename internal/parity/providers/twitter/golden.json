@@ -43,6 +43,17 @@
         },
         "method": "GET",
         "url": "https://api.twitter.com/2/users/me"
+      },
+      {
+        "body": "{\"text\": \"hello\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"TevuQwkEnvXpLUK6cOoCSlCAsRQ%3D\"",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.twitter.com/2/dm_conversations/with/123/messages"
       }
     ]
   }

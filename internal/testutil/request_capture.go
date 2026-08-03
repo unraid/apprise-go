@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -61,15 +60,10 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	} else if req.URL.Host == "graph.microsoft.com" && strings.HasPrefix(req.URL.Path, "/v1.0/users/") && req.Method == http.MethodGet {
 		responseBody = `{"mail":"user@example.com","userPrincipalName":"user@example.com","displayName":"Apprise"}`
 		contentType = "application/json"
-	} else if req.URL.Host == "api.twitter.com" && strings.HasSuffix(req.URL.Path, "/users/lookup.json") {
+	} else if req.URL.Host == "api.twitter.com" && req.URL.Path == "/2/users/by" {
 		names := []string{}
-		if values, err := url.ParseQuery(body); err == nil {
-			names = values["screen_name"]
-			if len(names) == 0 {
-				if value := values.Get("screen_name"); value != "" {
-					names = []string{value}
-				}
-			}
+		for _, entry := range req.URL.Query()["usernames"] {
+			names = append(names, strings.Split(entry, ",")...)
 		}
 		if len(names) == 0 {
 			names = []string{"user"}
@@ -77,17 +71,16 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		entries := make([]map[string]string, 0, len(names))
 		for _, name := range names {
 			entries = append(entries, map[string]string{
-				"screen_name": name,
-				"id":          "123",
-				"id_str":      "123",
+				"username": name,
+				"id":       "123",
 			})
 		}
-		if data, err := json.Marshal(entries); err == nil {
+		if data, err := json.Marshal(map[string]any{"data": entries}); err == nil {
 			responseBody = string(data)
 			contentType = "application/json"
 		}
-	} else if req.URL.Host == "api.twitter.com" && strings.HasSuffix(req.URL.Path, "/account/verify_credentials.json") {
-		responseBody = `{"screen_name":"apprise","id":"123","id_str":"123"}`
+	} else if req.URL.Host == "api.twitter.com" && req.URL.Path == "/2/users/me" {
+		responseBody = `{"data":{"id":"123","username":"apprise"}}`
 		contentType = "application/json"
 	} else if req.URL.Host == "slack.com" && req.URL.Path == "/api/users.lookupByEmail" {
 		responseBody = `{"ok":true,"user":{"id":"U123"}}`

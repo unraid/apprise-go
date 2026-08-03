@@ -8,10 +8,11 @@ import (
 	"strings"
 )
 
-const twitterTweetURL = "https://api.twitter.com/1.1/statuses/update.json"
-const twitterWhoamiURL = "https://api.twitter.com/1.1/account/verify_credentials.json"
-const twitterLookupURL = "https://api.twitter.com/1.1/users/lookup.json"
-const twitterDMURL = "https://api.twitter.com/1.1/direct_messages/events/new.json"
+// X API v2 endpoints; v1.1 was retired upstream in 1.12.0.
+const twitterTweetURL = "https://api.twitter.com/2/tweets"
+const twitterWhoamiURL = "https://api.twitter.com/2/users/me"
+const twitterLookupURL = "https://api.twitter.com/2/users/by"
+const twitterDMURLTemplate = "https://api.twitter.com/2/dm_conversations/with/%s/messages"
 
 type TwitterTarget struct {
 	consumerKey    string
@@ -99,13 +100,15 @@ func (t *TwitterTarget) Send(body, title string, notifyType NotifyType) error {
 
 func (t *TwitterTarget) tweetRequest(body, title string) (RequestSpec, error) {
 	message := mergeTitleBody(title, body)
-	payload := url.Values{}
-	payload.Set("status", message)
+	data, err := json.Marshal(map[string]string{"text": message})
+	if err != nil {
+		return RequestSpec{}, err
+	}
 
 	auth, err := buildOAuth1Header(
 		"POST",
 		twitterTweetURL,
-		payload,
+		nil,
 		t.consumerKey,
 		t.consumerSecret,
 		t.accessKey,
@@ -121,17 +124,25 @@ func (t *TwitterTarget) tweetRequest(body, title string) (RequestSpec, error) {
 		Headers: map[string]string{
 			"User-Agent":    "Apprise",
 			"Accept":        "*/*",
-			"Content-Type":  "application/x-www-form-urlencoded",
+			"Content-Type":  "application/json",
 			"Authorization": auth,
 		},
-		Body: payload.Encode(),
+		Body: string(data),
 	}, nil
 }
 
+// twitterUser is the v2 user representation returned under a data envelope.
+type twitterUser struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+}
+
 type twitterWhoamiResponse struct {
-	ScreenName string      `json:"screen_name"`
-	ID         json.Number `json:"id"`
-	IDStr      string      `json:"id_str"`
+	Data twitterUser `json:"data"`
+}
+
+type twitterLookupResponse struct {
+	Data []twitterUser `json:"data"`
 }
 
 type twitterDMRequest struct {
@@ -190,12 +201,6 @@ func uniqueStrings(values []string) []string {
 	return out
 }
 
-type twitterLookupEntry struct {
-	ScreenName string      `json:"screen_name"`
-	ID         json.Number `json:"id"`
-	IDStr      string      `json:"id_str"`
-}
-
 type twitterRecipient struct {
 	ScreenName string
 	ID         string
@@ -209,15 +214,8 @@ func (t *TwitterTarget) sendDM(body, title string) error {
 	}
 
 	for _, recipient := range recipients {
-		payload := twitterDMRequest{
-			Event: twitterDMEvent{
-				Type: "message_create",
-				MessageCreate: twitterDMMessageBody{
-					Target:      twitterDMTarget{RecipientID: recipient.ID},
-					MessageData: twitterDMText{Text: message},
-				},
-			},
-		}
+		dmURL := fmt.Sprintf(twitterDMURLTemplate, recipient.ID)
+		payload := map[string]string{"text": message}
 		data, err := json.Marshal(payload)
 		if err != nil {
 			return err
@@ -225,7 +223,7 @@ func (t *TwitterTarget) sendDM(body, title string) error {
 
 		auth, err := buildOAuth1Header(
 			"POST",
-			twitterDMURL,
+			dmURL,
 			nil,
 			t.consumerKey,
 			t.consumerSecret,
@@ -238,7 +236,7 @@ func (t *TwitterTarget) sendDM(body, title string) error {
 
 		spec := RequestSpec{
 			Method: "POST",
-			URL:    twitterDMURL,
+			URL:    dmURL,
 			Headers: map[string]string{
 				"User-Agent":    "Apprise",
 				"Accept":        "*/*",
@@ -291,14 +289,10 @@ func (t *TwitterTarget) resolveWhoami() []twitterRecipient {
 	if err := doJSONRequest(spec, &response); err != nil {
 		return nil
 	}
-	id := response.IDStr
-	if id == "" {
-		id = response.ID.String()
-	}
-	if id == "" || response.ScreenName == "" {
+	if response.Data.ID == "" || response.Data.Username == "" {
 		return nil
 	}
-	return []twitterRecipient{{ScreenName: response.ScreenName, ID: id}}
+	return []twitterRecipient{{ScreenName: response.Data.Username, ID: response.Data.ID}}
 }
 
 func (t *TwitterTarget) lookupUsers(targets []string) []twitterRecipient {
@@ -313,15 +307,12 @@ func (t *TwitterTarget) lookupUsers(targets []string) []twitterRecipient {
 		if end > len(names) {
 			end = len(names)
 		}
-		payload := url.Values{}
-		for _, name := range names[i:end] {
-			payload.Add("screen_name", name)
-		}
+		lookupURL := twitterLookupURL + "?usernames=" + url.QueryEscape(strings.Join(names[i:end], ","))
 
 		auth, err := buildOAuth1Header(
-			"POST",
-			twitterLookupURL,
-			payload,
+			"GET",
+			lookupURL,
+			nil,
 			t.consumerKey,
 			t.consumerSecret,
 			t.accessKey,
@@ -332,33 +323,24 @@ func (t *TwitterTarget) lookupUsers(targets []string) []twitterRecipient {
 		}
 
 		spec := RequestSpec{
-			Method: "POST",
-			URL:    twitterLookupURL,
+			Method: "GET",
+			URL:    lookupURL,
 			Headers: map[string]string{
 				"User-Agent":    "Apprise",
 				"Accept":        "*/*",
-				"Content-Type":  "application/x-www-form-urlencoded",
 				"Authorization": auth,
 			},
-			Body: payload.Encode(),
 		}
 
-		var response []twitterLookupEntry
+		var response twitterLookupResponse
 		if err := doJSONRequest(spec, &response); err != nil {
 			continue
 		}
-		for _, entry := range response {
-			if entry.ScreenName == "" {
+		for _, entry := range response.Data {
+			if entry.Username == "" || entry.ID == "" {
 				continue
 			}
-			id := entry.IDStr
-			if id == "" {
-				id = entry.ID.String()
-			}
-			if id == "" {
-				continue
-			}
-			results[entry.ScreenName] = id
+			results[entry.Username] = entry.ID
 		}
 	}
 

@@ -518,19 +518,14 @@ def capture_request(url, body, title, notify_type, body_format=None):
             response._content = b'{"uri":"at://example/post"}'
         elif parsed.netloc == "api.twist.com" and parsed.path.endswith("/users/login"):
             response._content = b'{"token":"token","default_workspace":12345}'
-        elif parsed.netloc == "api.twitter.com" and parsed.path.endswith(
-            "/account/verify_credentials.json"
-        ):
-            response._content = b'{"screen_name":"apprise","id":"123","id_str":"123"}'
-        elif parsed.netloc == "api.twitter.com" and parsed.path.endswith(
-            "/users/lookup.json"
-        ):
-            values = parse_qs(body_text)
-            names = values.get("screen_name") or []
-            if not names:
-                names = ["user"]
+        elif parsed.netloc == "api.twitter.com" and parsed.path == "/2/users/me":
+            # X API v2 wraps the user in a data object
+            response._content = b'{"data":{"id":"123","username":"apprise"}}'
+        elif parsed.netloc == "api.twitter.com" and parsed.path == "/2/users/by":
+            names = parse_qs(parsed.query).get("usernames") or []
+            names = [n for entry in names for n in entry.split(",")] or ["user"]
             response._content = json.dumps(
-                [{"screen_name": name, "id": "123", "id_str": "123"} for name in names]
+                {"data": [{"username": name, "id": "123"} for name in names]}
             ).encode("utf-8")
         elif parsed.netloc == "slack.com" and parsed.path == "/api/users.lookupByEmail":
             response._content = b'{"ok": true, "user": {"id": "U123"}}'
