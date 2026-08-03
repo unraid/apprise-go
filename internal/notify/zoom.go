@@ -258,7 +258,7 @@ func init() {
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
-		"service_name": "Zoom Team Chat",
+		"service_name": "Zoom",
 		"service_url":  "https://zoom.us/",
 		"setup_url":    "https://appriseit.com/services/zoom/",
 	})

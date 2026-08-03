@@ -362,7 +362,7 @@ func init() {
 			"packages_required":    []any{},
 		},
 		"secure_protocols": []string{"jira"},
-		"service_name":     "Jira Service Management",
+		"service_name":     "Jira",
 		"service_url":      "https://atlassian.com/",
 		"setup_url":        "https://github.com/caronc/apprise/wiki/Notify_jira",
 	})

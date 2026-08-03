@@ -242,6 +242,27 @@ func adjustSchemaValues(specs schemaSpecs, target *ParsedURL, values map[string]
 				values["link"] = schemaValueAny(baseURL)
 			}
 		}
+	case "pover":
+		// Pushover's own parse_url stores e2ee without coercing it, so the
+		// raw query value survives where a framework-handled bool would not.
+		if raw, ok := target.Query["e2ee"]; ok && strings.TrimSpace(raw) != "" {
+			values["e2ee"] = schemaValueAny(raw)
+		}
+	case "notifico", "notificos":
+		// project is derived from the host by the generic fallback, but
+		// Notifico names no such token upstream.
+		delete(values, "project")
+	case "octopush":
+		// api_login comes from the URL's own credentials rather than a
+		// template token, so upstream never reports it as an input.
+		delete(values, "api_login")
+	case "hassio", "hassios":
+		// Home Assistant takes its access token from the last path segment
+		// and never reads targets from the path, so only ?to= can supply
+		// them.
+		if strings.TrimSpace(target.Query["to"]) == "" {
+			values["targets"] = schemaValueList([]string{})
+		}
 	case "matrix", "matrixs":
 		// The generic inputs comparison maps the URL's own path component
 		// onto the path argument when ?path= is absent, so webhook_path comes

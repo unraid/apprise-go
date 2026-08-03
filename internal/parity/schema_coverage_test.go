@@ -60,22 +60,6 @@ func isIgnoredSchema(schema string) bool {
 
 // Non-HTTP providers are excluded from schema coverage for the initial release.
 // Keep in sync with PROCESS.md.
-// ignoredSchemas are the upstream schemas this port deliberately does not
-// implement. Listing one here is a decision, not a shortcut — the entry says
-// the gap is known and accepted, so an unlisted schema stays a test failure.
-//
-// blink1 drives a USB HID device attached to the machine running Apprise.
-// Supporting it means cgo and a HID library, which costs the pure-Go static
-// build; it is also the least likely of anything here to be reached through a
-// Go port running in a container.
-//
-// irc and ircs need no dependency — upstream implements the protocol itself —
-// but they need a stateful client (registration, nick collision, PING/PONG,
-// JOIN confirmation, NickServ) and a fake IRC server for parity. That is
-// scoped in .codex/upstream-1.12.0-next-steps.md and simply has not been
-// written yet.
-var ignoredSchemas = map[string]struct{}{
-	"blink1": {},
-	"irc":    {},
-	"ircs":   {},
-}
+// ignoredSchemas defers to the port's own declaration of what it does
+// not implement, so the reasoning lives in one place.
+var ignoredSchemas = notify.UnsupportedSchemas

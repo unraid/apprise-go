@@ -86,7 +86,7 @@ func normalizeSchemaEntries(t *testing.T, raw any) map[string]any {
 }
 
 func TestSchemaDetailsParity(t *testing.T) {
-	python := normalizeSchemaDetails(t, loadPythonSchemaDetails(t))
+	python := normalizeSchemaDetails(t, dropKnownGapSchemas(loadPythonSchemaDetails(t)))
 	goDetails := normalizeSchemaDetails(t, loadGoSchemaDetails(t))
 
 	if !reflect.DeepEqual(python, goDetails) {
@@ -94,4 +94,52 @@ func TestSchemaDetailsParity(t *testing.T) {
 		goJSON, _ := json.MarshalIndent(goDetails, "", "  ")
 		t.Fatalf("schema details mismatch\npython=%s\ngo=%s", pythonJSON, goJSON)
 	}
+}
+
+// dropKnownGapSchemas removes the entries for schemas this port declares it
+// does not implement, so the comparison is about drift rather than about a
+// gap that is already recorded.
+func dropKnownGapSchemas(details map[string]any) map[string]any {
+	entries, ok := details["schemas"].([]any)
+	if !ok {
+		return details
+	}
+
+	kept := make([]any, 0, len(entries))
+	for _, raw := range entries {
+		entry, ok := raw.(map[string]any)
+		if !ok {
+			kept = append(kept, raw)
+			continue
+		}
+		if schemaEntryIsKnownGap(entry) {
+			continue
+		}
+		kept = append(kept, raw)
+	}
+
+	out := map[string]any{}
+	for key, value := range details {
+		out[key] = value
+	}
+	out["schemas"] = kept
+
+	return out
+}
+
+func schemaEntryIsKnownGap(entry map[string]any) bool {
+	for _, key := range []string{"protocols", "secure_protocols"} {
+		values, ok := entry[key].([]any)
+		if !ok {
+			continue
+		}
+		for _, raw := range values {
+			schema, ok := raw.(string)
+			if ok && notify.IsKnownGapSchema(schema) {
+				return true
+			}
+		}
+	}
+
+	return false
 }
