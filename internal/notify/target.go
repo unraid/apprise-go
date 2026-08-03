@@ -540,6 +540,12 @@ var targetBuilders = map[string]buildTargetFunc{
 	"sinch": func(parsed *ParsedURL) (Sender, error) {
 		return NewSinchTarget(parsed)
 	},
+	"flowtriq": func(parsed *ParsedURL) (Sender, error) {
+		return NewFlowtriqTarget(parsed)
+	},
+	"flowtriqs": func(parsed *ParsedURL) (Sender, error) {
+		return NewFlowtriqTarget(parsed)
+	},
 	"stackfield": func(parsed *ParsedURL) (Sender, error) {
 		return NewStackfieldTarget(parsed)
 	},

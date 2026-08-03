@@ -1,0 +1,23 @@
+[
+  {
+    "name": "default",
+    "url": "flowtriqs://apikey123@flowtriq.example.com/hooks/inbound",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "insecure-port",
+    "url": "flowtriq://apikey123@flowtriq.example.com:8080/inbound",
+    "body": "body",
+    "title": "title",
+    "type": "warning"
+  },
+  {
+    "name": "failure-severity",
+    "url": "flowtriqs://apikey123@flowtriq.example.com/hooks/inbound",
+    "body": "body",
+    "title": "title",
+    "type": "failure"
+  }
+]
