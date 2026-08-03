@@ -97,7 +97,10 @@ func ConvertMessageFormat(content, inputFormat, outputFormat string) (string, er
 			return htmlToText(markdownToHTML(content)), nil
 		}
 	case "html":
-		if output == "text" || output == "markdown" {
+		if output == "markdown" {
+			return htmlToMarkdown(content), nil
+		}
+		if output == "text" {
 			return htmlToText(content), nil
 		}
 	case "text":
