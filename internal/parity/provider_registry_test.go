@@ -228,6 +228,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"jira": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewJiraTarget(parsed)
 	},
+	"wechat": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewWeChatTarget(parsed)
+	},
 	"matrix": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewMatrixTarget(parsed)
 	},

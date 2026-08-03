@@ -3,7 +3,6 @@ package notify
 import (
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
 )
 
@@ -284,7 +283,7 @@ func parseGeniePriority(raw string) int {
 // and anything else by name.
 func parseGenieTargets(entries []string) []map[string]string {
 	targets := []map[string]string{}
-	for _, entry := range normalizeGenieEntries(entries) {
+	for _, entry := range sortedUniqueTargets(entries) {
 		target := strings.TrimSpace(entry)
 		if len(target) < 2 {
 			continue
@@ -322,27 +321,6 @@ func parseGenieTargets(entries []string) []map[string]string {
 	}
 
 	return targets
-}
-
-// normalizeGenieEntries mirrors upstream's parse_list, which deduplicates and
-// sorts, so the responder order follows from the set rather than the URL.
-func normalizeGenieEntries(entries []string) []string {
-	unique := map[string]struct{}{}
-	for _, entry := range entries {
-		trimmed := strings.TrimSpace(entry)
-		if trimmed == "" {
-			continue
-		}
-		unique[trimmed] = struct{}{}
-	}
-
-	normalized := make([]string, 0, len(unique))
-	for entry := range unique {
-		normalized = append(normalized, entry)
-	}
-	sort.Strings(normalized)
-
-	return normalized
 }
 
 var uuidPattern = regexp.MustCompile(`^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$`)

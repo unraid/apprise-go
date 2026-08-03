@@ -741,6 +741,16 @@ def capture_request(url, body, title, notify_type, body_format=None):
             and parsed.path == "/v2/alerts"
         ):
             response._content = b'{"requestId":"request"}'
+        elif parsed.netloc == "qyapi.weixin.qq.com":
+            # WeCom reports application errors in the body with a 200 status,
+            # so both the token hop and the send need errcode 0.
+            if parsed.path == "/cgi-bin/gettoken":
+                response._content = (
+                    b'{"errcode":0,"errmsg":"ok",'
+                    b'"access_token":"token","expires_in":7200}'
+                )
+            else:
+                response._content = b'{"errcode":0,"errmsg":"ok"}'
         elif (
             parsed.netloc == "api.atlassian.com"
             and parsed.path == "/jsm/ops/integration/v2/alerts"
