@@ -3,7 +3,7 @@
     "name": "all-devices",
     "requests": [
       {
-        "body": "token=token123&user=userkey123&priority=0&title=apprise+parity&message=hello+from+python&device=ALL_DEVICES&sound=pushover",
+        "body": "token=token123&priority=0&title=apprise+parity&message=hello+from+python&sound=pushover&user=userkey123&device=ALL_DEVICES",
         "headers": {
           "accept": "*/*",
           "authorization": "Basic dG9rZW4xMjM6",
@@ -19,7 +19,66 @@
     "name": "device",
     "requests": [
       {
-        "body": "token=token123&user=userkey123&priority=0&title=Apprise+Notifications&message=body&device=device1&sound=pushover",
+        "body": "token=token123&priority=0&title=Apprise+Notifications&message=body&sound=pushover&user=userkey123&device=device1",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushover.net/1/messages.json"
+      }
+    ]
+  },
+  {
+    "name": "group",
+    "requests": [
+      {
+        "body": "token=token123&priority=0&title=apprise+parity&message=body&sound=pushover&user=mygroup",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushover.net/1/messages.json"
+      }
+    ]
+  },
+  {
+    "name": "devices-and-group",
+    "requests": [
+      {
+        "body": "token=token123&priority=0&title=apprise+parity&message=body&sound=pushover&user=userkey123&device=device1",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushover.net/1/messages.json"
+      },
+      {
+        "body": "token=token123&priority=0&title=apprise+parity&message=body&sound=pushover&user=mygroup",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushover.net/1/messages.json"
+      }
+    ]
+  },
+  {
+    "name": "emergency-interval",
+    "requests": [
+      {
+        "body": "token=token123&priority=2&title=apprise+parity&message=body&sound=pushover&retry=120&expire=600&user=userkey123&device=ALL_DEVICES",
         "headers": {
           "accept": "*/*",
           "authorization": "Basic dG9rZW4xMjM6",

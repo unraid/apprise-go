@@ -12,5 +12,26 @@
     "body": "body",
     "title": "",
     "type": "info"
+  },
+  {
+    "name": "group",
+    "url": "pover://userkey123@token123/%23mygroup",
+    "body": "body",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "devices-and-group",
+    "url": "pover://userkey123@token123/device1/%23mygroup",
+    "body": "body",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "emergency-interval",
+    "url": "pover://userkey123@token123?priority=emergency&interval=120&expire=600",
+    "body": "body",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]
