@@ -15,5 +15,23 @@
         "url": "https://sns.us-east-1.amazonaws.com/"
       }
     ]
+  },
+  {
+    "name": "session-token",
+    "requests": [
+      {
+        "body": "Action=Publish&Message=hello&Version=2010-03-31&PhoneNumber=%2B15551234567",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "AWS4-HMAC-SHA256 Credential=access123/20240101/us-east-1/sns/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-security-token, Signature=360ae1973288b294476017c06dc095341b0889c2383f5eee6d2becff68efa4aa",
+          "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+          "user-agent": "Apprise",
+          "x-amz-date": "20240101T000000Z",
+          "x-amz-security-token": "sessiontoken123"
+        },
+        "method": "POST",
+        "url": "https://sns.us-east-1.amazonaws.com/"
+      }
+    ]
   }
 ]

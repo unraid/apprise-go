@@ -424,7 +424,7 @@ func init() {
 					"type":     "string",
 				},
 			},
-			"templates": []string{"{schema}://{user}@{host}:{apikey}/", "{schema}://{user}@{host}:{apikey}/{targets}"},
+			"templates": []string{"{schema}://{user}@{host}/{apikey}/", "{schema}://{user}@{host}/{apikey}/{targets}"},
 			"tokens": map[string]any{
 				"apikey": map[string]any{
 					"map_to":   "apikey",

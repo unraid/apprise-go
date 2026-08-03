@@ -10,11 +10,12 @@ import (
 const snsServiceName = "sns"
 
 type SNSTarget struct {
-	accessKey string
-	secretKey string
-	region    string
-	phones    []string
-	topics    []string
+	accessKey    string
+	secretKey    string
+	sessionToken string
+	region       string
+	phones       []string
+	topics       []string
 }
 
 func NewSNSTarget(target *ParsedURL) (*SNSTarget, error) {
@@ -24,6 +25,12 @@ func NewSNSTarget(target *ParsedURL) (*SNSTarget, error) {
 	}
 	if accessKey == "" {
 		return nil, fmt.Errorf("missing access key")
+	}
+
+	// The session token may arrive in the user field or as ?token=.
+	sessionToken := strings.TrimSpace(target.User)
+	if raw := strings.TrimSpace(target.Query["token"]); raw != "" {
+		sessionToken = raw
 	}
 
 	entries := splitPath(target.Path)
@@ -89,11 +96,12 @@ func NewSNSTarget(target *ParsedURL) (*SNSTarget, error) {
 	}
 
 	return &SNSTarget{
-		accessKey: accessKey,
-		secretKey: secretKey,
-		region:    region,
-		phones:    phones,
-		topics:    topics,
+		accessKey:    accessKey,
+		secretKey:    secretKey,
+		sessionToken: sessionToken,
+		region:       region,
+		phones:       phones,
+		topics:       topics,
 	}, nil
 }
 
@@ -164,11 +172,12 @@ func (s *SNSTarget) notifyURL() string {
 
 func (s *SNSTarget) signer() awsSigV4 {
 	return awsSigV4{
-		accessKey: s.accessKey,
-		secretKey: s.secretKey,
-		region:    s.region,
-		service:   snsServiceName,
-		host:      fmt.Sprintf("sns.%s.amazonaws.com", s.region),
+		accessKey:    s.accessKey,
+		secretKey:    s.secretKey,
+		sessionToken: s.sessionToken,
+		region:       s.region,
+		service:      snsServiceName,
+		host:         fmt.Sprintf("sns.%s.amazonaws.com", s.region),
 	}
 }
 
@@ -274,6 +283,21 @@ func init() {
 					"type":     "choice:string",
 					"values":   []string{"html", "markdown", "text"},
 				},
+				"key": map[string]any{
+					"alias_of": "access_key_id",
+				},
+				"mode": map[string]any{
+					"default":  "sms",
+					"map_to":   "mode",
+					"name":     "Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"sms", "topic"},
+				},
+				"token": map[string]any{
+					"alias_of": "token",
+				},
 				"overflow": map[string]any{
 					"default":  "upstream",
 					"map_to":   "overflow",
@@ -327,7 +351,7 @@ func init() {
 				},
 			},
 			"kwargs":    map[string]any{},
-			"templates": []string{"{schema}://{access_key_id}/{secret_access_key}/{region}/{targets}"},
+			"templates": []string{"{schema}://{token}@{access_key_id}/{secret_access_key}/{region}/{targets}", "{schema}://{access_key_id}/{secret_access_key}/{region}/{targets}"},
 			"tokens": map[string]any{
 				"access_key_id": map[string]any{
 					"map_to":   "access_key_id",
@@ -374,6 +398,13 @@ func init() {
 					"prefix":   "#",
 					"private":  false,
 					"regex":    []string{"^[A-Za-z0-9_-]+$", "i"},
+					"required": false,
+					"type":     "string",
+				},
+				"token": map[string]any{
+					"map_to":   "session_token",
+					"name":     "Session Token",
+					"private":  true,
 					"required": false,
 					"type":     "string",
 				},

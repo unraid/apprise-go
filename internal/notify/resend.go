@@ -230,7 +230,7 @@ func init() {
 			"args": map[string]any{
 				"apikey": map[string]any{
 					"map_to":   "apikey",
-					"name":     "apikey",
+					"name":     "API Key",
 					"private":  false,
 					"required": false,
 					"type":     "string",
@@ -280,7 +280,7 @@ func init() {
 				},
 				"from": map[string]any{
 					"map_to":   "from_addr",
-					"name":     "from",
+					"name":     "From Address",
 					"private":  false,
 					"required": false,
 					"type":     "string",

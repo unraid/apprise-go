@@ -661,7 +661,7 @@ func init() {
 					"map_to":   "targets",
 					"name":     "Targets",
 					"private":  false,
-					"required": false,
+					"required": true,
 					"type":     "list:string",
 				},
 				"type": map[string]any{

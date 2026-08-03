@@ -16,16 +16,24 @@ const sesDefaultFromName = "Apprise Notifications"
 var awsRegionPattern = regexp.MustCompile(`^[A-Za-z]{2}-[A-Za-z-]+-[0-9]+$`)
 
 type SESTarget struct {
-	accessKey string
-	secretKey string
-	region    string
-	fromEmail string
-	fromName  string
-	targets   []string
+	accessKey    string
+	secretKey    string
+	sessionToken string
+	region       string
+	fromEmail    string
+	fromName     string
+	targets      []string
 }
 
 func NewSESTarget(target *ParsedURL) (*SESTarget, error) {
 	fromEmail := ""
+	// The session token arrives in the URL password field or as ?token=,
+	// with the query parameter winning when both are set.
+	sessionToken := strings.TrimSpace(target.Password)
+	if raw := strings.TrimSpace(target.Query["token"]); raw != "" {
+		sessionToken = raw
+	}
+
 	if target.User != "" && target.Host != "" {
 		fromEmail = strings.TrimSpace(target.User) + "@" + strings.TrimSpace(target.Host)
 	} else if strings.Contains(target.Host, "@") {
@@ -103,12 +111,13 @@ func NewSESTarget(target *ParsedURL) (*SESTarget, error) {
 	}
 
 	return &SESTarget{
-		accessKey: accessKey,
-		secretKey: secretKey,
-		region:    region,
-		fromEmail: fromEmail,
-		fromName:  fromName,
-		targets:   targets,
+		accessKey:    accessKey,
+		secretKey:    secretKey,
+		sessionToken: sessionToken,
+		region:       region,
+		fromEmail:    fromEmail,
+		fromName:     fromName,
+		targets:      targets,
 	}, nil
 }
 
@@ -153,11 +162,12 @@ func (s *SESTarget) notifyURL() string {
 
 func (s *SESTarget) signer() awsSigV4 {
 	return awsSigV4{
-		accessKey: s.accessKey,
-		secretKey: s.secretKey,
-		region:    s.region,
-		service:   sesServiceName,
-		host:      fmt.Sprintf("email.%s.amazonaws.com", s.region),
+		accessKey:    s.accessKey,
+		secretKey:    s.secretKey,
+		sessionToken: s.sessionToken,
+		region:       s.region,
+		service:      sesServiceName,
+		host:         fmt.Sprintf("email.%s.amazonaws.com", s.region),
 	}
 }
 
@@ -368,6 +378,12 @@ func init() {
 					"required": false,
 					"type":     "string",
 				},
+				"key": map[string]any{
+					"alias_of": "access_key_id",
+				},
+				"token": map[string]any{
+					"alias_of": "token",
+				},
 				"overflow": map[string]any{
 					"default":  "upstream",
 					"map_to":   "overflow",
@@ -466,6 +482,13 @@ func init() {
 					"name":     "Secret Access Key",
 					"private":  true,
 					"required": true,
+					"type":     "string",
+				},
+				"token": map[string]any{
+					"map_to":   "session_token",
+					"name":     "Session Token",
+					"private":  true,
+					"required": false,
 					"type":     "string",
 				},
 				"targets": map[string]any{
