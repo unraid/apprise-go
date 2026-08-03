@@ -218,7 +218,7 @@ func init() {
 				},
 			},
 			"kwargs":    map[string]any{},
-			"templates": []string{"{schema}://{user}:{password}@/{from_phone}", "{schema}://{user}:{password}@/{from_phone}/{targets}"},
+			"templates": []string{"{schema}://{user}:{password}@{from_phone}", "{schema}://{user}:{password}@{from_phone}/{targets}"},
 			"tokens": map[string]any{
 				"from_phone": map[string]any{
 					"map_to":   "source",
