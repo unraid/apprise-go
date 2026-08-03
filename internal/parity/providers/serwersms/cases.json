@@ -1,0 +1,16 @@
+[
+  {
+    "name": "default",
+    "url": "serwersms://user:pass@Sender/15551234567",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "phone-and-group",
+    "url": "serwersms://user:pass@Sender/15551234567/%23123",
+    "body": "body",
+    "title": "",
+    "type": "info"
+  }
+]

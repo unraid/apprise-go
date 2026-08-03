@@ -1,0 +1,42 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "{\"username\": \"user\", \"password\": \"pass\", \"text\": \"apprise parity\\r\\nhello from python\", \"sender\": \"Sender\", \"phone\": \"+15551234567\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api2.serwersms.pl/messages/send_sms"
+      }
+    ]
+  },
+  {
+    "name": "phone-and-group",
+    "requests": [
+      {
+        "body": "{\"username\": \"user\", \"password\": \"pass\", \"text\": \"body\", \"sender\": \"Sender\", \"phone\": \"+15551234567\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api2.serwersms.pl/messages/send_sms"
+      },
+      {
+        "body": "{\"username\": \"user\", \"password\": \"pass\", \"text\": \"body\", \"sender\": \"Sender\", \"group_id\": \"123\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api2.serwersms.pl/messages/send_sms"
+      }
+    ]
+  }
+]

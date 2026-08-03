@@ -699,6 +699,9 @@ def capture_request(url, body, title, notify_type, body_format=None):
             response._content = b'{"code":1000,"msg":"ok"}'
         elif parsed.netloc == "www.pushplus.plus" and parsed.path == "/send":
             response._content = b'{"code":200,"msg":"ok"}'
+        elif parsed.netloc == "api2.serwersms.pl" and "/messages/" in parsed.path:
+            # SerwerSMS answers 200 and reports the outcome in the body
+            response._content = b'{"success":true}'
         elif parsed.netloc == "api.octopush.com" and parsed.path.endswith(
             "/sms-campaign/send"
         ):
