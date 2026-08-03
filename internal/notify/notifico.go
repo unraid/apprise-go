@@ -354,7 +354,7 @@ func init() {
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
-		"secure_protocols": []string{"notifico"},
+		"secure_protocols": []string{"notificos"},
 		"service_name":     "Notifico",
 		"service_url":      "https://n.tkte.ch",
 		"setup_url":        "https://appriseit.com/services/notifico/",
