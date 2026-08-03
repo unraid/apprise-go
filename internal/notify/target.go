@@ -533,6 +533,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"sinch": func(parsed *ParsedURL) (Sender, error) {
 		return NewSinchTarget(parsed)
 	},
+	"stackfield": func(parsed *ParsedURL) (Sender, error) {
+		return NewStackfieldTarget(parsed)
+	},
 	"slack": func(parsed *ParsedURL) (Sender, error) {
 		return NewSlackTarget(parsed)
 	},
