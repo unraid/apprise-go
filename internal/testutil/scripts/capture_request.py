@@ -667,7 +667,13 @@ def capture_request(url, body, title, notify_type, body_format=None):
                 "utf-8"
             )
         elif (
-            "/_matrix/client/" in parsed.path and "/send/m.room.message" in parsed.path
+            "/_matrix/client/" in parsed.path
+            and (
+                "/send/m.room.message" in parsed.path
+                # Encrypted rooms send m.room.encrypted instead, and the
+                # plugin treats a send without an event_id as a failure.
+                or "/send/m.room.encrypted" in parsed.path
+            )
         ):
             response._content = b'{"event_id":"$event"}'
         elif "/_matrix/client/" in parsed.path and parsed.path.endswith("/logout"):
