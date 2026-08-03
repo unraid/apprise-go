@@ -169,8 +169,11 @@ func runParityTests(pkg string) (report, []byte, error) {
 		return report{}, nil, fmt.Errorf("read go test output: %w", err)
 	}
 
+	// A failing suite is exactly when the report is wanted, so the summary
+	// below still has to be computed; the error is returned at the end.
+	var runErr error
 	if err := cmd.Wait(); err != nil {
-		return rep, raw.Bytes(), fmt.Errorf("go test failed: %w", err)
+		runErr = fmt.Errorf("go test failed: %w", err)
 	}
 
 	repoRoot := findRepoRoot()
@@ -205,7 +208,7 @@ func runParityTests(pkg string) (report, []byte, error) {
 		}
 	}
 
-	return rep, raw.Bytes(), nil
+	return rep, raw.Bytes(), runErr
 }
 
 func topLevelTest(name string) string {
