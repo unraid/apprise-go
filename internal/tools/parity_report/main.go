@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -66,10 +67,11 @@ func main() {
 	flag.StringVar(&pkg, "pkg", "./internal/parity", "go test package to run")
 	flag.Parse()
 
-	rep, raw, err := runParityTests(pkg)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
+	// A failing run is exactly when the report matters, so record the error
+	// and still write both outputs before exiting non-zero.
+	rep, raw, runErr := runParityTests(pkg)
+	if runErr != nil {
+		fmt.Fprintln(os.Stderr, runErr.Error())
 	}
 
 	if jsonPath != "" {
@@ -96,6 +98,10 @@ func main() {
 
 	if err := schemaDiffError(rep); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+
+	if runErr != nil {
 		os.Exit(1)
 	}
 }
@@ -487,6 +493,24 @@ func renderMarkdown(rep report, jsonPath string) string {
 		fmt.Fprintf(&b, "| %s | %s | %s |\n", schema, strings.Join(tests, ", "), status)
 	}
 
+	if failing := failingSubtests(rep.Tests); len(failing) > 0 {
+		b.WriteString("\n## Work Outstanding\n\n")
+		b.WriteString("Each entry below is a provider or schema that no longer matches upstream.\n\n")
+		b.WriteString("| Test | Count | Failing |\n")
+		b.WriteString("| --- | --- | --- |\n")
+
+		parents := make([]string, 0, len(failing))
+		for parent := range failing {
+			parents = append(parents, parent)
+		}
+		sort.Strings(parents)
+		for _, parent := range parents {
+			names := failing[parent]
+			sort.Strings(names)
+			fmt.Fprintf(&b, "| %s | %d | %s |\n", parent, len(names), strings.Join(names, ", "))
+		}
+	}
+
 	b.WriteString("\n## Parity Tests\n\n")
 	b.WriteString("| Test | Status | Elapsed (s) |\n")
 	b.WriteString("| --- | --- | --- |\n")
@@ -538,4 +562,30 @@ func coverageStatus(results map[string]testResult, tests []string) string {
 		}
 	}
 	return "PASS"
+}
+
+// failingSubtests groups failing subtests by their parent test so the report
+// names the providers and schemas that need porting, not just the test that
+// covers them.
+func failingSubtests(tests map[string]testResult) map[string][]string {
+	failing := map[string][]string{}
+	for name, result := range tests {
+		if result.Status != "fail" {
+			continue
+		}
+		parent := topLevelTest(name)
+		if parent == name {
+			continue
+		}
+		// Subtests can nest; the first segment after the parent identifies the
+		// provider or schema.
+		leaf := strings.TrimPrefix(name, parent+"/")
+		if idx := strings.Index(leaf, "/"); idx >= 0 {
+			leaf = leaf[:idx]
+		}
+		if !slices.Contains(failing[parent], leaf) {
+			failing[parent] = append(failing[parent], leaf)
+		}
+	}
+	return failing
 }

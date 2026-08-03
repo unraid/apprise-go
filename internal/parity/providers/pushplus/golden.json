@@ -28,5 +28,35 @@
         "url": "https://www.pushplus.plus/send"
       }
     ]
+  },
+  {
+    "name": "wecom-alias",
+    "requests": [
+      {
+        "body": "{\"token\": \"token12345678901234567890123456789012\", \"title\": \"apprise parity\", \"content\": \"hello from python\", \"template\": \"html\", \"channel\": \"cp\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.pushplus.plus/send"
+      }
+    ]
+  },
+  {
+    "name": "group-topic",
+    "requests": [
+      {
+        "body": "{\"token\": \"token12345678901234567890123456789012\", \"title\": \"apprise parity\", \"content\": \"hello from python\", \"template\": \"html\", \"channel\": \"wechat\", \"topic\": \"topic1\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.pushplus.plus/send"
+      }
+    ]
   }
 ]

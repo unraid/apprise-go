@@ -1,4 +1,7 @@
 {
   "name": "pushplus",
-  "schemas": ["pushplus"]
+  "schemas": [
+    "pushplus",
+    "wecom"
+  ]
 }
