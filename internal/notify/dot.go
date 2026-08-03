@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	dotTextURL  = "https://dot.mindreset.tech/api/open/text"
-	dotImageURL = "https://dot.mindreset.tech/api/open/image"
+	// The v2 API addresses the device in the path.
+	dotTextURLTemplate  = "https://dot.mindreset.tech/api/authV2/open/device/%s/text"
+	dotImageURLTemplate = "https://dot.mindreset.tech/api/authV2/open/device/%s/image"
 
 	dotModeText  = "text"
 	dotModeImage = "image"
@@ -27,6 +28,7 @@ type DotTarget struct {
 	border       int
 	ditherType   string
 	ditherKernel string
+	taskKey      string
 }
 
 func NewDotTarget(target *ParsedURL) (*DotTarget, error) {
@@ -40,10 +42,9 @@ func NewDotTarget(target *ParsedURL) (*DotTarget, error) {
 		return nil, fmt.Errorf("missing device id")
 	}
 
+	// Upstream moved the mode from the path to a query argument.
 	mode := dotModeText
-	pathTokens := splitPath(target.Path)
-	if len(pathTokens) > 0 {
-		candidate := strings.ToLower(pathTokens[0])
+	if candidate := strings.ToLower(strings.TrimSpace(target.Query["mode"])); candidate != "" {
 		if candidate == dotModeText || candidate == dotModeImage {
 			mode = candidate
 		}
@@ -55,6 +56,7 @@ func NewDotTarget(target *ParsedURL) (*DotTarget, error) {
 	icon := strings.TrimSpace(target.Query["icon"])
 	imageData := strings.TrimSpace(target.Query["image"])
 	link := strings.TrimSpace(target.Query["link"])
+	taskKey := strings.TrimSpace(target.Query["task_key"])
 
 	border := 0
 	if rawBorder := strings.TrimSpace(target.Query["border"]); rawBorder != "" {
@@ -89,6 +91,7 @@ func NewDotTarget(target *ParsedURL) (*DotTarget, error) {
 		border:       border,
 		ditherType:   ditherType,
 		ditherKernel: ditherKernel,
+		taskKey:      taskKey,
 	}, nil
 }
 
@@ -115,12 +118,12 @@ func (d *DotTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (d *DotTarget) buildRequest(body, title string) (RequestSpec, error) {
+	// The v2 API identifies the device in the URL, not the payload.
 	payload := map[string]any{
 		"refreshNow": d.refreshNow,
-		"deviceId":   d.deviceID,
 	}
 
-	requestURL := dotTextURL
+	requestURL := fmt.Sprintf(dotTextURLTemplate, d.deviceID)
 	if d.mode == dotModeImage {
 		if d.imageData == "" {
 			return RequestSpec{}, fmt.Errorf("missing image data")
@@ -133,8 +136,11 @@ func (d *DotTarget) buildRequest(body, title string) (RequestSpec, error) {
 		payload["border"] = d.border
 		payload["ditherType"] = d.ditherType
 		payload["ditherKernel"] = d.ditherKernel
+		if d.taskKey != "" {
+			payload["taskKey"] = d.taskKey
+		}
 
-		requestURL = dotImageURL
+		requestURL = fmt.Sprintf(dotImageURLTemplate, d.deviceID)
 	} else {
 		if title != "" {
 			payload["title"] = title
@@ -150,6 +156,9 @@ func (d *DotTarget) buildRequest(body, title string) (RequestSpec, error) {
 		}
 		if d.link != "" {
 			payload["link"] = d.link
+		}
+		if d.taskKey != "" {
+			payload["taskKey"] = d.taskKey
 		}
 	}
 
@@ -250,6 +259,22 @@ func init() {
 					"required": false,
 					"type":     "string",
 				},
+				"mode": map[string]any{
+					"default":  "text",
+					"map_to":   "mode",
+					"name":     "API Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"text", "image"},
+				},
+				"task_key": map[string]any{
+					"map_to":   "task_key",
+					"name":     "Task Key",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
 				"overflow": map[string]any{
 					"default":  "upstream",
 					"map_to":   "overflow",
@@ -308,7 +333,7 @@ func init() {
 				},
 			},
 			"kwargs":    map[string]any{},
-			"templates": []string{"{schema}://{apikey}@{device_id}/{mode}/"},
+			"templates": []string{"{schema}://{apikey}@{device_id}/"},
 			"tokens": map[string]any{
 				"apikey": map[string]any{
 					"map_to":   "apikey",
@@ -323,15 +348,6 @@ func init() {
 					"private":  false,
 					"required": true,
 					"type":     "string",
-				},
-				"mode": map[string]any{
-					"default":  "text",
-					"map_to":   "mode",
-					"name":     "API Mode",
-					"private":  false,
-					"required": false,
-					"type":     "choice:string",
-					"values":   []string{"text", "image"},
 				},
 				"schema": map[string]any{
 					"default":  "dot",
