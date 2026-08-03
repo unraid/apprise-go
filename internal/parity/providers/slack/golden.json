@@ -13,5 +13,65 @@
         "url": "https://hooks.slack.com/services/T1JJ3T3L2/A1BRTD4JD/TIAJKDNL0AZKC0XRIDEVI7"
       }
     ]
+  },
+  {
+    "name": "workflow-mode",
+    "requests": [
+      {
+        "body": "{\"text\": \"the title: body\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.slack.com/workflows/T111/F222/X333/Y444"
+      }
+    ]
+  },
+  {
+    "name": "trigger-mode",
+    "requests": [
+      {
+        "body": "{\"text\": \"the title: body\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.slack.com/triggers/T111/X333/Y444"
+      }
+    ]
+  },
+  {
+    "name": "workflow-no-title",
+    "requests": [
+      {
+        "body": "{\"text\": \"body only\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.slack.com/workflows/T111/F222/X333/Y444"
+      }
+    ]
+  },
+  {
+    "name": "workflow-template",
+    "requests": [
+      {
+        "body": "{\"text\": \"the title / body\", \"blocks\": [{\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"body\"}}, {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"success hi\"}]}]}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.slack.com/workflows/T111/F222/X333/Y444"
+      }
+    ]
   }
 ]

@@ -5,5 +5,33 @@
     "body": "hello from python",
     "title": "apprise parity",
     "type": "info"
+  },
+  {
+    "name": "workflow-mode",
+    "url": "slack://T111/F222/X333/Y444?mode=workflow",
+    "body": "body",
+    "title": "the title",
+    "type": "info"
+  },
+  {
+    "name": "trigger-mode",
+    "url": "slack://T111/X333/Y444?mode=trigger",
+    "body": "body",
+    "title": "the title",
+    "type": "warning"
+  },
+  {
+    "name": "workflow-no-title",
+    "url": "slack://T111/F222/X333/Y444?mode=workflow",
+    "body": "body only",
+    "title": "",
+    "type": "info"
+  },
+  {
+    "name": "workflow-template",
+    "url": "slack://T111/F222/X333/Y444?mode=workflow&template=%7Brepo%7D%2Finternal%2Fparity%2Ffixtures%2Fslack_template.json&:mytoken=hi",
+    "body": "body",
+    "title": "the title",
+    "type": "success"
   }
 ]

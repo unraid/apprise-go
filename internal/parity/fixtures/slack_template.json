@@ -1,0 +1,7 @@
+{
+  "text": "{{app_title}} / {{app_body}}",
+  "blocks": [
+    {"type": "section", "text": {"type": "mrkdwn", "text": "{{app_body}}"}},
+    {"type": "context", "elements": [{"type": "mrkdwn", "text": "{{app_type}} {{mytoken}}"}]}
+  ]
+}

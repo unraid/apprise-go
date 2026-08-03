@@ -10,9 +10,18 @@ import (
 )
 
 const (
-	slackModeWebhook = "hook"
-	slackModeGov     = "gov-hook"
-	slackModeBot     = "bot"
+	slackModeWebhook  = "hook"
+	slackModeGov      = "gov-hook"
+	slackModeBot      = "bot"
+	slackModeWorkflow = "workflow"
+	slackModeTrigger  = "trigger"
+)
+
+// Workflow Builder posts to a fixed endpoint built from path segments rather
+// than to a channel.
+const (
+	slackWorkflowURL = "https://hooks.slack.com/workflows"
+	slackTriggerURL  = "https://hooks.slack.com/triggers"
 )
 
 var slackListDelims = regexp.MustCompile(`[ \t\r\n,#\\/]+`)
@@ -30,6 +39,9 @@ type SlackTarget struct {
 	includeTimestamp bool
 	useBlocks        bool
 	targets          []string
+	workflowPath     []string
+	templatePath     string
+	templateTokens   map[string]string
 }
 
 func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
@@ -47,6 +59,37 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 	}
 
 	entries := splitPath(target.Path)
+
+	// Workflow Builder consumes every path segment; nothing here is a token
+	// or a channel, so this branch has to come before either is read.
+	if mode == slackModeWorkflow || mode == slackModeTrigger {
+		workflowPath := append([]string{token}, entries...)
+
+		// A workflow URL carries four segments and a trigger three; with the
+		// mode named, the count has to match it exactly.
+		expected := 4
+		if mode == slackModeTrigger {
+			expected = 3
+		}
+		if len(workflowPath) != expected {
+			return nil, fmt.Errorf("a slack %s url requires exactly %d path segments, got %d",
+				mode, expected, len(workflowPath))
+		}
+
+		templateTokens := map[string]string{}
+		for key, value := range target.QueryPayload {
+			templateTokens[key] = value
+		}
+
+		return &SlackTarget{
+			mode:           mode,
+			username:       strings.TrimSpace(target.User),
+			workflowPath:   workflowPath,
+			templatePath:   strings.TrimSpace(target.Query["template"]),
+			templateTokens: templateTokens,
+		}, nil
+	}
+
 	tokenA := token
 	tokenB := ""
 	tokenC := ""
@@ -111,6 +154,11 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 		return nil, fmt.Errorf("missing webhook credentials")
 	}
 
+	templateTokens := map[string]string{}
+	for key, value := range target.QueryPayload {
+		templateTokens[key] = value
+	}
+
 	return &SlackTarget{
 		tokenA:           tokenA,
 		tokenB:           tokenB,
@@ -123,10 +171,67 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 		includeTimestamp: includeTimestamp,
 		useBlocks:        useBlocks,
 		targets:          targets,
+		templatePath:     strings.TrimSpace(target.Query["template"]),
+		templateTokens:   templateTokens,
+	}, nil
+}
+
+// isWorkflow reports whether this target posts to Workflow Builder, which has
+// no channels and a completely different payload.
+func (s *SlackTarget) isWorkflow() bool {
+	return s.mode == slackModeWorkflow || s.mode == slackModeTrigger
+}
+
+func (s *SlackTarget) workflowSpec(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	base := slackWorkflowURL
+	if s.mode == slackModeTrigger {
+		base = slackTriggerURL
+	}
+
+	var payload map[string]any
+	if s.templatePath != "" {
+		rendered, err := renderNotifyTemplate(s.templatePath, s.templateTokens, body, title, notifyType, "72x72")
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		payload = rendered
+	} else {
+		// The workflow has to accept this variable; there is no channel or
+		// block structure to attach anything else to.
+		text := body
+		if title != "" {
+			text = title + ": " + body
+		}
+		payload = map[string]any{"text": text}
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return RequestSpec{}, err
+	}
+
+	return RequestSpec{
+		Method: "POST",
+		URL:    base + "/" + strings.Join(s.workflowPath, "/"),
+		Headers: map[string]string{
+			"User-Agent":   "Apprise",
+			"Accept":       "application/json",
+			"Content-Type": "application/json; charset=utf-8",
+		},
+		Body: string(data),
 	}, nil
 }
 
 func (s *SlackTarget) Send(body, title string, notifyType NotifyType) error {
+	if s.isWorkflow() {
+		spec, err := s.workflowSpec(body, title, notifyType)
+		if err != nil {
+			return err
+		}
+
+		return SendRequest(spec)
+	}
+
 	channels := s.targets
 	if len(channels) == 0 {
 		channels = []string{""}
@@ -332,6 +437,10 @@ func slackNormalizeMode(mode string) string {
 		return slackModeBot
 	case strings.HasPrefix(lower, "hook"):
 		return slackModeWebhook
+	case strings.HasPrefix(lower, "workflow"):
+		return slackModeWorkflow
+	case strings.HasPrefix(lower, "trigger"):
+		return slackModeTrigger
 	default:
 		return ""
 	}
