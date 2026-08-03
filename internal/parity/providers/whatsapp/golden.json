@@ -11,7 +11,7 @@
           "user-agent": "Apprise"
         },
         "method": "POST",
-        "url": "https://graph.facebook.com/v17.0/12345678901234/messages"
+        "url": "https://graph.facebook.com/v21.0/12345678901234/messages"
       }
     ]
   },
@@ -19,7 +19,7 @@
     "name": "template",
     "requests": [
       {
-        "body": "{\"messaging_product\": \"whatsapp\", \"to\": \"+15551231234\", \"type\": \"template\", \"template\": {\"name\": \"apptemplate\", \"language\": {\"code\": \"fr\"}, \"components\": [{\"type\": \"body\", \"parameters\": [{\"type\": \"text\", \"text\": \"static\"}, {\"type\": \"text\", \"text\": \"hello\"}]}]}}",
+        "body": "{\"messaging_product\": \"whatsapp\", \"to\": \"+15551231234\", \"type\": \"template\", \"template\": {\"name\": \"apptemplate\", \"language\": {\"code\": \"fr\"}, \"components\": [{\"type\": \"body\", \"parameters\": [{\"type\": \"text\", \"text\": \"static\"}, {\"type\": \"text\", \"text\": \"hello\"}]}]}, \"recipient_type\": \"individual\"}",
         "headers": {
           "accept": "application/json",
           "authorization": "Bearer token123",
@@ -27,7 +27,23 @@
           "user-agent": "Apprise"
         },
         "method": "POST",
-        "url": "https://graph.facebook.com/v17.0/12345678901234/messages"
+        "url": "https://graph.facebook.com/v21.0/12345678901234/messages"
+      }
+    ]
+  },
+  {
+    "name": "group-target",
+    "requests": [
+      {
+        "body": "{\"messaging_product\": \"whatsapp\", \"to\": \"1234567890123456789@g.us\", \"recipient_type\": \"group\", \"type\": \"text\", \"text\": {\"body\": \"apprise parity\\r\\nhello from python\"}}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://graph.facebook.com/v21.0/12345678901234/messages"
       }
     ]
   }

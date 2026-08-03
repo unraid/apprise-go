@@ -12,5 +12,12 @@
     "body": "hello",
     "title": "",
     "type": "warning"
+  },
+  {
+    "name": "group-target",
+    "url": "whatsapp://token123@12345678901234/%231234567890123456789",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]
