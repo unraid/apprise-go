@@ -2,6 +2,7 @@ package notify
 
 var smsSchemas = map[string]struct{}{
 	"notifyre":   {},
+	"smsc":       {},
 	"46elks":     {},
 	"atalk":      {},
 	"clickatell": {},
