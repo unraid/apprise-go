@@ -336,15 +336,15 @@ func init() {
 				},
 			},
 		},
-		"enabled":   true,
-		"protocols": []string{"mailersend"},
+		"enabled": true,
 		"requirements": map[string]any{
 			"details":              "",
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
-		"service_name": "MailerSend",
-		"service_url":  "https://www.mailersend.com/",
-		"setup_url":    "https://appriseit.com/services/mailersend/",
+		"secure_protocols": []string{"mailersend"},
+		"service_name":     "MailerSend",
+		"service_url":      "https://www.mailersend.com/",
+		"setup_url":        "https://appriseit.com/services/mailersend/",
 	})
 }
