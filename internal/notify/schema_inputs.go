@@ -242,6 +242,15 @@ func adjustSchemaValues(specs schemaSpecs, target *ParsedURL, values map[string]
 				values["link"] = schemaValueAny(baseURL)
 			}
 		}
+	case "matrix", "matrixs":
+		// The generic inputs comparison maps the URL's own path component
+		// onto the path argument when ?path= is absent, so webhook_path comes
+		// out as the directory part of the URL rather than the arg default.
+		if _, ok := values["webhook_path"]; !ok {
+			if directory, ok := urlDirectoryPath(target.Path); ok {
+				values["webhook_path"] = schemaValueAny(directory)
+			}
+		}
 	case "ringc":
 		// Upstream always resolves a mode while parsing, guessing from the
 		// token's length when ?mode= is absent, so it is never unset.
@@ -258,6 +267,21 @@ func adjustSchemaValues(specs schemaSpecs, target *ParsedURL, values map[string]
 			}
 		}
 	}
+}
+
+// urlDirectoryPath returns the directory portion of a URL path, matching what
+// apprise reports as "path" alongside its "fullpath".
+func urlDirectoryPath(path string) (string, bool) {
+	if strings.TrimSpace(path) == "" {
+		return "", false
+	}
+
+	index := strings.LastIndex(path, "/")
+	if index < 0 {
+		return "", false
+	}
+
+	return path[:index+1], true
 }
 
 func (s SchemaInputs) ValuesMap() map[string]any {
