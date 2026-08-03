@@ -30,6 +30,7 @@ var pushSchemas = map[string]struct{}{
 	"notica":          {},
 	"noticas":         {},
 	"notifico":        {},
+	"notificos":       {},
 	"onesignal":       {},
 	"parsep":          {},
 	"parseps":         {},

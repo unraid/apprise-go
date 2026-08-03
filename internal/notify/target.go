@@ -394,6 +394,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"notificationapi": func(parsed *ParsedURL) (Sender, error) {
 		return NewNotificationAPITarget(parsed)
 	},
+	"notificos": func(parsed *ParsedURL) (Sender, error) {
+		return NewNotificoTarget(parsed)
+	},
 	"notifico": func(parsed *ParsedURL) (Sender, error) {
 		return NewNotificoTarget(parsed)
 	},

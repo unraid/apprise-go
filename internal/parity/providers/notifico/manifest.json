@@ -1,4 +1,7 @@
 {
   "name": "notifico",
-  "schemas": ["notifico"]
+  "schemas": [
+    "notifico",
+    "notificos"
+  ]
 }
