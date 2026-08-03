@@ -134,14 +134,16 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		if host == "" {
 			host = req.URL.Host
 		}
-		responseBody = fmt.Sprintf(`{"access_token":"token","home_server":"%s","user_id":"@user:%s"}`, host, host)
+		// A device id is what e2ee binds its keys to; without one the flow
+		// cannot upload them.
+		responseBody = fmt.Sprintf(`{"access_token":"token","home_server":"%s","user_id":"@user:%s","device_id":"APPRISEDEVICE"}`, host, host)
 		contentType = "application/json"
 	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.HasSuffix(req.URL.Path, "/register") {
 		host := req.URL.Hostname()
 		if host == "" {
 			host = req.URL.Host
 		}
-		responseBody = fmt.Sprintf(`{"access_token":"token","home_server":"%s","user_id":"@user:%s"}`, host, host)
+		responseBody = fmt.Sprintf(`{"access_token":"token","home_server":"%s","user_id":"@user:%s","device_id":"APPRISEDEVICE"}`, host, host)
 		contentType = "application/json"
 	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.Contains(req.URL.Path, "/join/") {
 		host := req.URL.Hostname()
@@ -170,6 +172,27 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 			host = req.URL.Host
 		}
 		responseBody = fmt.Sprintf(`{"joined_rooms":["#room:%s"]}`, host)
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/keys/upload") {
+		responseBody = `{"one_time_key_counts":{"signed_curve25519":50}}`
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/keys/query") {
+		responseBody = matrixE2EEDeviceKeys()
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/keys/claim") {
+		responseBody = matrixE2EEClaimedKey()
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/state/m.room.encryption") {
+		responseBody = `{"algorithm":"m.megolm.v1.aes-sha2"}`
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/joined_members") {
+		responseBody = `{"joined":{"` + matrixE2EEUserID + `":{"display_name":"target"}}}`
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/sendToDevice/m.room.encrypted") {
+		responseBody = `{}`
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/send/m.room.encrypted") {
+		responseBody = `{"event_id":"$encrypted"}`
 		contentType = "application/json"
 	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.Contains(req.URL.Path, "/send/m.room.message") {
 		responseBody = `{"event_id":"$event"}`

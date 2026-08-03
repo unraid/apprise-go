@@ -443,6 +443,12 @@ var targetBuilders = map[string]buildTargetFunc{
 	"fluxers": func(parsed *ParsedURL) (Sender, error) {
 		return NewFluxerTarget(parsed)
 	},
+	"xmpp": func(parsed *ParsedURL) (Sender, error) {
+		return NewXMPPTarget(parsed)
+	},
+	"xmpps": func(parsed *ParsedURL) (Sender, error) {
+		return NewXMPPTarget(parsed)
+	},
 	"jira": func(parsed *ParsedURL) (Sender, error) {
 		return NewJiraTarget(parsed)
 	},

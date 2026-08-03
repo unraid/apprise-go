@@ -283,10 +283,15 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	_ = opts.verbose
 	_ = opts.interpretEscapes
 	_ = opts.interpretEmojis
-	_ = opts.storageMode
-	_ = opts.storagePath
 	_ = opts.storagePruneDays
-	_ = opts.storageUIDLength
+
+	// storage-mode memory keeps everything in process, which is also what an
+	// empty path means; anything else persists under the storage path.
+	storagePath := opts.storagePath
+	if strings.EqualFold(strings.TrimSpace(opts.storageMode), "memory") {
+		storagePath = ""
+	}
+	notify.ConfigureStorage(storagePath, opts.storageUIDLength, nil)
 
 	failed := false
 	for _, entry := range tagged {

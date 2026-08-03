@@ -566,3 +566,23 @@ func encodeJSONValue(value any) ([]byte, error) {
 	}
 	return json.Marshal(value)
 }
+
+// VerifySignature checks an Ed25519 signature written the way Matrix writes
+// them: unpadded base64 over a public key in the same encoding.
+//
+// This is what stops a homeserver handing us a device key of its choosing to
+// encrypt to, so a malformed key or signature has to read as "not verified"
+// rather than being skipped over.
+func VerifySignature(publicKeyBase64 string, message []byte, signatureBase64 string) bool {
+	publicKey, err := DecodeBase64(publicKeyBase64)
+	if err != nil || len(publicKey) != ed25519.PublicKeySize {
+		return false
+	}
+
+	signature, err := DecodeBase64(signatureBase64)
+	if err != nil || len(signature) != ed25519.SignatureSize {
+		return false
+	}
+
+	return ed25519.Verify(ed25519.PublicKey(publicKey), message, signature)
+}

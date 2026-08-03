@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/unraid/apprise-go/internal/matrixolm"
 )
 
 const (
@@ -22,10 +24,11 @@ const (
 )
 
 const (
-	matrixModeOff    = "off"
-	matrixModeMatrix = "matrix"
-	matrixModeSlack  = "slack"
-	matrixModeT2Bot  = "t2bot"
+	matrixModeOff      = "off"
+	matrixModeMatrix   = "matrix"
+	matrixModeSlack    = "slack"
+	matrixModeT2Bot    = "t2bot"
+	matrixModeHookshot = "hookshot"
 
 	matrixVersionV2 = "2"
 	matrixVersionV3 = "3"
@@ -55,8 +58,14 @@ type MatrixTarget struct {
 	accessToken         string
 	homeServer          string
 	userID              string
+	deviceID            string
 	transactionID       int
 	transactionIDString string
+	e2ee                bool
+	hsreq               bool
+	webhookPath         string
+	store               Store
+	olmAccount          *matrixolm.Account
 	baseURLCached       string
 	discoveryDone       bool
 }
@@ -100,7 +109,7 @@ func NewMatrixTarget(target *ParsedURL) (*MatrixTarget, error) {
 	}
 
 	switch mode {
-	case matrixModeOff, matrixModeMatrix, matrixModeSlack, matrixModeT2Bot:
+	case matrixModeOff, matrixModeMatrix, matrixModeSlack, matrixModeT2Bot, matrixModeHookshot:
 	default:
 		return nil, fmt.Errorf("unsupported matrix mode")
 	}
@@ -161,6 +170,24 @@ func NewMatrixTarget(target *ParsedURL) (*MatrixTarget, error) {
 		discovery:     discovery,
 		rooms:         rooms,
 		transactionID: 0,
+		// Upstream defaults end-to-end encryption on; it only takes effect
+		// for rooms the server reports as encrypted.
+		e2ee:  parseBoolWithDefault(target.Query["e2ee"], true),
+		store: StoreFor(target),
+		hsreq: parseBoolWithDefault(target.Query["hsreq"], true),
+		webhookPath: func() string {
+			if raw := strings.TrimSpace(target.Query["path"]); raw != "" {
+				return raw
+			}
+			return "/webhook"
+		}(),
+	}
+
+	// A transaction id the server has already seen is ignored as a
+	// duplicate, so the counter has to survive the process.
+	var storedTransaction int
+	if storeGetJSON(matrixTarget.store, "transaction_id", &storedTransaction) {
+		matrixTarget.transactionID = storedTransaction
 	}
 
 	if mode == matrixModeT2Bot {
@@ -228,6 +255,15 @@ func (m *MatrixTarget) sendServer(body, title string, notifyType NotifyType) err
 			}
 		}
 
+		// Only an encrypted room gets encrypted traffic; anywhere else the
+		// plaintext path is what upstream uses too.
+		if m.e2ee && m.version == matrixVersionV3 && m.roomEncrypted(roomID) {
+			if err := m.sendEncrypted(roomID, body, title); err != nil {
+				return err
+			}
+			continue
+		}
+
 		if ok := m.sendMessage(roomID, body, title, notifyType); !ok {
 			return fmt.Errorf("matrix send failed")
 		}
@@ -245,6 +281,9 @@ func (m *MatrixTarget) buildWebhookRequest(body, title string, notifyType Notify
 		urlStr = matrixT2BotWebhookURL + m.accessToken
 	case matrixModeSlack:
 		payload = m.slackPayload(body, title, notifyType)
+		urlStr = m.webhookURL()
+	case matrixModeHookshot:
+		payload = m.hookshotPayload(body, title)
 		urlStr = m.webhookURL()
 	default:
 		payload = m.matrixPayload(body, title)
@@ -282,7 +321,51 @@ func (m *MatrixTarget) webhookURL() string {
 	if m.hasPort {
 		port = fmt.Sprintf(":%d", m.port)
 	}
-	return fmt.Sprintf("%s://%s%s%s/%s", scheme, m.host, port, matrixWebhookPath, token)
+	// matrix-hookshot exposes its own configurable path; the v1 webhook is
+	// fixed.
+	path := matrixWebhookPath
+	if m.mode == matrixModeHookshot {
+		path = strings.TrimRight(m.webhookPath, "/")
+	}
+
+	return fmt.Sprintf("%s://%s%s%s/%s", scheme, m.host, port, path, token)
+}
+
+// hookshotPayload builds the generic webhook body matrix-hookshot expects:
+// always a text field, with an html rendering alongside it.
+func (m *MatrixTarget) hookshotPayload(body, title string) map[string]any {
+	username := m.user
+	if username == "" {
+		username = matrixDefaultUserAgent
+	}
+
+	text := body
+	if title != "" {
+		text = title + "\r\n" + body
+	}
+
+	payload := map[string]any{
+		"username": username,
+		"text":     text,
+	}
+
+	heading := ""
+	if title != "" {
+		heading = "<h1>" + matrixEscapeHTML(title, true) + "</h1>"
+	}
+
+	switch m.notifyFormat {
+	case "html":
+		payload["html"] = heading + body
+	case "markdown":
+		payload["html"] = heading + matrixMarkdown(body)
+	default:
+		// Upstream converts only the newline, leaving any carriage return
+		// in place, so "a\r\nb" becomes "a\r<br/>b".
+		payload["html"] = strings.ReplaceAll(matrixEscapeHTML(text, false), "\n", "<br/>")
+	}
+
+	return payload
 }
 
 func (m *MatrixTarget) matrixPayload(body, title string) map[string]any {
@@ -358,6 +441,9 @@ func (m *MatrixTarget) login() bool {
 				"user": m.user,
 			},
 			"password": m.password,
+			// Names the device the server creates, which is what a user sees
+			// listed against the e2ee keys uploaded under it.
+			"initial_device_display_name": matrixDefaultUserAgent,
 		}
 	} else {
 		payload = map[string]any{
@@ -377,6 +463,8 @@ func (m *MatrixTarget) login() bool {
 	}
 	m.accessToken = accessToken
 	m.homeServer, _ = response["home_server"].(string)
+	// The device the homeserver assigned; e2ee keys are bound to it.
+	m.deviceID, _ = response["device_id"].(string)
 	m.userID, _ = response["user_id"].(string)
 	return true
 }
@@ -407,6 +495,8 @@ func (m *MatrixTarget) register() bool {
 	}
 	m.accessToken = accessToken
 	m.homeServer, _ = response["home_server"].(string)
+	// The device the homeserver assigned; e2ee keys are bound to it.
+	m.deviceID, _ = response["device_id"].(string)
 	m.userID, _ = response["user_id"].(string)
 	return true
 }
@@ -525,16 +615,25 @@ func (m *MatrixTarget) normalizeRoomID(room string) (string, bool) {
 		return "", false
 	}
 	roomID := matches[1]
-	homeServer := ""
+	explicitHomeServer := ""
 	if len(matches) > 2 {
-		homeServer = matches[2]
+		explicitHomeServer = matches[2]
 	}
+
+	// With hsreq off, a room id given without a homeserver is used exactly as
+	// written rather than having one appended to it.
+	if explicitHomeServer == "" && !m.hsreq {
+		return "!" + roomID, true
+	}
+
+	homeServer := explicitHomeServer
 	if homeServer == "" {
 		homeServer = m.homeServer
 	}
 	if homeServer == "" {
 		homeServer = "None"
 	}
+
 	return fmt.Sprintf("!%s:%s", roomID, homeServer), true
 }
 
@@ -886,6 +985,22 @@ func init() {
 					"required": false,
 					"type":     "bool",
 				},
+				"e2ee": map[string]any{
+					"default":  true,
+					"map_to":   "e2ee",
+					"name":     "End-to-End Encryption",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"hsreq": map[string]any{
+					"default":  true,
+					"map_to":   "hsreq",
+					"name":     "Force Home Server on Room IDs",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
 				"mode": map[string]any{
 					"default":  "off",
 					"map_to":   "mode",
@@ -893,7 +1008,7 @@ func init() {
 					"private":  false,
 					"required": false,
 					"type":     "choice:string",
-					"values":   []string{"off", "matrix", "slack", "t2bot"},
+					"values":   []string{"off", "matrix", "slack", "t2bot", "hookshot"},
 				},
 				"msgtype": map[string]any{
 					"default":  "text",
@@ -903,6 +1018,14 @@ func init() {
 					"required": false,
 					"type":     "choice:string",
 					"values":   []string{"text", "notice"},
+				},
+				"path": map[string]any{
+					"default":  "/webhook",
+					"map_to":   "webhook_path",
+					"name":     "Webhook Path",
+					"private":  false,
+					"required": false,
+					"type":     "string",
 				},
 				"overflow": map[string]any{
 					"default":  "upstream",

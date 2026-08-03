@@ -33,6 +33,8 @@ var chatSchemas = map[string]struct{}{
 	"sogs":       {},
 	"fluxer":     {},
 	"fluxers":    {},
+	"xmpp":       {},
+	"xmpps":      {},
 	"stackfield": {},
 	"revolt":     {},
 	"mmost":      {},
