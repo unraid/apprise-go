@@ -1,0 +1,45 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "{\"sender\": \"+15550000000\", \"recipient\": \"+15551234567\", \"message\": \"apprise parity\\r\\nhello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.800.com/message"
+      }
+    ]
+  },
+  {
+    "name": "from-query-multiple",
+    "requests": [
+      {
+        "body": "{\"sender\": \"+15550000000\", \"recipient\": \"+15551234567\", \"message\": \"body\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.800.com/message"
+      },
+      {
+        "body": "{\"sender\": \"+15550000000\", \"recipient\": \"+15559876543\", \"message\": \"body\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.800.com/message"
+      }
+    ]
+  }
+]

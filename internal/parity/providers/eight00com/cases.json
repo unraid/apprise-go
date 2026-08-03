@@ -1,0 +1,16 @@
+[
+  {
+    "name": "default",
+    "url": "eight00com://token123@15550000000/15551234567",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "from-query-multiple",
+    "url": "eight00com://token123@15551234567/15559876543?from=15550000000",
+    "body": "body",
+    "title": "",
+    "type": "info"
+  }
+]
