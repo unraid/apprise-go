@@ -463,6 +463,10 @@ var targetBuilders = map[string]buildTargetFunc{
 	"pushme": func(parsed *ParsedURL) (Sender, error) {
 		return NewPushMeTarget(parsed)
 	},
+	// wecom:// is a pushplus alias that pins the channel to WeCom.
+	"wecom": func(parsed *ParsedURL) (Sender, error) {
+		return NewPushplusTarget(parsed)
+	},
 	"pushplus": func(parsed *ParsedURL) (Sender, error) {
 		return NewPushplusTarget(parsed)
 	},

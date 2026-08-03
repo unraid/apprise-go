@@ -3,7 +3,7 @@
     "name": "webhook_default",
     "requests": [
       {
-        "body": "{\"text\": \"apprise parity\\r\\nhello from python\", \"icon_url\": null, \"username\": \"Apprise\"}",
+        "body": "{\"text\": \"apprise parity\\r\\nhello from python\", \"username\": \"Apprise\"}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json",
@@ -18,7 +18,7 @@
     "name": "mmosts-default",
     "requests": [
       {
-        "body": "{\"text\": \"apprise parity\\r\\nhello from python\", \"icon_url\": null, \"username\": \"Apprise\"}",
+        "body": "{\"text\": \"apprise parity\\r\\nhello from python\", \"username\": \"Apprise\"}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json",

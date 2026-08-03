@@ -43,6 +43,7 @@ var pushSchemas = map[string]struct{}{
 	"pushed":          {},
 	"pushme":          {},
 	"pushplus":        {},
+	"wecom":           {},
 	"pushy":           {},
 	"pjet":            {},
 	"pjets":           {},

@@ -3,10 +3,10 @@
     "name": "basic",
     "requests": [
       {
-        "body": "Action=SendRawEmail&Version=2010-12-01&RawMessage.Data=Q29udGVudC1UeXBlOiB0ZXh0L2h0bWw7IGNoYXJzZXQ9InV0Zi04IgpNSU1FLVZlcnNpb246IDEuMApDb250ZW50LVRyYW5zZmVyLUVuY29kaW5nOiBxdW90ZWQtcHJpbnRhYmxlClN1YmplY3Q6ID0%2FdXRmLTg%2FcT9UZXN0X1N1YmplY3Q%2FPQpGcm9tOiBBcHByaXNlIE5vdGlmaWNhdGlvbnMgPHNlbmRlckBleGFtcGxlLmNvbT4KVG86IHRhcmdldEBleGFtcGxlLmNvbQpDYzogCkRhdGU6IE1vbiwgMDEgSmFuIDIwMjQgMDA6MDA6MDAgKzAwMDAKWC1BcHBsaWNhdGlvbjogQXBwcmlzZQoKaGVsbG8%3D&Destinations.member.1=target%40example.com&Source=Apprise+Notifications+%3Csender%40example.com%3E",
+        "body": "Action=SendRawEmail&Version=2010-12-01&RawMessage.Data=Q29udGVudC1UeXBlOiB0ZXh0L2h0bWw7IGNoYXJzZXQ9InV0Zi04IgpNSU1FLVZlcnNpb246IDEuMApDb250ZW50LVRyYW5zZmVyLUVuY29kaW5nOiBxdW90ZWQtcHJpbnRhYmxlClN1YmplY3Q6ID0%2FdXRmLTg%2FcT9UZXN0X1N1YmplY3Q%2FPQpGcm9tOiBBcHByaXNlIE5vdGlmaWNhdGlvbnMgPHNlbmRlckBleGFtcGxlLmNvbT4KVG86IHRhcmdldEBleGFtcGxlLmNvbQpDYzogCkRhdGU6IE1vbiwgMDEgSmFuIDIwMjQgMDA6MDA6MDAgKzAwMDAKWC1BcHBsaWNhdGlvbjogQXBwcmlzZQoKaGVsbG8%3D&Destinations.member.1=target%40example.com&Source=Apprise%20Notifications%20%3Csender%40example.com%3E",
         "headers": {
           "accept": "*/*",
-          "authorization": "AWS4-HMAC-SHA256 Credential=access123/20240101/us-east-1/ses/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=75234febfc8fe1e3ed77b0bab3a9594321e4bd9d99f987a7f242c7c62b62bc00",
+          "authorization": "AWS4-HMAC-SHA256 Credential=access123/20240101/us-east-1/ses/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=aa3e99e8ff567d564e85dd8e786b38581cad24b3d4888c39033b195440ebfe5b",
           "content-type": "application/x-www-form-urlencoded; charset=utf-8",
           "user-agent": "Apprise",
           "x-amz-date": "20240101T000000Z"

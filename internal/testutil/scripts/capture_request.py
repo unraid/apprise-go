@@ -163,6 +163,13 @@ def apprise_git_sha():
     return output.decode("utf-8", "replace").strip()
 
 
+def script_sha():
+    try:
+        return hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
 def cache_key(url, body, title, notify_type, body_format):
     notify_name = notify_type.name if hasattr(notify_type, "name") else str(notify_type)
     try:
@@ -180,6 +187,9 @@ def cache_key(url, body, title, notify_type, body_format):
         "body_format": body_format,
         "apprise_version": apprise_version,
         "apprise_sha": apprise_git_sha(),
+        # The mocked responses live in this script, so a change to it must
+        # invalidate cached captures.
+        "script_sha": script_sha(),
         "python_version": sys.version,
         "requests_version": getattr(requests, "__version__", ""),
         "env": {
@@ -608,6 +618,8 @@ def capture_request(url, body, title, notify_type, body_format=None):
             and parsed.path == "/api/send/message"
         ):
             response._content = b'{"code":1000,"msg":"ok"}'
+        elif parsed.netloc == "www.pushplus.plus" and parsed.path == "/send":
+            response._content = b'{"code":200,"msg":"ok"}'
         elif parsed.netloc.endswith("notificationapi.com"):
             response._content = b'{"ok":true}'
         elif parsed.netloc == "api.sendpulse.com" and parsed.path.endswith(

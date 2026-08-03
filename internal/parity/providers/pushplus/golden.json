@@ -3,7 +3,7 @@
     "name": "default",
     "requests": [
       {
-        "body": "{\"token\": \"token12345678901234567890123456789012\", \"title\": \"apprise parity\", \"content\": \"hello from python\"}",
+        "body": "{\"token\": \"token12345678901234567890123456789012\", \"title\": \"apprise parity\", \"content\": \"hello from python\", \"template\": \"html\", \"channel\": \"wechat\"}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json",
@@ -18,7 +18,7 @@
     "name": "title-fallback",
     "requests": [
       {
-        "body": "{\"token\": \"token12345678901234567890123456789012\", \"title\": \"hello\", \"content\": \"hello\"}",
+        "body": "{\"token\": \"token12345678901234567890123456789012\", \"title\": \"hello\", \"content\": \"hello\", \"template\": \"html\", \"channel\": \"wechat\"}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json",

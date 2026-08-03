@@ -3,7 +3,7 @@
     "name": "webhook_basic",
     "requests": [
       {
-        "body": "{\"username\": \"Apprise\", \"mrkdwn\": true, \"attachments\": [{\"title\": \"apprise parity\", \"text\": \"hello from python\", \"color\": \"#3AA3E3\"}]}",
+        "body": "{\"mrkdwn\": true, \"attachments\": [{\"title\": \"apprise parity\", \"text\": \"hello from python\", \"color\": \"#3AA3E3\"}]}",
         "headers": {
           "accept": "application/json",
           "content-type": "application/json; charset=utf-8",
