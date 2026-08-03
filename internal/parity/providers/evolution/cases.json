@@ -1,0 +1,16 @@
+[
+  {
+    "name": "secure-default",
+    "url": "evolutions://apikey123@evo.example.com/instance1/15551234567",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "insecure-port-multiple",
+    "url": "evolution://apikey123@evo.example.com:8080/instance1/15551234567/15559876543",
+    "body": "body",
+    "title": "",
+    "type": "info"
+  }
+]
