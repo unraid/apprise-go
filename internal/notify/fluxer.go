@@ -265,7 +265,7 @@ func (f *FluxerTarget) prefix() string {
 }
 func init() {
 	RegisterSchemaEntryOrdered(164, SchemaEntry{
-		"attachment_support": false,
+		"attachment_support": true,
 		"category":           "native",
 		"details": map[string]any{
 			"args": map[string]any{

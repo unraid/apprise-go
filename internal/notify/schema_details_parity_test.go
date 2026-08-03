@@ -86,8 +86,8 @@ func normalizeSchemaEntries(t *testing.T, raw any) map[string]any {
 }
 
 func TestSchemaDetailsParity(t *testing.T) {
-	python := normalizeSchemaDetails(t, dropAttachmentSupport(dropKnownGapSchemas(loadPythonSchemaDetails(t))))
-	goDetails := normalizeSchemaDetails(t, dropAttachmentSupport(loadGoSchemaDetails(t)))
+	python := normalizeSchemaDetails(t, dropKnownGapSchemas(loadPythonSchemaDetails(t)))
+	goDetails := normalizeSchemaDetails(t, loadGoSchemaDetails(t))
 
 	if !reflect.DeepEqual(python, goDetails) {
 		pythonJSON, _ := json.MarshalIndent(python, "", "  ")
@@ -142,41 +142,4 @@ func schemaEntryIsKnownGap(entry map[string]any) bool {
 	}
 
 	return false
-}
-
-// dropAttachmentSupport removes the attachment_support flag from both sides.
-// This port sends no attachments for any service, so its entries correctly
-// report false where upstream reports true; comparing the flag would keep the
-// test red on a deliberate, port-wide difference and hide real drift behind
-// it. Delete this once attachments are implemented.
-func dropAttachmentSupport(details map[string]any) map[string]any {
-	entries, ok := details["schemas"].([]any)
-	if !ok {
-		return details
-	}
-
-	stripped := make([]any, 0, len(entries))
-	for _, raw := range entries {
-		entry, ok := raw.(map[string]any)
-		if !ok {
-			stripped = append(stripped, raw)
-			continue
-		}
-		clone := map[string]any{}
-		for key, value := range entry {
-			if key == "attachment_support" {
-				continue
-			}
-			clone[key] = value
-		}
-		stripped = append(stripped, clone)
-	}
-
-	out := map[string]any{}
-	for key, value := range details {
-		out[key] = value
-	}
-	out["schemas"] = stripped
-
-	return out
 }

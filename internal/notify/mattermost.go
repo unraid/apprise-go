@@ -257,7 +257,7 @@ func (m *MattermostTarget) buildSpec(message string, notifyType NotifyType, chan
 
 func init() {
 	RegisterSchemaEntryOrdered(43, SchemaEntry{
-		"attachment_support": false,
+		"attachment_support": true,
 		"category":           "native",
 		"details": map[string]any{
 			"args": map[string]any{

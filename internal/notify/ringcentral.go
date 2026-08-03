@@ -276,7 +276,7 @@ func ringCentralEnvironment(raw string) (string, error) {
 }
 func init() {
 	RegisterSchemaEntryOrdered(162, SchemaEntry{
-		"attachment_support": false,
+		"attachment_support": true,
 		"category":           "native",
 		"details": map[string]any{
 			"args": map[string]any{

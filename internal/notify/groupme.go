@@ -70,7 +70,7 @@ func (g *GroupMeTarget) Send(body, title string, notifyType NotifyType) error {
 
 func init() {
 	RegisterSchemaEntryOrdered(147, SchemaEntry{
-		"attachment_support": false,
+		"attachment_support": true,
 		"category":           "native",
 		"details": map[string]any{
 			"args": map[string]any{

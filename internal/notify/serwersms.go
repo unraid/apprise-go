@@ -146,7 +146,7 @@ func (s *SerwerSMSTarget) buildRequests(body, title string, notifyType NotifyTyp
 
 func init() {
 	RegisterSchemaEntryOrdered(157, SchemaEntry{
-		"attachment_support": false,
+		"attachment_support": true,
 		"category":           "native",
 		"details": map[string]any{
 			"args": map[string]any{

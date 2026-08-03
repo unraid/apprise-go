@@ -121,7 +121,7 @@ func (e *Eight00comTarget) buildRequests(body, title string, notifyType NotifyTy
 
 func init() {
 	RegisterSchemaEntryOrdered(155, SchemaEntry{
-		"attachment_support": false,
+		"attachment_support": true,
 		"category":           "native",
 		"details": map[string]any{
 			"args": map[string]any{

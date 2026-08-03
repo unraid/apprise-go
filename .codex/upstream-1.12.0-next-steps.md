@@ -50,9 +50,11 @@ into a test failure.
   `internal/parity/smpp_parity_test.go` is the pattern: stand up a Go listener,
   run both implementations against it, compare the frames.
 
-Two comparisons also exclude `attachment_support`, because this port sends no
-attachments for any service. Implementing them is the way to remove that
-exclusion; both places say so inline.
+`attachment_support` is *not* excluded. It mirrors what upstream declares
+about the service, which the port does for every entry, and it is compared in
+full. An exclusion was briefly added here on the mistaken belief that the flag
+described whether this port sends attachments; it does not, and ten entries
+were simply carrying wrong data.
 
 ### XMPP is unverified against upstream
 
@@ -78,9 +80,10 @@ frozen clock would let that case come back.
 
 ### Worth doing next
 
-- Attachments. Ten providers advertise support upstream that this port does
-  not have, and it is the one exclusion that covers real functionality rather
-  than a single service.
+- Attachment sending. No provider actually transmits attachments, though 42
+  entries declare the service supports them. That is the largest single piece
+  of upstream behaviour still missing, and it is invisible to every current
+  test because nothing exercises an attachment.
 - The persistent store now exists, so `wechat` and `ringc` could cache their
   tokens instead of refetching on every send.
 

@@ -36,8 +36,8 @@ func TestSchemaMatchesPython(t *testing.T) {
 		t.Fatalf("decode go schema: %v", err)
 	}
 
-	// The port declares some schemas as known gaps and sends no attachments
-	// anywhere, so those two differences are deliberate rather than drift.
+	// The port declares some schemas as known gaps; everything else is
+	// compared, keyed by schema since the two sides order entries differently.
 	want = normalizeSchemaForComparison(want)
 	got = normalizeSchemaForComparison(got)
 
@@ -49,9 +49,8 @@ func TestSchemaMatchesPython(t *testing.T) {
 }
 
 // normalizeSchemaForComparison drops the entries for schemas this port does
-// not implement, and the attachment_support flag, which is false throughout
-// because no attachments are sent. Both are recorded decisions; comparing
-// them would keep this test red and hide real drift behind the noise.
+// not implement, and keys the rest by schema so ordering differences between
+// the two sides do not register as drift.
 func normalizeSchemaForComparison(value any) any {
 	root, ok := value.(map[string]any)
 	if !ok {
@@ -75,14 +74,7 @@ func normalizeSchemaForComparison(value any) any {
 			continue
 		}
 
-		clone := map[string]any{}
-		for key, inner := range entry {
-			if key == "attachment_support" {
-				continue
-			}
-			clone[key] = inner
-		}
-		kept[schemaEntryKey(entry)] = clone
+		kept[schemaEntryKey(entry)] = entry
 	}
 
 	out := map[string]any{}

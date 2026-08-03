@@ -168,7 +168,7 @@ func (w *WebexTeamsTarget) Send(body, title string, notifyType NotifyType) error
 
 func init() {
 	RegisterSchemaEntryOrdered(70, SchemaEntry{
-		"attachment_support": false,
+		"attachment_support": true,
 		"category":           "native",
 		"details": map[string]any{
 			"args": map[string]any{
