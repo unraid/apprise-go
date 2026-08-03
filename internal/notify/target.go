@@ -540,6 +540,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"sinch": func(parsed *ParsedURL) (Sender, error) {
 		return NewSinchTarget(parsed)
 	},
+	"zoom": func(parsed *ParsedURL) (Sender, error) {
+		return NewZoomTarget(parsed)
+	},
 	"viber": func(parsed *ParsedURL) (Sender, error) {
 		return NewViberTarget(parsed)
 	},

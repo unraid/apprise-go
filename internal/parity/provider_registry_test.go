@@ -135,6 +135,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"whatsapp": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewWhatsAppTarget(parsed)
 	},
+	"zoom": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewZoomTarget(parsed)
+	},
 	"viber": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewViberTarget(parsed)
 	},

@@ -1,0 +1,49 @@
+[
+  {
+    "name": "default-full",
+    "requests": [
+      {
+        "body": "{\"content\": {\"head\": {\"text\": \"apprise parity\"}, \"body\": [{\"type\": \"message\", \"text\": \"hello from python\"}]}}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "verificationtoken456",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://inbots.zoom.us/incoming/hook/webhookid123?format=full"
+      }
+    ]
+  },
+  {
+    "name": "simple-mode",
+    "requests": [
+      {
+        "body": "apprise parity: hello from python",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "verificationtoken456",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://inbots.zoom.us/incoming/hook/webhookid123"
+      }
+    ]
+  },
+  {
+    "name": "no-title",
+    "requests": [
+      {
+        "body": "{\"content\": {\"body\": [{\"type\": \"message\", \"text\": \"body only\"}]}}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "verificationtoken456",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://inbots.zoom.us/incoming/hook/webhookid123?format=full"
+      }
+    ]
+  }
+]

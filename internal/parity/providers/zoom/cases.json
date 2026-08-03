@@ -1,0 +1,23 @@
+[
+  {
+    "name": "default-full",
+    "url": "zoom://webhookid123/verificationtoken456",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "simple-mode",
+    "url": "zoom://webhookid123/verificationtoken456?mode=simple",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "no-title",
+    "url": "zoom://webhookid123/verificationtoken456",
+    "body": "body only",
+    "title": "",
+    "type": "info"
+  }
+]
