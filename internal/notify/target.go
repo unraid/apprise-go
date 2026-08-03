@@ -422,6 +422,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"opsgenie": func(parsed *ParsedURL) (Sender, error) {
 		return NewOpsgenieTarget(parsed)
 	},
+	"jira": func(parsed *ParsedURL) (Sender, error) {
+		return NewJiraTarget(parsed)
+	},
 	"pagerduty": func(parsed *ParsedURL) (Sender, error) {
 		return NewPagerDutyTarget(parsed)
 	},

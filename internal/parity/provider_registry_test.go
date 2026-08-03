@@ -225,6 +225,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"opsgenie": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewOpsgenieTarget(parsed)
 	},
+	"jira": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewJiraTarget(parsed)
+	},
 	"matrix": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewMatrixTarget(parsed)
 	},

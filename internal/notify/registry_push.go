@@ -64,6 +64,7 @@ var pushSchemas = map[string]struct{}{
 	"pagertree":       {},
 	"pagerduty":       {},
 	"opsgenie":        {},
+	"jira":            {},
 	"napi":            {},
 	"notificationapi": {},
 	"psafer":          {},

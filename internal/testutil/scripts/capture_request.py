@@ -741,6 +741,13 @@ def capture_request(url, body, title, notify_type, body_format=None):
             and parsed.path == "/v2/alerts"
         ):
             response._content = b'{"requestId":"request"}'
+        elif (
+            parsed.netloc == "api.atlassian.com"
+            and parsed.path == "/jsm/ops/integration/v2/alerts"
+        ):
+            # Jira Service Management, like Opsgenie, treats a 200 with no
+            # requestId in the body as a failure.
+            response._content = b'{"requestId":"request"}'
         elif parsed.netloc == "www.dmc.sfr-sh.fr" and parsed.path.endswith(
             "/DmcWS/1.5.8/JsonService/MessagesUnitairesWS/addSingleCall"
         ):

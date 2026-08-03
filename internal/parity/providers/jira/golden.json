@@ -1,0 +1,190 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"apprise parity\", \"description\": \"hello from python\", \"details\": {\"detail\": \"xyz\", \"type\": \"warning\"}, \"priority\": \"P4\", \"tags\": [\"alpha\", \"beta\"], \"entity\": \"server1\", \"alias\": \"alert1\", \"responders\": [{\"type\": \"team\", \"name\": \"team\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "accepts": "application/json",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.atlassian.com/jsm/ops/integration/v2/alerts"
+      },
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"apprise parity\", \"description\": \"hello from python\", \"details\": {\"detail\": \"xyz\", \"type\": \"warning\"}, \"priority\": \"P4\", \"tags\": [\"alpha\", \"beta\"], \"entity\": \"server1\", \"alias\": \"alert1\", \"responders\": [{\"type\": \"user\", \"username\": \"user\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "accepts": "application/json",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.atlassian.com/jsm/ops/integration/v2/alerts"
+      }
+    ]
+  },
+  {
+    "name": "map-info-is-a-note-so-nothing-is-sent",
+    "requests": []
+  },
+  {
+    "name": "map-warning-creates-an-alert",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"user\", \"username\": \"user\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "accepts": "application/json",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.atlassian.com/jsm/ops/integration/v2/alerts"
+      }
+    ]
+  },
+  {
+    "name": "mapping-override-makes-info-create",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"info\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"user\", \"username\": \"user\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "accepts": "application/json",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.atlassian.com/jsm/ops/integration/v2/alerts"
+      }
+    ]
+  },
+  {
+    "name": "us-region-uses-the-same-endpoint",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"user\", \"username\": \"user\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "accepts": "application/json",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.atlassian.com/jsm/ops/integration/v2/alerts"
+      }
+    ]
+  },
+  {
+    "name": "batch-off-splits-responders",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"team\", \"name\": \"teamtwo\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "accepts": "application/json",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.atlassian.com/jsm/ops/integration/v2/alerts"
+      },
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"schedule\", \"name\": \"sched\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "accepts": "application/json",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.atlassian.com/jsm/ops/integration/v2/alerts"
+      },
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"user\", \"username\": \"one\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "accepts": "application/json",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.atlassian.com/jsm/ops/integration/v2/alerts"
+      },
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"escalation\", \"name\": \"esc\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "accepts": "application/json",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.atlassian.com/jsm/ops/integration/v2/alerts"
+      }
+    ]
+  },
+  {
+    "name": "batch-on-groups-responders",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"team\", \"name\": \"teamtwo\"}, {\"type\": \"schedule\", \"name\": \"sched\"}, {\"type\": \"user\", \"username\": \"one\"}, {\"type\": \"escalation\", \"name\": \"esc\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "accepts": "application/json",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.atlassian.com/jsm/ops/integration/v2/alerts"
+      }
+    ]
+  },
+  {
+    "name": "user-in-url-and-no-targets",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"this title is deliberately longer than the one hundred and thirty character message limit that upstream applies before it trunc...\", \"description\": \"body\", \"details\": {\"type\": \"failure\"}, \"priority\": \"P3\", \"user\": \"someuser\"}",
+        "headers": {
+          "accept": "*/*",
+          "accepts": "application/json",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.atlassian.com/jsm/ops/integration/v2/alerts"
+      }
+    ]
+  },
+  {
+    "name": "uuid-target-is-an-id",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"user\", \"id\": \"8b8d1b3e-1a4f-4c2a-9f3e-2c7d5a6b1e90\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "accepts": "application/json",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.atlassian.com/jsm/ops/integration/v2/alerts"
+      }
+    ]
+  }
+]
