@@ -2,7 +2,7 @@
 
 Branch: `feat/upstream-1.12.0` (PR #84). Everything described as done is pushed.
 
-Where things stand: 18 services ported this pass, missing schemas 36 → 14.
+Where things stand: 22 services ported this pass, missing schemas 36 → 10.
 `TestProviderRequestParity` and `TestProviderGoldenRequests` have been green
 after every commit, and that is the bar for anything added below.
 
@@ -30,25 +30,12 @@ Fixtures have caught a wrong assumption on nearly every provider — a missing
 `charset=utf-8`, a 201 instead of 200, a default mode that was not the one in
 the docs. Write the case first and let it tell you.
 
-## Remaining 14, by what they actually cost
+## Remaining 10, by what they actually cost
 
-### Plain HTTP — do these first (4 schemas)
-
-| Schema | Upstream | Notes |
-| --- | --- | --- |
-| `kook` | `kook.py`, 770 lines | Single request, no auth flow. |
-| `jira` | `jira.py`, 912 lines | Single request, no auth flow. Long because of field mapping, not complexity. |
-
-### Token lifecycle (3 schemas)
-
-`wechat` needs a `gettoken` request whose result is cached and reused;
-`ringc` has an OAuth acquire/revoke lifecycle around each send.
-
-Neither is hard, but a single-shot parity case cannot see the bug that
-matters here: get the caching wrong and the provider works once and then
-silently fails on the second send. These need a case that sends **twice** and
-asserts the request sequence, so the harness needs to grow a multi-send mode
-before either is worth starting.
+`kook`, `jira`, `wechat` and `ringc` are done. The token-lifecycle worry about
+the latter two turned out to be smaller than it looked: both fetch their token
+in the same send, so a single-shot case captures the whole flow. Neither
+caches, matching what upstream does against a cold store.
 
 ### Larger (2 schemas)
 
@@ -58,10 +45,26 @@ before either is worth starting.
 
 `sogs`, `session` / `sessions` — Ed25519 plus blake2b in `X-SOGS-*` headers.
 
-Treat this the way Matrix crypto was treated: pin the same state on both
-sides, dump both signatures, compare bytes. A wrong signature is rejected by
-the server, not visible in a diff, and no unit test written from the docs will
-notice. Budget a session for this one and do not start it on fumes.
+Better news than expected after reading it: `golang.org/x/crypto` is already a
+dependency so blake2b is free, the protobuf message build has no random
+padding, and Ed25519 signing is deterministic — which makes the whole request
+*body* byte-comparable.
+
+What is not comparable is the four `X-SOGS-*` headers: the signature covers a
+random 16-byte nonce and the current timestamp. The harness compares every
+`x-`-prefixed header strictly, so it needs a way to assert a header is present
+without pinning its value, plus a checked-in vector — nonce and timestamp
+pinned on both sides — proving the signing construction itself. That is the
+Matrix technique, and it is the only thing that catches a wrong signature: the
+server rejects it, a diff does not show it.
+
+### Token lifecycle: resolved
+
+Worth recording since the concern was raised and turned out wrong. Neither
+`wechat` nor `ringc` needed a multi-send harness mode. Upstream caches in its
+persistent store, the Go port has none, and a fresh store behaves identically —
+so the two agree request-for-request on a single send. If a store ever lands,
+these are the two to revisit.
 
 ### Needs a dependency decision from you (5 schemas)
 
@@ -95,6 +98,10 @@ Do not remove these; each one exists because something got through.
 - `registry_consistency_test.go` — the three-way registration check.
 - `capture_request.py` cache key includes the harness script hash. Without it
   the cache served stale results and inflated failure counts.
+- A case may declare `sends_nothing`, and the golden loader checks it both
+  ways. Before this, an empty golden was always treated as a broken capture,
+  which made "upstream deliberately sends no request" untestable — and that is
+  exactly where the Opsgenie action-mapping bug was hiding.
 - `internal/tools/parity_report` — writes a "Work Outstanding" section listing
   failing providers, and the sync workflow puts it in the PR body. The drift
   to 1.12.0 happened in the first place because the sync workflow was disabled
