@@ -1,0 +1,16 @@
+[
+  {
+    "name": "default",
+    "url": "notifyre://apikey123/15551234567",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "multiple-with-campaign",
+    "url": "notifyre://apikey123/15551234567/15559876543?campaign=MyCampaign&from=15550000000",
+    "body": "body",
+    "title": "",
+    "type": "info"
+  }
+]
