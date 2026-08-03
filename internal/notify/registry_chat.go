@@ -21,6 +21,8 @@ var chatSchemas = map[string]struct{}{
 	"chime":      {},
 	"viber":      {},
 	"groupme":    {},
+	"humhub":     {},
+	"humhubs":    {},
 	"zoom":       {},
 	"flowtriq":   {},
 	"flowtriqs":  {},

@@ -1,0 +1,4 @@
+{
+  "name": "humhub",
+  "schemas": ["humhub", "humhubs"]
+}

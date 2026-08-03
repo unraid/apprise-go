@@ -1,0 +1,294 @@
+package notify
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+)
+
+type HumHubTarget struct {
+	host     string
+	port     int
+	secure   bool
+	user     string
+	password string
+	targets  []string
+}
+
+func NewHumHubTarget(target *ParsedURL) (*HumHubTarget, error) {
+	host := strings.TrimSpace(target.Host)
+	if host == "" {
+		return nil, fmt.Errorf("missing host")
+	}
+
+	user := strings.TrimSpace(target.User)
+	if user == "" {
+		return nil, fmt.Errorf("missing token or username")
+	}
+
+	targets := splitPath(target.Path)
+	if to := strings.TrimSpace(target.Query["to"]); to != "" {
+		targets = append(targets, parseDelimitedList(to)...)
+	}
+	if len(targets) == 0 {
+		return nil, fmt.Errorf("missing container ids")
+	}
+
+	return &HumHubTarget{
+		host:     host,
+		port:     target.Port,
+		secure:   strings.EqualFold(target.Scheme, "humhubs"),
+		user:     user,
+		password: target.Password,
+		targets:  targets,
+	}, nil
+}
+
+func (h *HumHubTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	specs, err := h.buildRequests(body, title, notifyType)
+	if err != nil {
+		return RequestSpec{}, err
+	}
+
+	return specs[0], nil
+}
+
+func (h *HumHubTarget) Send(body, title string, notifyType NotifyType) error {
+	specs, err := h.buildRequests(body, title, notifyType)
+	if err != nil {
+		return err
+	}
+
+	for _, spec := range specs {
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// buildRequests posts once per container, since HumHub addresses a single
+// container per call.
+func (h *HumHubTarget) buildRequests(body, title string, notifyType NotifyType) ([]RequestSpec, error) {
+	_ = notifyType
+
+	headers := map[string]string{
+		"User-Agent":   "Apprise",
+		"Accept":       "*/*",
+		"Content-Type": "application/json",
+	}
+	// A password means basic auth; otherwise the user field is a bearer token.
+	if h.password != "" {
+		headers["Authorization"] = basicAuthHeader(h.user, h.password)
+	} else {
+		headers["Authorization"] = "Bearer " + h.user
+	}
+
+	data, err := json.Marshal(map[string]any{
+		"data": map[string]any{"message": mergeTitleBody(title, body)},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	scheme := "http"
+	if h.secure {
+		scheme = "https"
+	}
+	base := fmt.Sprintf("%s://%s", scheme, h.host)
+	if h.port > 0 {
+		base += fmt.Sprintf(":%d", h.port)
+	}
+
+	specs := make([]RequestSpec, 0, len(h.targets))
+	for _, container := range h.targets {
+		specs = append(specs, RequestSpec{
+			Method:  "POST",
+			URL:     fmt.Sprintf("%s/api/v1/post/container/%s", base, container),
+			Headers: headers,
+			Body:    string(data),
+		})
+	}
+
+	return specs, nil
+}
+
+func init() {
+	RegisterSchemaEntryOrdered(149, SchemaEntry{
+		"attachment_support": true,
+		"category":           "native",
+		"details": map[string]any{
+			"args": map[string]any{
+				"cto": map[string]any{
+					"default":  4.0,
+					"map_to":   "cto",
+					"name":     "Socket Connect Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"emojis": map[string]any{
+					"default":  false,
+					"map_to":   "emojis",
+					"name":     "Interpret Emojis",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"format": map[string]any{
+					"default":  "text",
+					"map_to":   "format",
+					"name":     "Notify Format",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"html", "markdown", "text"},
+				},
+				"optional": map[string]any{
+					"default":  false,
+					"map_to":   "optional",
+					"name":     "Optional Service",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"overflow": map[string]any{
+					"default":  "upstream",
+					"map_to":   "overflow",
+					"name":     "Overflow Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"redirect": map[string]any{
+					"default":  true,
+					"map_to":   "redirect",
+					"name":     "Follow Redirects",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"retry": map[string]any{
+					"default":  0,
+					"map_to":   "retry",
+					"max":      10,
+					"min":      0,
+					"name":     "Service Retry",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+				"rto": map[string]any{
+					"default":  4.0,
+					"map_to":   "rto",
+					"name":     "Socket Read Timeout",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+				"store": map[string]any{
+					"default":  true,
+					"map_to":   "store",
+					"name":     "Persistent Storage",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"to": map[string]any{
+					"alias_of": "targets",
+					"delim":    []string{",", " "},
+				},
+				"tz": map[string]any{
+					"default":  nil,
+					"map_to":   "tz",
+					"name":     "Timezone",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+				"verify": map[string]any{
+					"default":  true,
+					"map_to":   "verify",
+					"name":     "Verify SSL",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"wait": map[string]any{
+					"default":  0.0,
+					"map_to":   "wait",
+					"max":      20.0,
+					"min":      0.0,
+					"name":     "Inter-Retry Wait",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
+			},
+			"kwargs":    map[string]any{},
+			"templates": []string{"{schema}://{user}@{host}/{targets}", "{schema}://{user}@{host}:{port}/{targets}", "{schema}://{user}:{password}@{host}/{targets}", "{schema}://{user}:{password}@{host}:{port}/{targets}"},
+			"tokens": map[string]any{
+				"host": map[string]any{
+					"map_to":   "host",
+					"name":     "Hostname",
+					"private":  false,
+					"required": true,
+					"type":     "string",
+				},
+				"password": map[string]any{
+					"map_to":   "password",
+					"name":     "Password",
+					"private":  true,
+					"required": false,
+					"type":     "string",
+				},
+				"port": map[string]any{
+					"map_to":   "port",
+					"max":      65535,
+					"min":      1,
+					"name":     "Port",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+				"schema": map[string]any{
+					"map_to":   "schema",
+					"name":     "Schema",
+					"private":  false,
+					"required": true,
+					"type":     "choice:string",
+					"values":   []string{"humhub", "humhubs"},
+				},
+				"targets": map[string]any{
+					"delim":    []string{"/"},
+					"group":    []any{},
+					"map_to":   "targets",
+					"name":     "Targets",
+					"private":  false,
+					"required": false,
+					"type":     "list:string",
+				},
+				"user": map[string]any{
+					"map_to":   "user",
+					"name":     "Token or Username",
+					"private":  true,
+					"required": true,
+					"type":     "string",
+				},
+			},
+		},
+		"enabled":   true,
+		"protocols": []string{"humhub"},
+		"requirements": map[string]any{
+			"details":              "",
+			"packages_recommended": []any{},
+			"packages_required":    []any{},
+		},
+		"secure_protocols": []string{"humhubs"},
+		"service_name":     "HumHub",
+		"service_url":      "https://www.humhub.com/",
+		"setup_url":        "https://appriseit.com/services/humhub/",
+	})
+}

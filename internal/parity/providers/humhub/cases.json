@@ -1,0 +1,16 @@
+[
+  {
+    "name": "bearer-token",
+    "url": "humhubs://token123@humhub.example.com/1",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "basic-auth-multiple",
+    "url": "humhub://user:pass@humhub.example.com:8080/1/2",
+    "body": "body",
+    "title": "",
+    "type": "info"
+  }
+]

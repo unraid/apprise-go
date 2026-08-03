@@ -1,0 +1,45 @@
+[
+  {
+    "name": "bearer-token",
+    "requests": [
+      {
+        "body": "{\"data\": {\"message\": \"apprise parity\\r\\nhello from python\"}}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://humhub.example.com/api/v1/post/container/1"
+      }
+    ]
+  },
+  {
+    "name": "basic-auth-multiple",
+    "requests": [
+      {
+        "body": "{\"data\": {\"message\": \"body\"}}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://humhub.example.com:8080/api/v1/post/container/1"
+      },
+      {
+        "body": "{\"data\": {\"message\": \"body\"}}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://humhub.example.com:8080/api/v1/post/container/2"
+      }
+    ]
+  }
+]

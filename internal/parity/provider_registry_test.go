@@ -135,6 +135,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"whatsapp": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewWhatsAppTarget(parsed)
 	},
+	"humhub": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewHumHubTarget(parsed)
+	},
 	"pushward": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewPushWardTarget(parsed)
 	},
