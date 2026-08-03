@@ -1,6 +1,7 @@
 package notify
 
 var emailSchemas = map[string]struct{}{
+	"postmark":  {},
 	"azure":     {},
 	"mailto":    {},
 	"mailtos":   {},

@@ -1,0 +1,16 @@
+[
+  {
+    "name": "default",
+    "url": "postmark://apikey123:sender@example.com/target@example.com",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "from-query",
+    "url": "postmark://apikey123@example.com/target@example.com?from=sender@example.com&name=Apprise",
+    "body": "body",
+    "title": "",
+    "type": "info"
+  }
+]
