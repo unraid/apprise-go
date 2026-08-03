@@ -206,13 +206,10 @@ func (s *SlackTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 }
 
 func (s *SlackTarget) buildPayload(body, title string, notifyType NotifyType) (map[string]any, error) {
-	username := s.username
-	if username == "" {
-		username = "Apprise"
-	}
-
-	payload := map[string]any{
-		"username": username,
+	// Upstream only names the poster when the URL supplies a user.
+	payload := map[string]any{}
+	if s.username != "" {
+		payload["username"] = s.username
 	}
 
 	imageURL := ""

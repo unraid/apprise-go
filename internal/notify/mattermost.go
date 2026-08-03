@@ -88,9 +88,10 @@ func (m *MattermostTarget) BuildRequest(body, title string, notifyType NotifyTyp
 }
 
 func (m *MattermostTarget) buildSpec(message string, notifyType NotifyType, channel string) (RequestSpec, error) {
+	// icon_url is only sent when there is an image to point at; upstream no
+	// longer emits an explicit null.
 	payload := map[string]any{
-		"text":     message,
-		"icon_url": nil,
+		"text": message,
 	}
 
 	if m.includeImage {
