@@ -62,5 +62,101 @@
         "url": "https://mastodon.local/api/v1/statuses"
       }
     ]
+  },
+  {
+    "name": "ping-mentions-and-hashtags",
+    "requests": [
+      {
+        "body": "{\"status\": \"t\\r\\nhello #apprise @alice\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "ping-deduped-against-body",
+    "requests": [
+      {
+        "body": "{\"status\": \"hey @alice how are you\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "path-hashtag-target",
+    "requests": [
+      {
+        "body": "{\"status\": \"t\\r\\nhello #apprise\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "path-user-target-not-direct",
+    "requests": [
+      {
+        "body": "{\"status\": \"t\\r\\nhello @alice\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "markdown-scans-body",
+    "requests": [
+      {
+        "body": "{\"status\": \"hello @bob and #tagged @bob #tagged #apprise\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "numeric-hashtag-rejected",
+    "requests": [
+      {
+        "body": "{\"status\": \"t\\r\\nhello #real\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
   }
 ]

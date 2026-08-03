@@ -22,5 +22,47 @@
     "url": "toots://token@mastodon.local",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "ping-mentions-and-hashtags",
+    "url": "mastodons://token@mastodon.local?ping=@alice,%23apprise",
+    "body": "hello",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "ping-deduped-against-body",
+    "url": "mastodons://token@mastodon.local?ping=@alice",
+    "body": "hey @alice how are you",
+    "title": "",
+    "type": "info"
+  },
+  {
+    "name": "path-hashtag-target",
+    "url": "mastodons://token@mastodon.local/%23apprise",
+    "body": "hello",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "path-user-target-not-direct",
+    "url": "mastodons://token@mastodon.local/@alice",
+    "body": "hello",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "markdown-scans-body",
+    "url": "mastodons://token@mastodon.local?format=markdown&ping=%23apprise",
+    "body": "hello @bob and #tagged",
+    "title": "",
+    "type": "info"
+  },
+  {
+    "name": "numeric-hashtag-rejected",
+    "url": "mastodons://token@mastodon.local?ping=%23123,%23real",
+    "body": "hello",
+    "title": "t",
+    "type": "info"
   }
 ]

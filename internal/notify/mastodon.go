@@ -15,18 +15,30 @@ const tootDefaultVisibility = "public"
 var mastodonUserPattern = regexp.MustCompile(`^[A-Za-z0-9_]+(@[A-Za-z0-9_.-]+)?$`)
 var mastodonMentionPattern = regexp.MustCompile(`(?i)@[A-Z0-9_]+(?:@[A-Z0-9_.-]+)?`)
 
+// A hashtag may not be all digits once underscores are removed, which is what
+// keeps "#123" from being treated as one.
+var mastodonHashtagPattern = regexp.MustCompile(`^[^\W_][\w]*$`)
+var mastodonHashtagDigits = regexp.MustCompile(`^[0-9]+$`)
+
+// Go's regexp has no lookaround, so the boundary conditions upstream writes as
+// (?<![#%\w]) and (?![#%\w]) are handled by capturing the neighbours.
+var mastodonHashtagDetectPattern = regexp.MustCompile(`(?:^|[^#%\w])(#[^\W_][\w]*)(?:$|[^#%\w])`)
+
 type MastodonTarget struct {
 	host              string
 	port              int
 	secure            bool
 	token             string
 	targets           []string
+	hashtags          []string
+	ping              []string
 	visibility        string
 	visibilityDefault string
 	sensitive         bool
 	spoiler           string
 	language          string
 	idempotencyKey    string
+	format            string
 }
 
 func NewMastodonTarget(target *ParsedURL) (*MastodonTarget, error) {
@@ -43,11 +55,42 @@ func NewMastodonTarget(target *ParsedURL) (*MastodonTarget, error) {
 		return nil, fmt.Errorf("missing token")
 	}
 
+	// A path entry is either a user to mention or a hashtag to append; they
+	// are carried separately because only mentions prefix a direct message.
 	targets := []string{}
-	for _, entry := range splitPath(target.Path) {
+	hashtags := []string{}
+	hashtagSeen := map[string]struct{}{}
+	for _, entry := range sortedUniqueTargets(splitPath(target.Path)) {
 		if normalized, ok := normalizeMastodonTarget(entry); ok {
 			targets = append(targets, normalized)
+			continue
 		}
+		if normalized, ok := normalizeMastodonHashtag(entry); ok {
+			key := strings.ToLower(normalized)
+			if _, seen := hashtagSeen[key]; !seen {
+				hashtagSeen[key] = struct{}{}
+				hashtags = append(hashtags, normalized)
+			}
+		}
+	}
+
+	// ?ping= names mentions and hashtags to append to every status.
+	ping := []string{}
+	pingSeen := map[string]struct{}{}
+	// Upstream reads this through parse_list, which sorts as well as
+	// deduplicates, so a hashtag sorts ahead of a mention regardless of the
+	// order they were written in.
+	for _, entry := range sortedUniqueTargets(parseDelimitedList(target.Query["ping"])) {
+		normalized, ok := normalizeMastodonPingToken(entry)
+		if !ok {
+			continue
+		}
+		key := strings.ToLower(normalized)
+		if _, seen := pingSeen[key]; seen {
+			continue
+		}
+		pingSeen[key] = struct{}{}
+		ping = append(ping, normalized)
 	}
 
 	visibility := strings.ToLower(strings.TrimSpace(target.Query["visibility"]))
@@ -67,40 +110,41 @@ func NewMastodonTarget(target *ParsedURL) (*MastodonTarget, error) {
 		secure:            strings.EqualFold(target.Scheme, "mastodons") || strings.EqualFold(target.Scheme, "toots"),
 		token:             token,
 		targets:           targets,
+		hashtags:          hashtags,
+		ping:              ping,
 		visibility:        visibility,
 		visibilityDefault: visibilityDefault,
 		sensitive:         sensitive,
 		spoiler:           strings.TrimSpace(target.Query["spoiler"]),
 		language:          strings.TrimSpace(target.Query["language"]),
 		idempotencyKey:    strings.TrimSpace(target.Query["key"]),
+		format:            normalizeNotifyFormat(target.Query["format"]),
 	}, nil
 }
 
 func (m *MastodonTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
 	message := mergeTitleBody(title, body)
-	status := message
-	mentions := extractMastodonMentions(message)
-	if len(mentions) > 0 {
-		seen := map[string]struct{}{}
-		targetSet := map[string]struct{}{}
+
+	// Only a direct message prefixes its recipients, and a mention already
+	// written into the body is not repeated.
+	prefixed := []string{}
+	if m.visibility == "direct" {
+		inBody := map[string]struct{}{}
+		for _, mention := range extractMastodonMentions(message) {
+			inBody[mention] = struct{}{}
+		}
 		for _, entry := range m.targets {
-			targetSet[entry] = struct{}{}
-		}
-		filtered := []string{}
-		for _, mention := range mentions {
-			if _, ok := seen[mention]; ok {
-				continue
+			if _, ok := inBody[entry]; !ok {
+				prefixed = append(prefixed, entry)
 			}
-			seen[mention] = struct{}{}
-			if _, ok := targetSet[mention]; ok {
-				continue
-			}
-			filtered = append(filtered, mention)
-		}
-		if len(filtered) > 0 {
-			status = strings.Join(filtered, " ") + " " + message
 		}
 	}
+
+	status := message
+	if len(prefixed) > 0 {
+		status = strings.Join(prefixed, " ") + " " + message
+	}
+	status += mastodonPingPayload(m.pingTokens(message, prefixed))
 
 	payload := map[string]any{
 		"status":    status,
@@ -334,6 +378,15 @@ func init() {
 					"required": false,
 					"type":     "bool",
 				},
+				"ping": map[string]any{
+					"delim":    []string{",", " "},
+					"group":    []any{},
+					"map_to":   "ping",
+					"name":     "Ping Users/Tags",
+					"private":  false,
+					"required": false,
+					"type":     "list:string",
+				},
 				"visibility": map[string]any{
 					"default":  "default",
 					"map_to":   "visibility",
@@ -409,4 +462,125 @@ func init() {
 		"service_url":      "https://joinmastodon.org",
 		"setup_url":        "https://appriseit.com/services/mastodon/",
 	})
+}
+
+// pingTokens returns the mention and hashtag tokens to append to a status.
+// Anything already prefixed onto the status, and — in markdown, where the
+// body is scanned — anything already visible in it, is left out so a mention
+// is never doubled up.
+func (m *MastodonTarget) pingTokens(message string, prefixed []string) []string {
+	seen := map[string]struct{}{}
+	for _, entry := range prefixed {
+		seen[strings.ToLower(entry)] = struct{}{}
+	}
+
+	tokens := []string{}
+	if m.format == "markdown" {
+		// Markdown can carry visible tokens, so the body contributes its own.
+		tokens = append(tokens, mastodonScanTokens(message, seen)...)
+	} else {
+		// Other formats are not scanned, but tokens already written into the
+		// body still suppress a duplicate copy at the end.
+		mastodonScanTokens(message, seen)
+	}
+
+	configured := append(append(append([]string{}, m.targets...), m.hashtags...), m.ping...)
+	for _, entry := range configured {
+		normalized, ok := normalizeMastodonPingToken(entry)
+		if !ok {
+			continue
+		}
+		key := strings.ToLower(normalized)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		tokens = append(tokens, normalized)
+	}
+
+	return tokens
+}
+
+// mastodonScanTokens finds the mentions and hashtags written into a message,
+// recording each in seen so a caller can suppress duplicates.
+func mastodonScanTokens(message string, seen map[string]struct{}) []string {
+	tokens := []string{}
+	for _, mention := range extractMastodonMentions(message) {
+		key := strings.ToLower(mention)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		tokens = append(tokens, mention)
+	}
+	for _, hashtag := range extractMastodonHashtags(message) {
+		key := strings.ToLower(hashtag)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		tokens = append(tokens, hashtag)
+	}
+
+	return tokens
+}
+
+func mastodonPingPayload(tokens []string) string {
+	if len(tokens) == 0 {
+		return ""
+	}
+
+	return " " + strings.Join(tokens, " ")
+}
+
+// normalizeMastodonPingToken accepts an @mention or a #hashtag and rejects
+// anything else, matching upstream's normalize_ping_token.
+func normalizeMastodonPingToken(token string) (string, bool) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return "", false
+	}
+
+	if strings.HasPrefix(token, "@") {
+		if normalized, ok := normalizeMastodonTarget(token); ok {
+			return normalized, true
+		}
+		return "", false
+	}
+
+	if strings.HasPrefix(token, "#") {
+		return normalizeMastodonHashtag(token)
+	}
+
+	return "", false
+}
+
+func normalizeMastodonHashtag(token string) (string, bool) {
+	token = strings.TrimSpace(token)
+	if !strings.HasPrefix(token, "#") {
+		return "", false
+	}
+
+	value := token[1:]
+	if !mastodonHashtagPattern.MatchString(value) {
+		return "", false
+	}
+	// A tag that is only digits once underscores are dropped is not one.
+	if mastodonHashtagDigits.MatchString(strings.ReplaceAll(value, "_", "")) {
+		return "", false
+	}
+
+	return token, true
+}
+
+func extractMastodonHashtags(message string) []string {
+	matches := mastodonHashtagDetectPattern.FindAllStringSubmatch(message, -1)
+	tags := make([]string, 0, len(matches))
+	for _, match := range matches {
+		if normalized, ok := normalizeMastodonHashtag(match[1]); ok {
+			tags = append(tags, normalized)
+		}
+	}
+
+	return tags
 }
