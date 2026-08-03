@@ -6,10 +6,36 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 )
 
-const homeAssistantDefaultPort = 8123
+const (
+	homeAssistantDefaultPort   = 8123
+	homeAssistantDefaultDomain = "notify"
+	homeAssistantBatchSize     = 10
+)
+
+// homeAssistantTokenPattern matches a Home Assistant Long-Lived Access Token:
+// either the supervisor form (8 hex, dot, 64 hex) or a JWT (three dot separated
+// segments). Path elements that do not match are treated as service targets.
+var homeAssistantTokenPattern = regexp.MustCompile(`(?i)^([0-9a-f]{8}\.[0-9a-f]{64}|[a-z0-9_-]+\.[a-z0-9_-]+\.[a-z0-9_-]+)$`)
+
+// homeAssistantServicePattern parses a [domain.]service[:target,...] entry.
+var homeAssistantServicePattern = regexp.MustCompile(`(?i)^\s*(?:([a-z0-9_-]+)\.)?([a-z0-9_-]+)(?::([a-z0-9_,-]+))?`)
+
+// homeAssistantPathDelims splits the URL path into elements. Upstream escapes
+// the path before splitting it, so a comma never separates path elements: it
+// binds sub-targets to the service they follow. Query values such as ?to= are
+// unescaped first and do split on commas, so they use splitPath instead.
+var homeAssistantPathDelims = regexp.MustCompile(`[ \t\r\n\\/]+`)
+
+// homeAssistantService is a resolved [domain.]service[:target,...] entry.
+type homeAssistantService struct {
+	domain   string
+	service  string
+	subjects []string
+}
 
 type HomeAssistantTarget struct {
 	host        string
@@ -20,6 +46,9 @@ type HomeAssistantTarget struct {
 	accessToken string
 	nid         string
 	fullpath    string
+	prefix      string
+	batch       bool
+	services    []homeAssistantService
 }
 
 func NewHomeAssistantTarget(target *ParsedURL) (*HomeAssistantTarget, error) {
@@ -35,23 +64,58 @@ func NewHomeAssistantTarget(target *ParsedURL) (*HomeAssistantTarget, error) {
 	}
 
 	accessToken := strings.TrimSpace(target.Query["accesstoken"])
-	fullpath := ""
 	if accessToken == "" {
-		parts := splitPath(target.Path)
-		if len(parts) == 0 {
-			return nil, fmt.Errorf("missing access token")
+		accessToken = strings.TrimSpace(target.Query["token"])
+	}
+
+	parts := homeAssistantSplitPath(target.Path)
+	fullpath := ""
+	var rawTargets []string
+
+	switch {
+	case accessToken != "":
+		// The token came from the query string, so every path element is a
+		// service target.
+		rawTargets = parts
+
+	default:
+		// Scan forward for the first element shaped like an access token.
+		// Elements after it are service targets; elements before it are too,
+		// each reversed so the last URL segment is called first.
+		tokenIdx := -1
+		for i, part := range parts {
+			if homeAssistantTokenPattern.MatchString(part) {
+				tokenIdx = i
+				accessToken = part
+				break
+			}
 		}
-		accessToken = parts[len(parts)-1]
-		parts = parts[:len(parts)-1]
-		if len(parts) > 0 {
-			fullpath = "/" + strings.Join(parts, "/")
+
+		switch {
+		case tokenIdx >= 0:
+			rawTargets = append(reverseStrings(parts[tokenIdx+1:]), reverseStrings(parts[:tokenIdx])...)
+
+		case len(parts) > 0:
+			// Nothing looked like a token, so fall back to the last path
+			// element and treat the URL as persistent notification only.
+			accessToken = parts[len(parts)-1]
 		}
 	}
+
 	if accessToken == "" {
 		return nil, fmt.Errorf("missing access token")
 	}
 
+	if to := strings.TrimSpace(target.Query["to"]); to != "" {
+		rawTargets = append(rawTargets, splitPath(to)...)
+	}
+
 	nid := strings.TrimSpace(target.Query["nid"])
+
+	prefix := strings.TrimSpace(target.Query["prefix"])
+	if prefix != "" && !strings.HasPrefix(prefix, "/") {
+		prefix = "/" + prefix
+	}
 
 	return &HomeAssistantTarget{
 		host:        host,
@@ -62,20 +126,102 @@ func NewHomeAssistantTarget(target *ParsedURL) (*HomeAssistantTarget, error) {
 		accessToken: accessToken,
 		nid:         nid,
 		fullpath:    fullpath,
+		prefix:      prefix,
+		batch:       parseBool(target.Query["batch"], false),
+		services:    parseHomeAssistantServices(rawTargets),
 	}, nil
 }
 
-func (h *HomeAssistantTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	payload := map[string]any{
-		"title":           title,
-		"message":         body,
-		"notification_id": h.notificationID(),
+func homeAssistantSplitPath(pathValue string) []string {
+	trimmed := strings.TrimLeft(pathValue, "/")
+	if trimmed == "" {
+		return nil
 	}
 
-	data, err := json.Marshal(payload)
+	parts := homeAssistantPathDelims.Split(trimmed, -1)
+	segments := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part != "" {
+			segments = append(segments, part)
+		}
+	}
+
+	return segments
+}
+
+func reverseStrings(values []string) []string {
+	out := make([]string, 0, len(values))
+	for i := len(values) - 1; i >= 0; i-- {
+		out = append(out, values[i])
+	}
+	return out
+}
+
+// parseHomeAssistantServices resolves raw path entries into service calls,
+// defaulting the domain to "notify" when one is not supplied. Entries that
+// cannot be parsed are dropped, matching upstream.
+func parseHomeAssistantServices(entries []string) []homeAssistantService {
+	var services []homeAssistantService
+	for _, entry := range entries {
+		// Only whitespace separates entries; a comma binds sub-targets to the
+		// service they follow, so "notify_group:alice,bob" stays one entry.
+		for _, candidate := range strings.Fields(entry) {
+			match := homeAssistantServicePattern.FindStringSubmatch(candidate)
+			if match == nil {
+				continue
+			}
+
+			domain := match[1]
+			if domain == "" {
+				domain = homeAssistantDefaultDomain
+			}
+
+			var subjects []string
+			for _, subject := range strings.Split(match[3], ",") {
+				if subject = strings.TrimSpace(subject); subject != "" {
+					subjects = append(subjects, subject)
+				}
+			}
+
+			services = append(services, homeAssistantService{
+				domain:   domain,
+				service:  match[2],
+				subjects: subjects,
+			})
+		}
+	}
+
+	return services
+}
+
+func (h *HomeAssistantTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	specs, err := h.buildRequests(body, title, notifyType)
 	if err != nil {
 		return RequestSpec{}, err
 	}
+
+	return specs[0], nil
+}
+
+func (h *HomeAssistantTarget) Send(body, title string, notifyType NotifyType) error {
+	specs, err := h.buildRequests(body, title, notifyType)
+	if err != nil {
+		return err
+	}
+
+	for _, spec := range specs {
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// buildRequests returns one request per service call. Without service targets
+// a single persistent notification request is produced.
+func (h *HomeAssistantTarget) buildRequests(body, title string, notifyType NotifyType) ([]RequestSpec, error) {
+	_ = notifyType
 
 	headers := map[string]string{
 		"User-Agent":    "Apprise",
@@ -90,26 +236,71 @@ func (h *HomeAssistantTarget) BuildRequest(body, title string, notifyType Notify
 		headers["Authorization"] = basicAuthHeader(h.user, password)
 	}
 
-	_ = notifyType
+	build := func(url string, payload map[string]any) (RequestSpec, error) {
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return RequestSpec{}, err
+		}
 
-	return RequestSpec{
-		Method:  "POST",
-		URL:     h.buildURL(),
-		Headers: headers,
-		Body:    string(data),
-	}, nil
-}
-
-func (h *HomeAssistantTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := h.BuildRequest(body, title, notifyType)
-	if err != nil {
-		return err
+		return RequestSpec{
+			Method:  "POST",
+			URL:     url,
+			Headers: headers,
+			Body:    string(data),
+		}, nil
 	}
 
-	return SendRequest(spec)
+	if len(h.services) == 0 {
+		// notification_id is only meaningful for persistent notifications;
+		// other service domains reject it.
+		spec, err := build(h.persistentURL(), map[string]any{
+			"title":           title,
+			"message":         body,
+			"notification_id": h.notificationID(),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		return []RequestSpec{spec}, nil
+	}
+
+	batchSize := 1
+	if h.batch {
+		batchSize = homeAssistantBatchSize
+	}
+
+	specs := make([]RequestSpec, 0, len(h.services))
+	for _, service := range h.services {
+		url := h.serviceURL(service)
+
+		if len(service.subjects) == 0 {
+			spec, err := build(url, map[string]any{"title": title, "message": body})
+			if err != nil {
+				return nil, err
+			}
+			specs = append(specs, spec)
+			continue
+		}
+
+		for start := 0; start < len(service.subjects); start += batchSize {
+			end := min(start+batchSize, len(service.subjects))
+			spec, err := build(url, map[string]any{
+				"title":   title,
+				"message": body,
+				"targets": service.subjects[start:end],
+			})
+			if err != nil {
+				return nil, err
+			}
+			specs = append(specs, spec)
+		}
+	}
+
+	return specs, nil
 }
 
-func (h *HomeAssistantTarget) buildURL() string {
+func (h *HomeAssistantTarget) baseURL() string {
 	scheme := "http"
 	if h.secure {
 		scheme = "https"
@@ -120,8 +311,15 @@ func (h *HomeAssistantTarget) buildURL() string {
 		base += fmt.Sprintf(":%d", h.port)
 	}
 
-	path := strings.TrimRight(h.fullpath, "/")
-	return base + path + "/api/services/persistent_notification/create"
+	return base
+}
+
+func (h *HomeAssistantTarget) persistentURL() string {
+	return h.baseURL() + strings.TrimRight(h.fullpath, "/") + "/api/services/persistent_notification/create"
+}
+
+func (h *HomeAssistantTarget) serviceURL(service homeAssistantService) string {
+	return fmt.Sprintf("%s%s/api/services/%s/%s", h.baseURL(), strings.TrimRight(h.prefix, "/"), service.domain, service.service)
 }
 
 func (h *HomeAssistantTarget) notificationID() string {

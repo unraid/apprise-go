@@ -13,7 +13,7 @@ var Version = "0.2.7"
 
 // UpstreamVersion tracks the caronc/apprise release version we are compatible with.
 // Override at build time with: -ldflags "-X github.com/unraid/apprise-go/internal/version.UpstreamVersion=1.2.3"
-var UpstreamVersion = "1.9.7"
+var UpstreamVersion = "1.12.0"
 
 func Message() string {
 	return fmt.Sprintf("%s v%s\n%s\nThis code is licensed under the %s License.", Title, Version, Copyright, License)
