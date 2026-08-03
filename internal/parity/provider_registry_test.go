@@ -138,6 +138,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"evolution": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewEvolutionTarget(parsed)
 	},
+	"kook": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewKookTarget(parsed)
+	},
 	"serwersms": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewSerwerSMSTarget(parsed)
 	},

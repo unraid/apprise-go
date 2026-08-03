@@ -597,6 +597,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"flowtriqs": func(parsed *ParsedURL) (Sender, error) {
 		return NewFlowtriqTarget(parsed)
 	},
+	"kook": func(parsed *ParsedURL) (Sender, error) {
+		return NewKookTarget(parsed)
+	},
 	"stackfield": func(parsed *ParsedURL) (Sender, error) {
 		return NewStackfieldTarget(parsed)
 	},

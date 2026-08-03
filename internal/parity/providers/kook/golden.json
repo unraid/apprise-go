@@ -1,0 +1,114 @@
+[
+  {
+    "name": "bot-single-channel",
+    "requests": [
+      {
+        "body": "{\"type\": 9, \"target_id\": \"1234567890\", \"content\": \"apprise parity\\r\\nhello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bot bottoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.kookapp.cn/api/v3/message/create"
+      }
+    ]
+  },
+  {
+    "name": "bot-channel-and-dm",
+    "requests": [
+      {
+        "body": "{\"type\": 9, \"target_id\": \"1234567890\", \"content\": \"body\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bot bottoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.kookapp.cn/api/v3/message/create"
+      },
+      {
+        "body": "{\"type\": 9, \"target_id\": \"9876543210\", \"content\": \"body\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bot bottoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.kookapp.cn/api/v3/direct-message/create"
+      }
+    ]
+  },
+  {
+    "name": "bot-text-format",
+    "requests": [
+      {
+        "body": "{\"type\": 1, \"target_id\": \"1234567890\", \"content\": \"t\\r\\nplain body\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bot bottoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.kookapp.cn/api/v3/message/create"
+      }
+    ]
+  },
+  {
+    "name": "webhook-mode",
+    "requests": [
+      {
+        "body": "{\"type\": 9, \"content\": \"hook title\\r\\nhook body\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.kookapp.cn/api/v3/incoming/webhookkey456"
+      }
+    ]
+  },
+  {
+    "name": "to-alias-and-hash-prefix",
+    "requests": [
+      {
+        "body": "{\"type\": 9, \"target_id\": \"1111111111\", \"content\": \"b\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bot bottoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.kookapp.cn/api/v3/message/create"
+      },
+      {
+        "body": "{\"type\": 9, \"target_id\": \"2222222222\", \"content\": \"b\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bot bottoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.kookapp.cn/api/v3/message/create"
+      },
+      {
+        "body": "{\"type\": 9, \"target_id\": \"3333333333\", \"content\": \"b\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bot bottoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.kookapp.cn/api/v3/direct-message/create"
+      }
+    ]
+  }
+]

@@ -46,6 +46,45 @@ def go_value(value, indent):
     return json.dumps(value)
 
 
+PROTOCOL_SCRIPT = """
+import json, sys
+from apprise.plugins import N_MGR
+
+plugin = N_MGR[sys.argv[1]]
+
+
+def listed(value):
+    if not value:
+        return []
+    return [value] if isinstance(value, str) else list(value)
+
+
+print(json.dumps({
+    "plain": listed(getattr(plugin, "protocol", None)),
+    "secure": listed(getattr(plugin, "secure_protocol", None)),
+}))
+"""
+
+
+def upstream_protocols(schema):
+    """Read the plugin's own protocol attributes.
+
+    Inferring this from the schema token values instead — treating a trailing
+    's' whose stem is also present as the secure one — mislabels every
+    HTTPS-only service that has a single scheme not ending in 's'. Kook is
+    declared `secure_protocol` upstream and was emitted as a plain protocol.
+    """
+    out = subprocess.run(
+        [str(REPO / ".venv" / "bin" / "python"), "-c", PROTOCOL_SCRIPT, schema],
+        capture_output=True, text=True, cwd=REPO,
+    )
+    if out.returncode != 0:
+        raise SystemExit(f"protocol lookup failed for {schema!r}: {out.stderr.strip()}")
+
+    result = json.loads(out.stdout)
+    return result["plain"], result["secure"]
+
+
 def main():
     schema = sys.argv[1]
     order = sys.argv[2] if len(sys.argv) > 2 else "0"
@@ -59,9 +98,7 @@ def main():
     if not details:
         raise SystemExit(f"upstream has no schema {schema!r}")
 
-    protocols = details.get("tokens", {}).get("schema", {}).get("values", [])
-    secure = [p for p in protocols if p.endswith("s") and p[:-1] in protocols]
-    plain = [p for p in protocols if p not in secure]
+    plain, secure = upstream_protocols(schema)
 
     print("func init() {")
     print(f"\tRegisterSchemaEntryOrdered({order}, SchemaEntry{{")
