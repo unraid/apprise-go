@@ -12,5 +12,47 @@
     "body": "hello from python",
     "title": "apprise parity",
     "type": "info"
+  },
+  {
+    "name": "webhook-with-channel",
+    "url": "mmost://mattermost.example.com/hooks-token?channel=general",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "webhook-icon-url",
+    "url": "mmost://mattermost.example.com/hooks-token?icon_url=https%3A%2F%2Fexample.com%2Ficon.png",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "webhook-botname",
+    "url": "mmost://mattermost.example.com/hooks-token?botname=deploybot&image=no",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "bot-channel-id",
+    "url": "mmost://team@mattermost.example.com/bot-token?mode=bot&channel=abc123def456",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "bot-channel-name-lookup",
+    "url": "mmost://team@mattermost.example.com/bot-token?mode=bot&channel=%23general",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "bot-multiple-channels",
+    "url": "mmost://team@mattermost.example.com/bot-token?mode=bot&channel=abc123,def456",
+    "body": "body",
+    "title": "t",
+    "type": "info"
   }
 ]

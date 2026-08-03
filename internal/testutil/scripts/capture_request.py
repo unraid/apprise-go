@@ -776,6 +776,12 @@ def capture_request(url, body, title, notify_type, body_format=None):
             and parsed.path == "/v2/alerts"
         ):
             response._content = b'{"requestId":"request"}'
+        elif "/api/v4/teams/" in parsed.path and "/channels/name/" in parsed.path:
+            # Mattermost bot mode resolves a channel name to an id first.
+            response._content = b'{"id":"channelid123"}'
+        elif parsed.path.endswith("/api/v4/posts"):
+            response.status_code = 201
+            response._content = b'{"id":"postid"}'
         elif parsed.netloc in (
             "platform.ringcentral.com",
             "platform.devtest.ringcentral.com",

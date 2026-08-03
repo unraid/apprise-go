@@ -28,5 +28,119 @@
         "url": "https://mattermost.example.com/hooks/hooks-token"
       }
     ]
+  },
+  {
+    "name": "webhook-with-channel",
+    "requests": [
+      {
+        "body": "{\"text\": \"t\\r\\nbody\", \"icon_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-72x72.png\", \"username\": \"Apprise\", \"channel\": \"general\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/hooks/hooks-token"
+      }
+    ]
+  },
+  {
+    "name": "webhook-icon-url",
+    "requests": [
+      {
+        "body": "{\"text\": \"t\\r\\nbody\", \"icon_url\": \"https://example.com/icon.png\", \"username\": \"Apprise\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/hooks/hooks-token"
+      }
+    ]
+  },
+  {
+    "name": "webhook-botname",
+    "requests": [
+      {
+        "body": "{\"text\": \"t\\r\\nbody\", \"username\": \"deploybot\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/hooks/hooks-token"
+      }
+    ]
+  },
+  {
+    "name": "bot-channel-id",
+    "requests": [
+      {
+        "body": "{\"channel_id\": \"abc123def456\", \"message\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer bot-token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/api/v4/posts"
+      }
+    ]
+  },
+  {
+    "name": "bot-channel-name-lookup",
+    "requests": [
+      {
+        "body": "",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer bot-token",
+          "user-agent": "Apprise"
+        },
+        "method": "GET",
+        "url": "http://mattermost.example.com/api/v4/teams/name/team/channels/name/general"
+      },
+      {
+        "body": "{\"channel_id\": \"channelid123\", \"message\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer bot-token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/api/v4/posts"
+      }
+    ]
+  },
+  {
+    "name": "bot-multiple-channels",
+    "requests": [
+      {
+        "body": "{\"channel_id\": \"abc123\", \"message\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer bot-token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/api/v4/posts"
+      },
+      {
+        "body": "{\"channel_id\": \"def456\", \"message\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer bot-token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/api/v4/posts"
+      }
+    ]
   }
 ]

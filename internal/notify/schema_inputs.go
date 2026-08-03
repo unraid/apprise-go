@@ -204,10 +204,6 @@ func adjustSchemaValues(specs schemaSpecs, target *ParsedURL, values map[string]
 		if _, ok := values["fullpath"]; !ok {
 			values["fullpath"] = schemaValueAny("/")
 		}
-	case "mmost", "mmosts":
-		if _, ok := values["channels"]; !ok {
-			values["channels"] = schemaValueList([]string{})
-		}
 	case "napi", "notificationapi", "sendpulse":
 		if _, ok := values["from_addr"]; !ok {
 			values["from_addr"] = schemaValueAny(nil)

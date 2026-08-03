@@ -45,6 +45,9 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	if strings.Contains(req.URL.String(), "sendpulse.com/oauth/access_token") {
 		responseBody = `{"access_token":"token","expires_in":3600}`
 		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/api/v4/teams/") && strings.Contains(req.URL.Path, "/channels/name/") {
+		responseBody = `{"id":"channelid123"}`
+		contentType = "application/json"
 	} else if strings.HasSuffix(req.URL.Host, "ringcentral.com") && req.URL.Path == "/restapi/oauth/token" {
 		responseBody = `{"access_token":"token","expires_in":3600,"scope":"SMS","owner_id":"owner","endpoint_id":"endpoint"}`
 		contentType = "application/json"
