@@ -44,26 +44,20 @@ Go's `NewMegolmSessionFromState`, then `MatrixOlmSession(...)` against
 
 ## What is left
 
-### 1. Harness blocker, do this first
+### 1. Harness: done
 
-`internal/testutil/scripts/capture_request.py` now mocks `m.room.encryption`
-room state, `joined_members`, `keys/upload`, `keys/query`, `keys/claim` and
-`sendToDevice`, and `/login` returns a `device_id` without which upstream
-refuses to upload keys at all.
-
-Upstream now reaches `POST /keys/upload` and then does not return from
-`_e2ee_setup`; a capture runs past 120 seconds. The canned upload response
-(`{"one_time_key_counts":{"signed_curve25519":50}}`) evidently does not
-satisfy it — suspect the one-time key replenish path looping. Reproduce with:
+`internal/testutil/scripts/capture_request.py` mocks the endpoints the path
+needs, `/login` returns a `device_id`, and the send mock covers
+`m.room.encrypted`. Upstream's e2ee flow now completes end to end in eleven
+requests, so the oracle for validating the Go side exists. Reproduce with:
 
     APPRISE_CAPTURE_CACHE=0 .venv/bin/python \
       internal/testutil/scripts/capture_request.py \
       --url 'matrixs://user:pass@matrix.example.com/%23room:example.com?e2ee=yes' \
       --body hello --title t --type info
 
-Until this returns, no e2ee parity case can be written: without it upstream
-silently sends plaintext and a parity case would compare two unencrypted
-sends and prove nothing.
+An earlier note here claimed `_e2ee_setup` looped. It does not; that was a
+grep hiding the success line.
 
 ### 2. Provider flow in `internal/notify/matrix.go`
 
