@@ -1,0 +1,16 @@
+[
+  {
+    "name": "default",
+    "url": "mailersend://apikey123:sender@example.com/target@example.com",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "multiple-with-cc",
+    "url": "mailersend://apikey123:sender@example.com/one@example.com/two@example.com?cc=copy@example.com",
+    "body": "body",
+    "title": "",
+    "type": "info"
+  }
+]

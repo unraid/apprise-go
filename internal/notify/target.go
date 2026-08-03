@@ -540,6 +540,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"sinch": func(parsed *ParsedURL) (Sender, error) {
 		return NewSinchTarget(parsed)
 	},
+	"mailersend": func(parsed *ParsedURL) (Sender, error) {
+		return NewMailerSendTarget(parsed)
+	},
 	"postmark": func(parsed *ParsedURL) (Sender, error) {
 		return NewPostmarkTarget(parsed)
 	},

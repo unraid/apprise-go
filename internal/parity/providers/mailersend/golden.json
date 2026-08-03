@@ -1,0 +1,45 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "{\"from\": {\"email\": \"sender@example.com\"}, \"to\": [{\"email\": \"target@example.com\"}], \"subject\": \"apprise parity\", \"html\": \"hello from python\", \"text\": \"hello from python\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer apikey123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.mailersend.com/v1/email"
+      }
+    ]
+  },
+  {
+    "name": "multiple-with-cc",
+    "requests": [
+      {
+        "body": "{\"from\": {\"email\": \"sender@example.com\"}, \"to\": [{\"email\": \"one@example.com\"}], \"subject\": \"<no subject>\", \"html\": \"body\", \"text\": \"body\", \"cc\": [{\"email\": \"copy@example.com\"}]}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer apikey123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.mailersend.com/v1/email"
+      },
+      {
+        "body": "{\"from\": {\"email\": \"sender@example.com\"}, \"to\": [{\"email\": \"two@example.com\"}], \"subject\": \"<no subject>\", \"html\": \"body\", \"text\": \"body\", \"cc\": [{\"email\": \"copy@example.com\"}]}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer apikey123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.mailersend.com/v1/email"
+      }
+    ]
+  }
+]
