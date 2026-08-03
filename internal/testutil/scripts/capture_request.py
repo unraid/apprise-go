@@ -699,6 +699,11 @@ def capture_request(url, body, title, notify_type, body_format=None):
             response._content = b'{"code":1000,"msg":"ok"}'
         elif parsed.netloc == "www.pushplus.plus" and parsed.path == "/send":
             response._content = b'{"code":200,"msg":"ok"}'
+        elif parsed.netloc == "chatapi.viber.com" and parsed.path.endswith(
+            "/send_message"
+        ):
+            # Viber always answers 200; status 0 in the body means success
+            response._content = b'{"status":0,"status_message":"ok"}'
         elif parsed.netloc.endswith("notificationapi.com"):
             response._content = b'{"ok":true}'
         elif parsed.netloc == "api.sendpulse.com" and parsed.path.endswith(
