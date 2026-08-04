@@ -47,5 +47,16 @@
     "body": "body",
     "title": "t",
     "type": "info"
+  },
+  {
+    "name": "attachment-mms",
+    "url": "ringc://15551234567:secretpass@myclientid/myclientsecret/15559876543",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png",
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ]
   }
 ]

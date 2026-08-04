@@ -12,5 +12,34 @@
     "body": "body",
     "title": "",
     "type": "info"
+  },
+  {
+    "name": "fax-mode",
+    "url": "notifyre://apikey123/15551234567?mode=fax",
+    "body": "body",
+    "title": "title",
+    "type": "info"
+  },
+  {
+    "name": "fax-attachment",
+    "url": "notifyre://apikey123/15551234567?mode=fax&ref=Ref1&header=Confidential&hq=no&template=MyTemplate",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png",
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ]
+  },
+  {
+    "name": "sms-attachment-dropped",
+    "url": "notifyre://apikey123/15551234567",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ],
+    "attachment_dropped": true
   }
 ]

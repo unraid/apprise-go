@@ -30,5 +30,53 @@
         "url": "https://api.notifyre.com/20220711/sms/send"
       }
     ]
+  },
+  {
+    "name": "fax-mode",
+    "requests": [
+      {
+        "body": "{\"templateName\": \"\", \"recipients\": [{\"type\": \"fax_number\", \"value\": \"+15551234567\"}], \"sendFrom\": \"\", \"isHighQuality\": true, \"clientReference\": \"\", \"documents\": [{\"base64Str\": \"dGl0bGUNCmJvZHk=\", \"contentType\": \"text/plain\"}], \"header\": \"\", \"subject\": \"title\\r\\nbody\", \"campaignName\": \"Apprise\", \"scheduledDate\": null}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-api-token": "apikey123"
+        },
+        "method": "POST",
+        "url": "https://api.notifyre.com/20220711/fax/send"
+      }
+    ]
+  },
+  {
+    "name": "fax-attachment",
+    "requests": [
+      {
+        "body": "{\"templateName\": \"MyTemplate\", \"recipients\": [{\"type\": \"fax_number\", \"value\": \"+15551234567\"}], \"sendFrom\": \"\", \"isHighQuality\": false, \"clientReference\": \"Ref1\", \"documents\": [{\"base64Str\": \"dGl0bGUNCmJvZHk=\", \"contentType\": \"text/plain\"}, {\"base64Str\": \"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\", \"contentType\": \"image/png\"}, {\"base64Str\": \"cGxhaW4gdGV4dCBhdHRhY2htZW50Cg==\", \"contentType\": \"text/plain\"}], \"header\": \"Confidential\", \"subject\": \"title\\r\\nbody\", \"campaignName\": \"Apprise\", \"scheduledDate\": null}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-api-token": "apikey123"
+        },
+        "method": "POST",
+        "url": "https://api.notifyre.com/20220711/fax/send"
+      }
+    ]
+  },
+  {
+    "name": "sms-attachment-dropped",
+    "requests": [
+      {
+        "body": "{\"body\": \"title\\r\\nbody\", \"recipients\": [{\"type\": \"mobile_number\", \"value\": \"+15551234567\"}], \"from\": \"\", \"campaignName\": \"Apprise\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-api-token": "apikey123"
+        },
+        "method": "POST",
+        "url": "https://api.notifyre.com/20220711/sms/send"
+      }
+    ]
   }
 ]

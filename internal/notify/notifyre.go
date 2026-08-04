@@ -1,19 +1,33 @@
 package notify
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"strings"
 )
 
 // Notifyre pins its API version in the path.
-const notifyreSMSURL = "https://api.notifyre.com/20220711/sms/send"
+const (
+	notifyreSMSURL = "https://api.notifyre.com/20220711/sms/send"
+	notifyreFaxURL = "https://api.notifyre.com/20220711/fax/send"
+
+	notifyreModeSMS = "sms"
+	notifyreModeFax = "fax"
+)
+
+var notifyreModes = []string{notifyreModeSMS, notifyreModeFax}
 
 type NotifyreTarget struct {
 	apikey   string
 	targets  []string
+	mode     string
 	source   string
 	campaign string
+	template string
+	ref      string
+	hq       bool
+	header   string
 }
 
 func NewNotifyreTarget(target *ParsedURL) (*NotifyreTarget, error) {
@@ -44,6 +58,21 @@ func NewNotifyreTarget(target *ParsedURL) (*NotifyreTarget, error) {
 		}
 	}
 
+	// A mode is matched by prefix, so notifyre://...?mode=f reaches fax.
+	mode := notifyreModeSMS
+	if raw := strings.ToLower(strings.TrimSpace(target.Query["mode"])); raw != "" {
+		mode = ""
+		for _, candidate := range notifyreModes {
+			if strings.HasPrefix(candidate, raw) {
+				mode = candidate
+				break
+			}
+		}
+		if mode == "" {
+			return nil, fmt.Errorf("invalid mode: %s", target.Query["mode"])
+		}
+	}
+
 	// The campaign name defaults to the application identifier.
 	campaign := strings.TrimSpace(target.Query["campaign"])
 	if campaign == "" {
@@ -53,13 +82,26 @@ func NewNotifyreTarget(target *ParsedURL) (*NotifyreTarget, error) {
 	return &NotifyreTarget{
 		apikey:   apikey,
 		targets:  targets,
+		mode:     mode,
 		source:   source,
 		campaign: campaign,
+		template: strings.TrimSpace(target.Query["template"]),
+		ref:      strings.TrimSpace(target.Query["ref"]),
+		hq:       parseBoolWithDefault(target.Query["hq"], true),
+		header:   strings.TrimSpace(target.Query["header"]),
 	}, nil
 }
 
 func (n *NotifyreTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return n.buildRequest(body, title, notifyType, nil)
+}
+
+func (n *NotifyreTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
 	_ = notifyType
+
+	if n.mode == notifyreModeFax {
+		return n.buildFaxRequest(mergeTitleBody(title, body), attachments)
+	}
 
 	recipients := make([]any, 0, len(n.targets))
 	for _, entry := range n.targets {
@@ -94,8 +136,75 @@ func (n *NotifyreTarget) BuildRequest(body, title string, notifyType NotifyType)
 	}, nil
 }
 
+// buildFaxRequest sends the message as fax pages: the text becomes the cover
+// page and each attachment follows it as a further page.
+func (n *NotifyreTarget) buildFaxRequest(text string, attachments []Attachment) (RequestSpec, error) {
+	documents := make([]any, 0, len(attachments)+1)
+	if text != "" {
+		documents = append(documents, map[string]any{
+			"base64Str":   base64.StdEncoding.EncodeToString([]byte(text)),
+			"contentType": "text/plain",
+		})
+	}
+
+	for _, attachment := range attachments {
+		documents = append(documents, map[string]any{
+			"base64Str":   attachment.Base64(),
+			"contentType": attachment.MimeType,
+		})
+	}
+
+	if len(documents) == 0 {
+		return RequestSpec{}, fmt.Errorf("fax has no content to send")
+	}
+
+	recipients := make([]any, 0, len(n.targets))
+	for _, entry := range n.targets {
+		recipients = append(recipients, map[string]any{
+			"type":  "fax_number",
+			"value": entry,
+		})
+	}
+
+	payload := map[string]any{
+		"templateName":    n.template,
+		"recipients":      recipients,
+		"sendFrom":        n.source,
+		"isHighQuality":   n.hq,
+		"clientReference": n.ref,
+		"documents":       documents,
+		"header":          n.header,
+		"subject":         text,
+		"campaignName":    n.campaign,
+		"scheduledDate":   nil,
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return RequestSpec{}, err
+	}
+
+	return RequestSpec{
+		Method: "POST",
+		URL:    notifyreFaxURL,
+		Headers: map[string]string{
+			"User-Agent":   "Apprise",
+			"Accept":       "*/*",
+			"Content-Type": "application/json",
+			"x-api-token":  n.apikey,
+		},
+		Body: string(data),
+	}, nil
+}
+
 func (n *NotifyreTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := n.BuildRequest(body, title, notifyType)
+	return n.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments only carries files in fax mode; upstream warns and drops
+// them for SMS rather than failing the send.
+func (n *NotifyreTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	spec, err := n.buildRequest(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}

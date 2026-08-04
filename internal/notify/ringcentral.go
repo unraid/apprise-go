@@ -139,6 +139,13 @@ func (r *RingCentralTarget) BuildRequest(body, title string, notifyType NotifyTy
 }
 
 func (r *RingCentralTarget) Send(body, title string, notifyType NotifyType) error {
+	return r.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments switches the whole send to the MMS endpoint. Upstream
+// picks one endpoint per notification rather than sending the text by SMS and
+// the files by MMS.
+func (r *RingCentralTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	_ = notifyType
 
 	accessToken, err := r.login()
@@ -146,7 +153,12 @@ func (r *RingCentralTarget) Send(body, title string, notifyType NotifyType) erro
 		return err
 	}
 
-	for _, spec := range r.messageSpecs(body, title, accessToken) {
+	specs, err := r.messageSpecs(body, title, accessToken, attachments)
+	if err != nil {
+		return err
+	}
+
+	for _, spec := range specs {
 		if err := SendRequest(spec); err != nil {
 			return err
 		}
@@ -203,7 +215,7 @@ func (r *RingCentralTarget) login() (string, error) {
 
 // messageSpecs builds one SMS per recipient. With no targets the message goes
 // back to the source number, which is upstream's loopback test.
-func (r *RingCentralTarget) messageSpecs(body, title, accessToken string) []RequestSpec {
+func (r *RingCentralTarget) messageSpecs(body, title, accessToken string, attachments []Attachment) ([]RequestSpec, error) {
 	recipients := r.targets
 	if len(recipients) == 0 {
 		recipients = []string{r.source}
@@ -224,9 +236,29 @@ func (r *RingCentralTarget) messageSpecs(body, title, accessToken string) []Requ
 			"to":   []map[string]string{{"phoneNumber": "+" + recipient}},
 			"text": text,
 		}
+		if len(attachments) > 0 {
+			requestBody, contentType, err := ringCentralMMSBody(payload, attachments)
+			if err != nil {
+				return nil, err
+			}
+
+			specs = append(specs, RequestSpec{
+				Method: "POST",
+				URL:    r.endpoint("/restapi/v1.0/account/~/extension/~/mms"),
+				Headers: map[string]string{
+					"User-Agent":    "Apprise",
+					"Accept":        "application/json",
+					"Content-Type":  contentType,
+					"Authorization": "Bearer " + accessToken,
+				},
+				Body: requestBody,
+			})
+			continue
+		}
+
 		data, err := json.Marshal(payload)
 		if err != nil {
-			continue
+			return nil, err
 		}
 
 		specs = append(specs, RequestSpec{
@@ -237,7 +269,7 @@ func (r *RingCentralTarget) messageSpecs(body, title, accessToken string) []Requ
 		})
 	}
 
-	return specs
+	return specs, nil
 }
 
 // ringCentralMode resolves the auth mode, falling back to guessing from the

@@ -310,3 +310,46 @@ func indexedFileAttachmentBody(
 
 	return buffer.String(), writer.FormDataContentType(), nil
 }
+
+// ringCentralMMSBody builds RingCentral's MMS body: the same JSON metadata an
+// SMS would carry, but as a named form part rather than the request body,
+// followed by one part per file all sharing the field name attachment.
+func ringCentralMMSBody(metadata map[string]any, attachments []Attachment) (body string, contentType string, err error) {
+	data, err := json.Marshal(metadata)
+	if err != nil {
+		return "", "", err
+	}
+
+	var buffer bytes.Buffer
+	writer := multipart.NewWriter(&buffer)
+
+	// The metadata part is handed over without a filename, so it is an
+	// ordinary field that happens to declare its type.
+	header := textproto.MIMEHeader{}
+	header.Set("Content-Disposition", `form-data; name="json"`)
+	header.Set("Content-Type", "application/json")
+
+	part, err := writer.CreatePart(header)
+	if err != nil {
+		return "", "", err
+	}
+	if _, err := part.Write(data); err != nil {
+		return "", "", err
+	}
+
+	for _, attachment := range attachments {
+		part, err := writer.CreatePart(attachmentPartHeader("attachment", attachment, true))
+		if err != nil {
+			return "", "", err
+		}
+		if _, err := part.Write(attachment.Data); err != nil {
+			return "", "", err
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return "", "", err
+	}
+
+	return buffer.String(), writer.FormDataContentType(), nil
+}
