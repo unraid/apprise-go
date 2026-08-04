@@ -52,6 +52,7 @@
     "type": "info",
     "attachments": [
       "%7Brepo%7D/internal/parity/fixtures/report.pdf"
-    ]
+    ],
+    "attachment_dropped": true
   }
 ]

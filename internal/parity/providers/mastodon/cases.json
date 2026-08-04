@@ -83,6 +83,7 @@
     "type": "info",
     "attachments": [
       "%7Brepo%7D/internal/parity/fixtures/notes.txt"
-    ]
+    ],
+    "attachment_dropped": true
   }
 ]

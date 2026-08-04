@@ -45,6 +45,12 @@ type providerCase struct {
 	// relative to the repository, written with a {repo} prefix so the fixture
 	// stays portable.
 	Attachments []string `json:"attachments"`
+
+	// AttachmentDropped marks a case where the service deliberately refuses
+	// the attachment — an image-only service handed a PDF, or an upload that
+	// needs credentials the URL does not carry. The request is still made,
+	// just without the file.
+	AttachmentDropped bool `json:"attachment_dropped"`
 }
 
 type providerDefinition struct {
