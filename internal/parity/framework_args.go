@@ -42,7 +42,20 @@ var FrameworkArgs = map[string]FrameworkArg{
 
 	// --- declared, not implemented -------------------------------------
 	"overflow": {
-		Note: "?overflow=split makes upstream send one request per chunk and " +
+		Implemented:    true,
+		FixtureCovered: true,
+		Note: "Implemented for the framework default: ?overflow=truncate " +
+			"shortens the body to the service's body_maxlen and " +
+			"?overflow=split sends one notification per chunk, splitting on " +
+			"newlines, then spaces, then punctuation. Verified against " +
+			"upstream by the 46elks and discord fixtures, which take " +
+			"different branches of the sizing logic — discord repeats the " +
+			"title with a [1/2] counter where 46elks folds it into the body. " +
+			"Not covered: services that override the framework's splitting, " +
+			"telegram being one, and the fifteen whose body_maxlen upstream " +
+			"computes per instance rather than declaring, which " +
+			"overflow_limits.py reports as null and ApplyOverflow leaves " +
+			"alone. Old note: ?overflow=split makes upstream send one request per chunk and " +
 			"?overflow=truncate shortens the body to the provider's " +
 			"body_maxlen. The port does neither, so a split sends one " +
 			"request where upstream sends several. The default mode is " +

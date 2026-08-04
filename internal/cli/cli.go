@@ -328,7 +328,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 			continue
 		}
 
-		if err := notify.DispatchSend(target, sendBody, title, nt, attachments); err != nil {
+		if err := notify.DispatchSendWithOverflow(
+			target, parsed, sendBody, title, nt, attachments); err != nil {
 			fmt.Fprintf(stderr, "%s notify error: %s\n", notify.TargetSchemaName(parsed.Scheme), err)
 			failed = true
 		}

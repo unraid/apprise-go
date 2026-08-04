@@ -91,7 +91,11 @@ func TestProviderGoldenRequests(t *testing.T) {
 
 				attachments := loadCaseAttachments(t, c)
 				goSpecs := testutil.CaptureGoRequests(t, func() error {
-					return notify.DispatchSend(target, c.Body, c.Title, notifyType, attachments)
+					// The overflow-aware entry point, so a fixture exercises the
+					// path a caller actually takes rather than the provider in
+					// isolation.
+					return notify.DispatchSendWithOverflow(
+						target, parsedURL, c.Body, c.Title, notifyType, attachments)
 				})
 
 				assertRequestSpecSequenceMatchesExcept(t, expected.specs(t), goSpecs,

@@ -55,7 +55,11 @@ func TestProviderRequestParity(t *testing.T) {
 				}
 
 				goSpecs, err := testutil.CaptureGoRequestsResult(t, func() error {
-					return notify.DispatchSend(target, c.Body, c.Title, notifyType, attachments)
+					// The overflow-aware entry point, so a fixture exercises the
+					// path a caller actually takes rather than the provider in
+					// isolation.
+					return notify.DispatchSendWithOverflow(
+						target, parsedURL, c.Body, c.Title, notifyType, attachments)
 				})
 				if shouldSkip := assertNotifySuccessMatches(t, pythonSuccess, err); shouldSkip {
 					return

@@ -108,5 +108,45 @@
         "url": "https://discord.com/api/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
       }
     ]
+  },
+  {
+    "name": "overflow-split",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"content\": \"over [1/2]\\r\\nword word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/1234567890/abcdef"
+      },
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"content\": \"over [2/2]\\r\\nword word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/1234567890/abcdef"
+      }
+    ]
+  },
+  {
+    "name": "overflow-truncate",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"content\": \"over\\r\\nword word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/1234567890/abcdef"
+      }
+    ]
   }
 ]

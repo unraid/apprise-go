@@ -61,7 +61,51 @@ func SendTargetURLWithAttachments(rawURL, body, title, inputFormat string, notif
 	if err != nil {
 		return err
 	}
-	return DispatchSend(target, sendBody, title, notifyType, attachments)
+	return DispatchSendWithOverflow(
+		target, parsed, sendBody, title, notifyType, attachments)
+}
+
+// DispatchSendWithOverflow applies the service's overflow rules before
+// sending, which is what upstream's base class does ahead of every send.
+//
+// A body longer than the service accepts becomes several notifications under
+// ?overflow=split, or a shortened one under ?overflow=truncate. The default is
+// upstream — leave the content alone — so a caller who has not asked for
+// either gets exactly what they always did.
+func DispatchSendWithOverflow(
+	target Sender,
+	parsed *ParsedURL,
+	body, title string,
+	notifyType NotifyType,
+	attachments []Attachment,
+) error {
+	mode := ""
+	format := ""
+	if parsed != nil {
+		mode = parsed.Query["overflow"]
+		format = parsed.Query["format"]
+	}
+
+	schema := ""
+	if parsed != nil {
+		schema = parsed.Scheme
+	}
+
+	parts := ApplyOverflow(schema, mode, format, title, body)
+	for index, part := range parts {
+		// Attachments ride with the first part only; upstream does not repeat
+		// them across a split.
+		carried := attachments
+		if index > 0 {
+			carried = nil
+		}
+
+		if err := DispatchSend(target, part.Body, part.Title, notifyType, carried); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func DispatchSend(target Sender, body, title string, notifyType NotifyType, attachments []Attachment) error {

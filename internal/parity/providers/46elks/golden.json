@@ -57,5 +57,70 @@
         "url": "https://api.46elks.com/a1/sms"
       }
     ]
+  },
+  {
+    "name": "overflow-split",
+    "requests": [
+      {
+        "body": "to=14051231234&from=14051231234&message=over",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.46elks.com/a1/sms"
+      },
+      {
+        "body": "to=14051231234&from=14051231234&message=word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.46elks.com/a1/sms"
+      },
+      {
+        "body": "to=14051231234&from=14051231234&message=word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.46elks.com/a1/sms"
+      },
+      {
+        "body": "to=14051231234&from=14051231234&message=word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.46elks.com/a1/sms"
+      }
+    ]
+  },
+  {
+    "name": "overflow-truncate",
+    "requests": [
+      {
+        "body": "to=14051231234&from=14051231234&message=over%0D%0Aword+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word+word",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.46elks.com/a1/sms"
+      }
+    ]
   }
 ]

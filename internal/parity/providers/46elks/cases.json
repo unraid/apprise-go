@@ -19,5 +19,19 @@
     "body": "body",
     "title": "title",
     "type": "info"
+  },
+  {
+    "name": "overflow-split",
+    "url": "46elks://user:pass@14051231234?overflow=split",
+    "body": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word",
+    "title": "over",
+    "type": "info"
+  },
+  {
+    "name": "overflow-truncate",
+    "url": "46elks://user:pass@14051231234?overflow=truncate",
+    "body": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word",
+    "title": "over",
+    "type": "info"
   }
 ]
