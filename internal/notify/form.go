@@ -24,7 +24,11 @@ type FormTarget struct {
 	params        map[string]string
 	payloadExtras map[string]string
 	payloadMap    map[string]string
-	attachAs      string
+
+	// The URL's own ordering for payloadExtras and params.
+	payloadExtraOrder []string
+	paramOrder        []string
+	attachAs          string
 }
 
 func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
@@ -37,6 +41,7 @@ func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
 	}
 
 	payloadExtras := cloneMap(target.QueryPayload)
+	payloadExtraOrder := target.QueryPayloadOrder
 	payloadMap := map[string]string{
 		"version": "version",
 		"title":   "title",
@@ -54,13 +59,18 @@ func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
 	}
 
 	return &FormTarget{
-		target:        target,
-		method:        method,
-		headers:       cloneMap(target.QueryAdd),
-		params:        cloneMap(target.QueryDel),
-		payloadExtras: payloadExtras,
-		payloadMap:    payloadMap,
-		attachAs:      strings.TrimSpace(target.Query["attach_as"]),
+		target:            target,
+		method:            method,
+		headers:           cloneMap(target.QueryAdd),
+		params:            cloneMap(target.QueryDel),
+		payloadExtras:     payloadExtras,
+		payloadExtraOrder: payloadExtraOrder,
+		paramOrder:        target.QueryDelOrder,
+		payloadMap:        payloadMap,
+		// The URL argument is attach-as; attach_as is only the name it maps
+		// to internally, and reading that spelling meant the documented one
+		// did nothing.
+		attachAs: strings.TrimSpace(target.Query["attach-as"]),
 	}, nil
 }
 
@@ -100,9 +110,8 @@ func (f *FormTarget) buildRequest(body, title string, notifyType NotifyType, att
 		payload.Set(mapped, entry.value)
 	}
 
-	// Sorted because a Go map has no order to preserve; upstream emits these
-	// in the order the URL named them.
-	for _, key := range sortedKeys(f.payloadExtras) {
+	// In the order the URL named them, which is upstream's order too.
+	for _, key := range orderedKeys(f.payloadExtraOrder, f.payloadExtras) {
 		payload.Set(key, f.payloadExtras[key])
 	}
 
@@ -127,7 +136,7 @@ func (f *FormTarget) buildRequest(body, title string, notifyType NotifyType, att
 
 	if f.method == "GET" {
 		query := payload.Clone()
-		for _, key := range sortedKeys(f.params) {
+		for _, key := range orderedKeys(f.paramOrder, f.params) {
 			query.Set(key, f.params[key])
 		}
 		u.RawQuery = query.Encode()
@@ -151,7 +160,7 @@ func (f *FormTarget) buildRequest(body, title string, notifyType NotifyType, att
 
 	if f.method != "GET" && len(f.params) > 0 {
 		query := formFields{}
-		for _, key := range sortedKeys(f.params) {
+		for _, key := range orderedKeys(f.paramOrder, f.params) {
 			query.Set(key, f.params[key])
 		}
 		u.RawQuery = query.Encode()

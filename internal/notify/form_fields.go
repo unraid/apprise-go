@@ -79,8 +79,7 @@ func (f *formFields) Encode() string {
 }
 
 // sortedKeys orders a map's keys so a body built from one is at least stable
-// between runs. It is not upstream's order — that comes from the order the URL
-// named the keys, which this port does not carry through parsing.
+// between runs. Prefer orderedKeys where the URL's own order was kept.
 func sortedKeys(values map[string]string) []string {
 	keys := make([]string, 0, len(values))
 	for key := range values {
@@ -91,6 +90,38 @@ func sortedKeys(values map[string]string) []string {
 	return keys
 }
 
+// orderedKeys walks an order list, keeping only the keys still present in the
+// map. Callers remove entries from these maps after parsing — form:// lifts
+// the reserved payload names out of the extras — so the two can disagree.
+//
+// Anything in the map but not the order list is appended sorted, so a caller
+// that adds keys of its own still gets a stable body.
+func orderedKeys(order []string, values map[string]string) []string {
+	keys := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+
+	for _, key := range order {
+		if _, ok := values[key]; !ok {
+			continue
+		}
+		if _, done := seen[key]; done {
+			continue
+		}
+		seen[key] = struct{}{}
+		keys = append(keys, key)
+	}
+
+	extra := make([]string, 0)
+	for key := range values {
+		if _, done := seen[key]; !done {
+			extra = append(extra, key)
+		}
+	}
+	sort.Strings(extra)
+
+	return append(keys, extra...)
+}
+
 // Clone returns a copy that can be extended without disturbing the original.
 // The zero value shares nothing, but appending to a shallow copy of a slice
 // header is the kind of aliasing that works until the day it does not.
@@ -99,4 +130,17 @@ func (f *formFields) Clone() formFields {
 		names:  append([]string(nil), f.names...),
 		values: append([]string(nil), f.values...),
 	}
+}
+
+// trimmedOrder applies to an order list the same trimming its map keys went
+// through, so the two still line up.
+func trimmedOrder(order []string) []string {
+	trimmed := make([]string, 0, len(order))
+	for _, key := range order {
+		if key = strings.TrimSpace(key); key != "" {
+			trimmed = append(trimmed, key)
+		}
+	}
+
+	return trimmed
 }

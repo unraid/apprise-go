@@ -24,9 +24,14 @@ type MailgunTarget struct {
 	bcc      map[string]struct{}
 	headers  map[string]string
 	tokens   map[string]string
-	batch    bool
-	verify   bool
-	disabled bool
+
+	// The URL's own ordering for the two maps above; upstream emits these
+	// fields in the order they were written.
+	headerOrder []string
+	tokenOrder  []string
+	batch       bool
+	verify      bool
+	disabled    bool
 }
 
 func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
@@ -116,6 +121,7 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 		}
 		headers[key] = value
 	}
+	headerOrder := trimmedOrder(target.QueryAddOrder)
 
 	tokens := map[string]string{}
 	for key, value := range target.QueryPayload {
@@ -125,6 +131,7 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 		}
 		tokens[key] = value
 	}
+	tokenOrder := trimmedOrder(target.QueryPayloadOrder)
 
 	return &MailgunTarget{
 		apiKey:   apiKey,
@@ -137,8 +144,11 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 		bcc:      bcc,
 		headers:  headers,
 		tokens:   tokens,
-		batch:    parseBoolWithDefault(target.Query["batch"], false),
-		verify:   parseBoolWithDefault(target.Query["verify"], true),
+
+		headerOrder: headerOrder,
+		tokenOrder:  tokenOrder,
+		batch:       parseBoolWithDefault(target.Query["batch"], false),
+		verify:      parseBoolWithDefault(target.Query["verify"], true),
 	}, nil
 }
 
@@ -270,13 +280,12 @@ func (m *MailgunTarget) buildPayload(body, title string, recipients []emailEntry
 		values.Set("bcc", strings.Join(bcc, ","))
 	}
 
-	// Sorted because a Go map has no order to preserve. Upstream emits these
-	// in the order the URL named them, which this port does not carry
-	// through parsing, so deterministic is the best available.
-	for _, key := range sortedKeys(m.tokens) {
+	// In the order the URL named them, which is the order upstream sends
+	// them in.
+	for _, key := range orderedKeys(m.tokenOrder, m.tokens) {
 		values.Set("v:"+key, m.tokens[key])
 	}
-	for _, key := range sortedKeys(m.headers) {
+	for _, key := range orderedKeys(m.headerOrder, m.headers) {
 		values.Set("h:"+key, m.headers[key])
 	}
 

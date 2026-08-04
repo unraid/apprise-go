@@ -22,5 +22,15 @@
     "attachments": [
       "%7Brepo%7D/internal/parity/fixtures/report.pdf"
     ]
+  },
+  {
+    "name": "attachment-ordered-extras",
+    "url": "mailgun://user@example.com/apikey/target@example.com?:zulu=z&:alpha=a&:mike=m",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
   }
 ]

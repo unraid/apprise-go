@@ -24,6 +24,13 @@ type ParsedURL struct {
 	QueryAdd     map[string]string
 	QueryDel     map[string]string
 	QueryPayload map[string]string
+
+	// The prefixed query maps carry no order, but the URL they came from
+	// did, and upstream emits these fields in the order they were written.
+	// A map cannot be walked in that order, so the keys are kept alongside.
+	QueryAddOrder     []string
+	QueryDelOrder     []string
+	QueryPayloadOrder []string
 }
 
 func ParseURL(raw string) (*ParsedURL, error) {
@@ -144,6 +151,10 @@ func ParseURL(raw string) (*ParsedURL, error) {
 		QueryAdd:     qsd.add,
 		QueryDel:     qsd.del,
 		QueryPayload: qsd.payload,
+
+		QueryAddOrder:     qsd.addOrder,
+		QueryDelOrder:     qsd.delOrder,
+		QueryPayloadOrder: qsd.payloadOrder,
 	}, nil
 }
 
@@ -207,6 +218,10 @@ func parseLenientURL(raw string, scheme string, splitFirstAt bool) (*ParsedURL, 
 		QueryAdd:     qsd.add,
 		QueryDel:     qsd.del,
 		QueryPayload: qsd.payload,
+
+		QueryAddOrder:     qsd.addOrder,
+		QueryDelOrder:     qsd.delOrder,
+		QueryPayloadOrder: qsd.payloadOrder,
 	}, nil
 }
 
@@ -229,6 +244,10 @@ type qsdResult struct {
 	add     map[string]string
 	del     map[string]string
 	payload map[string]string
+
+	addOrder     []string
+	delOrder     []string
+	payloadOrder []string
 }
 
 func parseQSD(raw string, plusToSpace bool, sanitize bool) qsdResult {
@@ -275,13 +294,24 @@ func parseQSD(raw string, plusToSpace bool, sanitize bool) qsdResult {
 		}
 		result.qsd[storeKey] = val
 
+		// A repeated key keeps its first position, matching the maps, where
+		// the later value simply overwrites the earlier one.
 		if strings.HasPrefix(key, "+") && len(key) > 1 {
+			if _, seen := result.add[key[1:]]; !seen {
+				result.addOrder = append(result.addOrder, key[1:])
+			}
 			result.add[key[1:]] = val
 		}
 		if strings.HasPrefix(key, "-") && len(key) > 1 {
+			if _, seen := result.del[key[1:]]; !seen {
+				result.delOrder = append(result.delOrder, key[1:])
+			}
 			result.del[key[1:]] = val
 		}
 		if strings.HasPrefix(key, ":") && len(key) > 1 {
+			if _, seen := result.payload[key[1:]]; !seen {
+				result.payloadOrder = append(result.payloadOrder, key[1:])
+			}
 			result.payload[key[1:]] = val
 		}
 	}
