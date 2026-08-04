@@ -33,5 +33,15 @@
     "body": "body",
     "title": "the title",
     "type": "success"
+  },
+  {
+    "name": "attachment",
+    "url": "slack://xoxb-token/%23general",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
   }
 ]

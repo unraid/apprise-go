@@ -51,6 +51,12 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	} else if strings.HasSuffix(req.URL.Host, "ringcentral.com") && req.URL.Path == "/restapi/oauth/token" {
 		responseBody = `{"access_token":"token","expires_in":3600,"scope":"SMS","owner_id":"owner","endpoint_id":"endpoint"}`
 		contentType = "application/json"
+	} else if req.URL.Path == "/api/files.getUploadURLExternal" {
+		responseBody = `{"ok":true,"file_id":"F123ABC456","upload_url":"https://files.slack.com/upload/v1/ABC123"}`
+		contentType = "application/json"
+	} else if req.URL.Path == "/api/files.completeUploadExternal" {
+		responseBody = `{"ok":true,"files":[{"id":"F123ABC456","title":"pixel.png"}]}`
+		contentType = "application/json"
 	} else if strings.HasSuffix(req.URL.Path, "/api/v4/files") {
 		responseBody = `{"file_infos":[{"id":"fileid123"}]}`
 		contentType = "application/json"
@@ -113,7 +119,7 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		responseBody = `{"ok":true,"user":{"id":"U123"}}`
 		contentType = "application/json"
 	} else if req.URL.Host == "slack.com" && req.URL.Path == "/api/chat.postMessage" {
-		responseBody = `{"ok":true,"ts":"123.456"}`
+		responseBody = `{"ok":true,"ts":"123.456","channel":"C123456"}`
 		contentType = "application/json"
 	} else if strings.HasSuffix(req.URL.Path, "/xrpc/com.atproto.server.createSession") {
 		responseBody = `{"accessJwt":"token","refreshJwt":"refresh"}`

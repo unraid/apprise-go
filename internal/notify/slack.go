@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -223,14 +224,133 @@ func (s *SlackTarget) workflowSpec(body, title string, notifyType NotifyType) (R
 }
 
 func (s *SlackTarget) Send(body, title string, notifyType NotifyType) error {
-	if s.isWorkflow() {
-		spec, err := s.workflowSpec(body, title, notifyType)
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments posts the message, then uploads each file through
+// Slack's external upload flow: ask for an upload URL, PUT the bytes there,
+// then complete the upload against each channel.
+func (s *SlackTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// The channels a file is completed against come from what the message
+	// posts report back, not from what was configured: Slack answers with the
+	// resolved channel id, and the upload has to name that.
+	channels, err := s.sendMessagesCollectingChannels(body, title, notifyType)
+	if err != nil {
+		return err
+	}
+
+	// Only a bot token can upload, and there is nowhere to put a file until
+	// a message has told us which channel it landed in.
+	if len(attachments) == 0 || s.mode != slackModeBot || len(channels) == 0 {
+		return nil
+	}
+
+	for index, attachment := range attachments {
+		if err := s.uploadAttachment(attachment, index, channels); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// uploadAttachment runs the three step external upload for one file.
+func (s *SlackTarget) uploadAttachment(attachment Attachment, index int, channels []string) error {
+	name := attachment.FileName(index, ".dat")
+
+	query := url.Values{}
+	query.Set("filename", name)
+	query.Set("length", strconv.Itoa(len(attachment.Data)))
+
+	var upload struct {
+		FileID    string `json:"file_id"`
+		UploadURL string `json:"upload_url"`
+	}
+	if err := doJSONRequest(RequestSpec{
+		Method: "GET",
+		URL:    "https://slack.com/api/files.getUploadURLExternal?" + query.Encode(),
+		// Upstream sends the same headers for every call, so this GET
+		// carries a content type despite having no body.
+		Headers: map[string]string{
+			"User-Agent":    "Apprise",
+			"Accept":        "application/json",
+			"Authorization": "Bearer " + s.accessToken,
+			"Content-Type":  "application/json; charset=utf-8",
+		},
+		// Upstream posts an empty JSON object here rather than nothing.
+		Body: "{}",
+	}, &upload); err != nil {
+		return err
+	}
+	if upload.FileID == "" || upload.UploadURL == "" {
+		return fmt.Errorf("slack did not return an upload url")
+	}
+
+	// Slack is handed a filename and a handle with no type, so the part
+	// carries no content type of its own.
+	uploadBody, contentType, err := singleFileAttachmentBody(
+		url.Values{}, "file",
+		Attachment{Name: name, Data: attachment.Data}, false)
+	if err != nil {
+		return err
+	}
+
+	if err := SendRequest(RequestSpec{
+		Method: "POST",
+		URL:    upload.UploadURL,
+		Headers: map[string]string{
+			"User-Agent":    "Apprise",
+			"Accept":        "application/json",
+			"Authorization": "Bearer " + s.accessToken,
+			"Content-Type":  contentType,
+		},
+		Body: uploadBody,
+	}); err != nil {
+		return err
+	}
+
+	// The file exists once uploaded but is not visible until it is completed
+	// against a channel.
+	for _, channel := range channels {
+		data, err := json.Marshal(map[string]any{
+			"files": []any{
+				map[string]any{"id": upload.FileID, "title": attachment.Name},
+			},
+			"channel_id": channel,
+		})
 		if err != nil {
 			return err
 		}
 
-		return SendRequest(spec)
+		if err := SendRequest(RequestSpec{
+			Method: "POST",
+			URL:    "https://slack.com/api/files.completeUploadExternal",
+			Headers: map[string]string{
+				"User-Agent":    "Apprise",
+				"Accept":        "application/json",
+				"Authorization": "Bearer " + s.accessToken,
+				"Content-Type":  "application/json; charset=utf-8",
+			},
+			Body: string(data),
+		}); err != nil {
+			return err
+		}
 	}
+
+	return nil
+}
+
+func (s *SlackTarget) sendMessagesCollectingChannels(body, title string, notifyType NotifyType) ([]string, error) {
+	if s.isWorkflow() {
+		spec, err := s.workflowSpec(body, title, notifyType)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, SendRequest(spec)
+	}
+
+	posted := []string{}
 
 	channels := s.targets
 	if len(channels) == 0 {
@@ -240,7 +360,7 @@ func (s *SlackTarget) Send(body, title string, notifyType NotifyType) error {
 	for _, rawChannel := range channels {
 		payload, err := s.buildPayload(body, title, notifyType)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		channel := strings.TrimSpace(rawChannel)
@@ -270,14 +390,30 @@ func (s *SlackTarget) Send(body, title string, notifyType NotifyType) error {
 
 		spec, err := s.buildRequestSpec(payload)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
+
+		// Only the bot API answers with JSON; a webhook replies with the
+		// literal text "ok", which is not decodable and carries no channel.
+		if s.mode != slackModeBot {
+			if err := SendRequest(spec); err != nil {
+				return nil, err
+			}
+			continue
+		}
+
+		var response struct {
+			Channel string `json:"channel"`
+		}
+		if err := doJSONRequest(spec, &response); err != nil {
+			return nil, err
+		}
+		if response.Channel != "" {
+			posted = append(posted, response.Channel)
 		}
 	}
 
-	return nil
+	return posted, nil
 }
 
 func (s *SlackTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {

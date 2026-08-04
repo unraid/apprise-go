@@ -646,7 +646,7 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
         elif parsed.netloc == "slack.com" and parsed.path == "/api/users.lookupByEmail":
             response._content = b'{"ok": true, "user": {"id": "U123"}}'
         elif parsed.netloc == "slack.com" and parsed.path == "/api/chat.postMessage":
-            response._content = b'{"ok": true, "ts": "123.456"}'
+            response._content = b'{"ok":true,"ts":"123.456","channel":"C123456"}'
         elif parsed.path.endswith("/Users/AuthenticateByName"):
             response._content = (
                 b'{"AccessToken":"token","Id":"user-id","User":{"Id":"user-id"}}'
@@ -831,6 +831,15 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
                 )
             else:
                 response._content = b'{"id":"message-id"}'
+        elif parsed.path == "/api/files.getUploadURLExternal":
+            response._content = (
+                b'{"ok":true,"file_id":"F123ABC456",'
+                b'"upload_url":"https://files.slack.com/upload/v1/ABC123"}'
+            )
+        elif parsed.path == "/api/files.completeUploadExternal":
+            response._content = (
+                b'{"ok":true,"files":[{"id":"F123ABC456","title":"pixel.png"}]}'
+            )
         elif parsed.path.endswith("/api/v4/files"):
             # Mattermost answers an upload with the file ids a post uses.
             response._content = b'{"file_infos":[{"id":"fileid123"}]}'
