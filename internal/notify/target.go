@@ -103,6 +103,20 @@ func DispatchSendWithOverflow(
 		schema = parsed.Scheme
 	}
 
+	// The transport settings for this send: how long to wait for a
+	// connection and for a reply, and whether to follow redirects.
+	options := defaultHTTPOptions()
+	if parsed != nil {
+		if seconds, err := strconv.ParseFloat(strings.TrimSpace(parsed.Query["cto"]), 64); err == nil && seconds > 0 {
+			options.connectTimeout = time.Duration(seconds * float64(time.Second))
+		}
+		if seconds, err := strconv.ParseFloat(strings.TrimSpace(parsed.Query["rto"]), 64); err == nil && seconds > 0 {
+			options.readTimeout = time.Duration(seconds * float64(time.Second))
+		}
+		options.followRedirect = parseBoolWithDefault(parsed.Query["redirect"], true)
+	}
+	defer withHTTPOptions(options)()
+
 	// ?retry= re-sends after a failure and ?wait= is how long to pause first.
 	// Both live in the orchestration layer upstream too, not in a plugin.
 	retries := 0

@@ -83,13 +83,22 @@ var FrameworkArgs = map[string]FrameworkArg{
 			"only its presence in the retry loop is covered.",
 	},
 	"cto": {
-		Note: "Socket connect timeout. A captured request cannot show it; " +
-			"observing it needs a server that refuses to complete a " +
-			"handshake.",
+		Implemented: true,
+		Note: "Connect timeout, defaulting to upstream's four seconds. " +
+			"Requests here previously went out on http.DefaultClient, which " +
+			"has no timeout at all, so a service that accepted a connection " +
+			"and went quiet hung the caller forever. Covered by " +
+			"timeout_parity_test.go against a server that never replies; " +
+			"not fixture-covered because a captured request cannot show how " +
+			"long the caller was willing to wait.",
 	},
 	"rto": {
-		Note: "Socket read timeout. Same as cto — it needs a server that " +
-			"stalls, not a request diff.",
+		Implemented: true,
+		Note: "Read timeout — how long to wait for the server to start " +
+			"replying. Same default and the same coverage as cto. Removing " +
+			"it fails the test in four seconds with the request still " +
+			"outstanding, which is what the port did on every send before " +
+			"this.",
 	},
 	"store": {
 		Note: "Persistent storage is configured process-wide by the CLI " +
@@ -111,8 +120,12 @@ var FrameworkArgs = map[string]FrameworkArg{
 			"visible for providers that put a local time in the payload.",
 	},
 	"redirect": {
-		Note: "?redirect=no stops upstream following HTTP redirects. The " +
-			"capture mocks never redirect, so neither side is exercised.",
+		Implemented: true,
+		Note: "?redirect=no stops the client following a 3xx, which is then " +
+			"reported as a failure rather than quietly succeeding at the " +
+			"new location. Covered by timeout_parity_test.go against a " +
+			"server that redirects; the capture mocks never do, so a request " +
+			"fixture cannot reach it.",
 	},
 	"optional": {
 		Note: "?optional=yes marks a service whose failure should not fail " +

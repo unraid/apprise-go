@@ -11,7 +11,7 @@ func doJSONRequest(spec RequestSpec, out any) error {
 		return err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient().Do(req)
 	if err != nil {
 		return err
 	}
