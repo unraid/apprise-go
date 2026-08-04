@@ -12,5 +12,13 @@
     "body": "body",
     "title": "",
     "type": "info"
+  },
+  {
+    "name": "body-format-markdown",
+    "url": "mailersend://apikey123:sender@example.com/target@example.com",
+    "body": "**bold** and [link](https://example.com) plus `code`.",
+    "title": "over",
+    "type": "info",
+    "body_format": "markdown"
   }
 ]

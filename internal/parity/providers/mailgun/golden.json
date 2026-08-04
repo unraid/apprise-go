@@ -63,5 +63,21 @@
         "url": "https://api.mailgun.net/v3/example.com/messages"
       }
     ]
+  },
+  {
+    "name": "body-format-markdown",
+    "requests": [
+      {
+        "body": "o%3Askip-verification=False&from=Apprise+%3Csender%40domain.com%3E&subject=over&html=%3Cp%3E%3Cstrong%3Ebold%3C%2Fstrong%3E+and+%3Ca+href%3D%22https%3A%2F%2Fexample.com%22%3Elink%3C%2Fa%3E+plus+%3Ccode%3Ecode%3C%2Fcode%3E.%3C%2Fp%3E&to=recipient%40domain.com",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic YXBpOmFwaWtleQ==",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.mailgun.net/v3/domain.com/messages"
+      }
+    ]
   }
 ]

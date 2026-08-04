@@ -58,5 +58,20 @@
         "url": "https://www.pushplus.plus/send"
       }
     ]
+  },
+  {
+    "name": "body-format-markdown",
+    "requests": [
+      {
+        "body": "{\"token\": \"token12345678901234567890123456789012\", \"title\": \"over\", \"content\": \"<p><strong>bold</strong> and <a href=\\\"https://example.com\\\">link</a> plus <code>code</code>.</p>\", \"template\": \"html\", \"channel\": \"wechat\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.pushplus.plus/send"
+      }
+    ]
   }
 ]

@@ -187,5 +187,21 @@
         "url": "https://www.kookapp.cn/api/v3/message/create"
       }
     ]
+  },
+  {
+    "name": "body-format-html",
+    "requests": [
+      {
+        "body": "{\"type\": 9, \"target_id\": \"1234567890\", \"content\": \"# over\\n**bold** and [link](<https://example.com>) plus `code`.\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bot bottoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://www.kookapp.cn/api/v3/message/create"
+      }
+    ]
   }
 ]

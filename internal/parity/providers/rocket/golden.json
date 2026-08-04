@@ -28,5 +28,20 @@
         "url": "https://chat.example.com/hooks/abc123/def456"
       }
     ]
+  },
+  {
+    "name": "body-format-html",
+    "requests": [
+      {
+        "body": "{\"text\": \"# over\\n**bold** and [link](<https://example.com>) plus `code`.\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://chat.example.com/hooks/abc123/def456"
+      }
+    ]
   }
 ]

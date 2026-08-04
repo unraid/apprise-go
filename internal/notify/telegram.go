@@ -144,6 +144,12 @@ func (t *TelegramTarget) SendWithAttachments(body, title string, notifyType Noti
 
 	message := formatTelegramMessage(title, body, t.notifyFormat, t.markdownMode)
 
+	if t.parseMode() == "HTML" {
+		// The caption goes through the same rewrite the message body does;
+		// Telegram rejects the tags it does not know wherever they appear.
+		message = rewriteTelegramHTML(message)
+	}
+
 	// A short message rides along as the media caption rather than being
 	// sent on its own; sending both would notify twice for one notification.
 	caption := ""

@@ -163,7 +163,9 @@ func (b *BrevoTarget) buildPayload(body, title, target string, attachments []Att
 		},
 		"subject":     subject,
 		"htmlContent": body,
-		"textContent": body,
+		// The plain-text alternative is the body with its markup stripped,
+		// not the same HTML sent twice.
+		"textContent": htmlToText(body),
 	}
 
 	cc := filterEmailSet(b.cc, b.bcc, target)

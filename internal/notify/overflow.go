@@ -123,16 +123,16 @@ func applyOverflowWithLimits(schema, mode, format, inputFormat, title, body stri
 	if mode == "" {
 		mode = OverflowUpstream
 	}
-	if mode == OverflowUpstream || !known || limits.bodyMax < 0 {
-		return []MessagePart{{Title: title, Body: body}}
-	}
-
 	// A service with no title of its own has the title folded into the body
-	// before anything is measured, and the title is cleared. Measuring the
+	// before anything is measured, and before the mode is consulted, and the title is cleared. Measuring the
 	// body on its own and letting the provider fold afterwards produces
 	// chunks that are longer than the limit by the width of the title.
 	if limits.titleMax <= 0 && title != "" {
-		markdownOut := strings.EqualFold(strings.TrimSpace(format), "markdown")
+		// The bold line is part of the override path, which upstream only
+		// takes for a markdown-native service handed HTML. By default the
+		// framework fold applies here too.
+		markdownOut := strings.EqualFold(strings.TrimSpace(format), "markdown") &&
+			strings.EqualFold(strings.TrimSpace(inputFormat), "html")
 		if markdownOut && boldTitleSchemas[strings.ToLower(strings.TrimSpace(schema))] {
 			// WhatsApp has no heading syntax, so upstream uses a bold line.
 			body = "**" + strings.TrimLeft(title, "\r\n \t\v\f#-") + "**\n" + body
@@ -143,6 +143,10 @@ func applyOverflowWithLimits(schema, mode, format, inputFormat, title, body stri
 		if title != "" {
 			title = ""
 		}
+	}
+
+	if mode == OverflowUpstream || !known || limits.bodyMax < 0 {
+		return []MessagePart{{Title: title, Body: body}}
 	}
 
 	// The buffer is only reserved while a title still needs folding, which

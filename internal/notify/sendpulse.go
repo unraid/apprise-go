@@ -321,6 +321,9 @@ func (s *SendPulseTarget) buildEmailPayload(body, title, target string, attachme
 
 	if s.notifyFormat == "html" {
 		emailPayload["html"] = base64.StdEncoding.EncodeToString([]byte(body))
+		// The text alternative is the body with its markup stripped; sending
+		// the HTML in both fields leaves a plain-text reader with tags.
+		emailPayload["text"] = htmlToText(body)
 	}
 
 	if len(s.cc) > 0 {

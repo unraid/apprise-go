@@ -22,5 +22,13 @@
     "attachments": [
       "%7Brepo%7D/internal/parity/fixtures/report.pdf"
     ]
+  },
+  {
+    "name": "body-format-markdown",
+    "url": "smtp2go://sender@domain.com/apikey/recipient@domain.com",
+    "body": "**bold** and [link](https://example.com) plus `code`.",
+    "title": "over",
+    "type": "info",
+    "body_format": "markdown"
   }
 ]

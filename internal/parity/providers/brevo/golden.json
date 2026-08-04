@@ -43,5 +43,20 @@
         "url": "https://api.brevo.com/v3/smtp/email"
       }
     ]
+  },
+  {
+    "name": "body-format-markdown",
+    "requests": [
+      {
+        "body": "{\"sender\": {\"email\": \"sender@domain.com\"}, \"to\": [{\"email\": \"recipient@domain.com\"}], \"subject\": \"over\", \"htmlContent\": \"<p><strong>bold</strong> and <a href=\\\"https://example.com\\\">link</a> plus <code>code</code>.</p>\", \"textContent\": \"bold and link plus\\ncode\\n.\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email"
+      }
+    ]
   }
 ]

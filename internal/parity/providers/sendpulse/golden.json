@@ -24,5 +24,31 @@
         "url": "https://api.sendpulse.com/smtp/emails"
       }
     ]
+  },
+  {
+    "name": "body-format-markdown",
+    "requests": [
+      {
+        "body": "{\"grant_type\": \"client_credentials\", \"client_id\": \"clientid\", \"client_secret\": \"clientsecret\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.sendpulse.com/oauth/access_token"
+      },
+      {
+        "body": "{\"email\": {\"from\": {\"name\": \"Apprise\", \"email\": \"user@example.com\"}, \"to\": [{\"email\": \"target@example.com\"}], \"subject\": \"over\", \"text\": \"bold and link plus\\ncode\\n.\", \"html\": \"PHA+PHN0cm9uZz5ib2xkPC9zdHJvbmc+IGFuZCA8YSBocmVmPSJodHRwczovL2V4YW1wbGUuY29tIj5saW5rPC9hPiBwbHVzIDxjb2RlPmNvZGU8L2NvZGU+LjwvcD4=\"}}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.sendpulse.com/smtp/emails"
+      }
+    ]
   }
 ]

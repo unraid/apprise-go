@@ -196,5 +196,20 @@
         "url": "https://api.ciscospark.com/v1/webhooks/incoming//aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       }
     ]
+  },
+  {
+    "name": "body-format-html",
+    "requests": [
+      {
+        "body": "{\"markdown\": \"# over\\n**bold** and [link](<https://example.com>) plus `code`.\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.ciscospark.com/v1/webhooks/incoming//aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ]
   }
 ]

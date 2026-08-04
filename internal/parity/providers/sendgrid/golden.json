@@ -46,5 +46,21 @@
         "url": "https://api.sendgrid.com/v3/mail/send"
       }
     ]
+  },
+  {
+    "name": "body-format-markdown",
+    "requests": [
+      {
+        "body": "{\"personalizations\": [{\"to\": [{\"email\": \"recipient@domain.com\"}]}], \"from\": {\"email\": \"sender@domain.com\"}, \"subject\": \"over\", \"content\": [{\"type\": \"text/html\", \"value\": \"<p><strong>bold</strong> and <a href=\\\"https://example.com\\\">link</a> plus <code>code</code>.</p>\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.sendgrid.com/v3/mail/send"
+      }
+    ]
   }
 ]

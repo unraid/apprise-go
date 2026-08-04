@@ -12,5 +12,13 @@
     "body": "message",
     "title": "subject",
     "type": "warning"
+  },
+  {
+    "name": "body-format-html",
+    "url": "workflow://example.com/WORKFLOWID/SIGNATURE?wrap=yes&image=yes",
+    "body": "<b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>.",
+    "title": "over",
+    "type": "info",
+    "body_format": "html"
   }
 ]

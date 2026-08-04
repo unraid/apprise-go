@@ -50,5 +50,22 @@
         "url": "https://email.us-east-1.amazonaws.com/"
       }
     ]
+  },
+  {
+    "name": "body-format-markdown",
+    "requests": [
+      {
+        "body": "Action=SendRawEmail&Version=2010-12-01&RawMessage.Data=Q29udGVudC1UeXBlOiB0ZXh0L2h0bWw7IGNoYXJzZXQ9InV0Zi04IgpNSU1FLVZlcnNpb246IDEuMApDb250ZW50LVRyYW5zZmVyLUVuY29kaW5nOiBxdW90ZWQtcHJpbnRhYmxlClN1YmplY3Q6ID0%2FdXRmLTg%2FcT9vdmVyPz0KRnJvbTogQXBwcmlzZSBOb3RpZmljYXRpb25zIDxzZW5kZXJAZXhhbXBsZS5jb20%2BClRvOiB0YXJnZXRAZXhhbXBsZS5jb20KQ2M6IApEYXRlOiBNb24sIDAxIEphbiAyMDI0IDAwOjAwOjAwICswMDAwClgtQXBwbGljYXRpb246IEFwcHJpc2UKCjxwPjxzdHJvbmc%2BYm9sZDwvc3Ryb25nPiBhbmQgPGEgaHJlZj0zRCJodHRwczovL2V4YW1wbGUuY29tIj5saW5rPC9hPiBwbHVzID0KPGNvZGU%2BY29kZTwvY29kZT4uPC9wPg%3D%3D&Destinations.member.1=target%40example.com&Source=Apprise%20Notifications%20%3Csender%40example.com%3E",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "AWS4-HMAC-SHA256 Credential=access123/20240101/us-east-1/ses/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=45f434ffa33602ce5748203236327aece40e6060b7c755ebc3ad79e6019d6800",
+          "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+          "user-agent": "Apprise",
+          "x-amz-date": "20240101T000000Z"
+        },
+        "method": "POST",
+        "url": "https://email.us-east-1.amazonaws.com/"
+      }
+    ]
   }
 ]

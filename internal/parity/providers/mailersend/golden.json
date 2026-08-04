@@ -41,5 +41,21 @@
         "url": "https://api.mailersend.com/v1/email"
       }
     ]
+  },
+  {
+    "name": "body-format-markdown",
+    "requests": [
+      {
+        "body": "{\"from\": {\"email\": \"sender@example.com\"}, \"to\": [{\"email\": \"target@example.com\"}], \"subject\": \"over\", \"html\": \"<p><strong>bold</strong> and <a href=\\\"https://example.com\\\">link</a> plus <code>code</code>.</p>\", \"text\": \"bold and link plus\\ncode\\n.\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer apikey123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.mailersend.com/v1/email"
+      }
+    ]
   }
 ]

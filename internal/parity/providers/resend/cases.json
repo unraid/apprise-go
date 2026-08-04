@@ -12,5 +12,13 @@
     "body": "hello",
     "title": "",
     "type": "warning"
+  },
+  {
+    "name": "body-format-markdown",
+    "url": "resend://apikey:sender@domain.com/recipient@domain.com",
+    "body": "**bold** and [link](https://example.com) plus `code`.",
+    "title": "over",
+    "type": "info",
+    "body_format": "markdown"
   }
 ]

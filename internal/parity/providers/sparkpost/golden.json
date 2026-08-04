@@ -46,5 +46,21 @@
         "url": "https://api.sparkpost.com/api/v1/transmissions/"
       }
     ]
+  },
+  {
+    "name": "body-format-markdown",
+    "requests": [
+      {
+        "body": "{\"options\": {\"open_tracking\": false, \"click_tracking\": false}, \"content\": {\"from\": {\"name\": \"Apprise Notifications\", \"email\": \"sender@domain.com\"}, \"subject\": \"over\", \"reply_to\": \"sender@domain.com\", \"html\": \"<p><strong>bold</strong> and <a href=\\\"https://example.com\\\">link</a> plus <code>code</code>.</p>\"}, \"substitution_data\": {}, \"recipients\": [{\"address\": {\"email\": \"recipient@domain.com\"}}]}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.sparkpost.com/api/v1/transmissions/"
+      }
+    ]
   }
 ]
