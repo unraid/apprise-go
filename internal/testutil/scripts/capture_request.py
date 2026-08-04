@@ -665,15 +665,6 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
 
         response = requests.Response()
         response.status_code = 200
-
-        # A fixture may ask for the first N requests to fail, which is the
-        # only way to reach a retry path: everything here answers 200, so
-        # neither implementation ever re-sends without it.
-        global _FAIL_BUDGET
-        if _FAIL_BUDGET > 0:
-            _FAIL_BUDGET -= 1
-            response.status_code = 500
-            response._content = b'{"error":"parity forced failure"}'
         hostname = parsed.hostname or ""
         if hostname in ("sendpulse.com", "api.sendpulse.com") and parsed.path == "/oauth/access_token":
             response._content = b'{"access_token":"token","expires_in":3600}'
@@ -986,6 +977,15 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
             response._content = b'{"success":true}'
         else:
             response._content = b"ok"
+        # The forced-failure budget is applied last: several providers set a
+        # status of their own further up, and injecting earlier let those
+        # overwrite the failure, which made a rejected request look accepted.
+        global _FAIL_BUDGET
+        if _FAIL_BUDGET > 0:
+            _FAIL_BUDGET -= 1
+            response.status_code = 500
+            response._content = b'{"error":"parity forced failure"}'
+
         response.headers.setdefault("Content-Type", "text/plain")
         response.headers["Content-Length"] = str(len(response.content))
         response.url = prepared.url
