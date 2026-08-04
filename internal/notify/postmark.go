@@ -85,7 +85,7 @@ func NewPostmarkTarget(target *ParsedURL) (*PostmarkTarget, error) {
 }
 
 func (p *PostmarkTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	specs, err := p.buildRequests(body, title, notifyType)
+	specs, err := p.buildRequests(body, title, notifyType, nil)
 	if err != nil {
 		return RequestSpec{}, err
 	}
@@ -94,7 +94,11 @@ func (p *PostmarkTarget) BuildRequest(body, title string, notifyType NotifyType)
 }
 
 func (p *PostmarkTarget) Send(body, title string, notifyType NotifyType) error {
-	specs, err := p.buildRequests(body, title, notifyType)
+	return p.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (p *PostmarkTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	specs, err := p.buildRequests(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -109,7 +113,7 @@ func (p *PostmarkTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 // buildRequests sends one message per recipient.
-func (p *PostmarkTarget) buildRequests(body, title string, notifyType NotifyType) ([]RequestSpec, error) {
+func (p *PostmarkTarget) buildRequests(body, title string, notifyType NotifyType, attachments []Attachment) ([]RequestSpec, error) {
 	_ = notifyType
 
 	subject := title
@@ -141,6 +145,9 @@ func (p *PostmarkTarget) buildRequests(body, title string, notifyType NotifyType
 		}
 		if len(p.bcc) > 0 {
 			payload["Bcc"] = strings.Join(p.bcc, ",")
+		}
+		if len(attachments) > 0 {
+			payload["Attachments"] = attachmentsPostmarkStyle(attachments)
 		}
 
 		data, err := json.Marshal(payload)

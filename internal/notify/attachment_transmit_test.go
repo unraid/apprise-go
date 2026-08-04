@@ -121,6 +121,23 @@ func TestEmailProvidersEncodeAttachments(t *testing.T) {
 			"mailersend", "mailersend://key@example.com/user@example.com",
 			[]string{`"attachments"`, `"content":"` + encoded + `"`, `"filename":"report.pdf"`},
 		},
+		{
+			// Postmark is the only one that capitalises its keys.
+			"postmark", "postmark://token:sender@example.com/user@example.com",
+			[]string{`"Attachments"`, `"Content":"` + encoded + `"`, `"Name":"report.pdf"`,
+				`"ContentType":"application/pdf"`},
+		},
+		{
+			// SendPulse keys by filename instead of listing objects.
+			"sendpulse", "sendpulse://user@example.com/clientid/clientsecret/target@example.com",
+			[]string{`"attachments_binary"`, `"report.pdf":"` + encoded + `"`},
+		},
+		{
+			// SMSEagle carries no filename at all.
+			"smseagle", "smseagle://token@smseagle.example.com/15551234567",
+			[]string{`"attachments"`, `"content":"` + encoded + `"`,
+				`"content_type":"application/pdf"`},
+		},
 	}
 
 	for _, tc := range cases {
@@ -146,10 +163,23 @@ func TestEmailProvidersEncodeAttachments(t *testing.T) {
 				t.Fatal("no request was sent")
 			}
 
-			compact := strings.ReplaceAll(specs[0].Body, " ", "")
+			// Some providers authenticate first, so the email is not always
+			// the opening request.
+			bodies := make([]string, 0, len(specs))
+			for _, spec := range specs {
+				bodies = append(bodies, strings.ReplaceAll(spec.Body, " ", ""))
+			}
+
 			for _, want := range tc.want {
-				if !strings.Contains(compact, want) {
-					t.Fatalf("request body is missing %s\nbody: %s", want, specs[0].Body)
+				found := false
+				for _, candidate := range bodies {
+					if strings.Contains(candidate, want) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Fatalf("no request carries %s\nbodies: %s", want, strings.Join(bodies, "\n"))
 				}
 			}
 		})

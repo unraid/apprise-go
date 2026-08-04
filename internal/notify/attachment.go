@@ -214,3 +214,32 @@ func attachmentsSMTP2GoStyle(attachments []Attachment) []any {
 
 	return out
 }
+
+// attachmentsPostmarkStyle capitalises its keys, unlike every other service
+// here.
+func attachmentsPostmarkStyle(attachments []Attachment) []any {
+	out := make([]any, 0, len(attachments))
+	for index, attachment := range attachments {
+		out = append(out, map[string]any{
+			"Name":        attachment.FileName(index, ".dat"),
+			"Content":     attachment.Base64(),
+			"ContentType": attachment.MimeType,
+		})
+	}
+
+	return out
+}
+
+// attachmentsSMSEagleStyle carries no filename at all; the content type is the
+// only thing describing the file.
+func attachmentsSMSEagleStyle(attachments []Attachment) []any {
+	out := make([]any, 0, len(attachments))
+	for _, attachment := range attachments {
+		out = append(out, map[string]any{
+			"content_type": attachment.MimeType,
+			"content":      attachment.Base64(),
+		})
+	}
+
+	return out
+}

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/textproto"
+	"net/url"
+	"sort"
 	"strings"
 )
 
@@ -65,4 +67,44 @@ func attachmentPartHeader(field string, attachment Attachment) textproto.MIMEHea
 
 func escapeMultipartValue(value string) string {
 	return strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(value)
+}
+
+// mailgunAttachmentBody converts a form-encoded payload into the multipart
+// body Mailgun needs once files are present: every existing field is carried
+// over, then one part per file named attachment[N].
+func mailgunAttachmentBody(values url.Values, attachments []Attachment) (body string, contentType string, err error) {
+	var buffer bytes.Buffer
+	writer := multipart.NewWriter(&buffer)
+
+	// Sorted so the body is reproducible; url.Values iterates a map.
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		for _, value := range values[key] {
+			if err := writer.WriteField(key, value); err != nil {
+				return "", "", err
+			}
+		}
+	}
+
+	for index, attachment := range attachments {
+		part, err := writer.CreatePart(attachmentPartHeader(
+			fmt.Sprintf("attachment[%d]", index), attachment))
+		if err != nil {
+			return "", "", err
+		}
+		if _, err := part.Write(attachment.Data); err != nil {
+			return "", "", err
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return "", "", err
+	}
+
+	return buffer.String(), writer.FormDataContentType(), nil
 }

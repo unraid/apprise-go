@@ -111,7 +111,7 @@ func (s *SMSEagleTarget) BuildRequest(body, title string, notifyType NotifyType)
 	method, targetKey := smseagleMethod(category)
 	value := smseagleJoinTargets(targets, s.batch)
 
-	payload := s.buildPayload(method, targetKey, value, message)
+	payload := s.buildPayload(method, targetKey, value, message, nil)
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
@@ -130,6 +130,10 @@ func (s *SMSEagleTarget) BuildRequest(body, title string, notifyType NotifyType)
 }
 
 func (s *SMSEagleTarget) Send(body, title string, notifyType NotifyType) error {
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (s *SMSEagleTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	message := mergeTitleBody(title, body)
 	if s.status {
 		message = notifyTypeASCII(notifyType) + " " + message
@@ -161,7 +165,7 @@ func (s *SMSEagleTarget) Send(body, title string, notifyType NotifyType) error {
 				end = len(targets)
 			}
 			value := strings.Join(targets[index:end], ",")
-			payload := s.buildPayload(method, targetKey, value, message)
+			payload := s.buildPayload(method, targetKey, value, message, attachments)
 			data, err := json.Marshal(payload)
 			if err != nil {
 				return err
@@ -200,7 +204,7 @@ func (s *SMSEagleTarget) buildURL() string {
 	return scheme + "://" + host + smseaglePath
 }
 
-func (s *SMSEagleTarget) buildPayload(method, targetKey, targetValue, message string) map[string]any {
+func (s *SMSEagleTarget) buildPayload(method, targetKey, targetValue, message string, attachments []Attachment) map[string]any {
 	params := map[string]any{
 		targetKey:      targetValue,
 		"access_token": s.token,
@@ -211,6 +215,10 @@ func (s *SMSEagleTarget) buildPayload(method, targetKey, targetValue, message st
 		"responsetype": "extended",
 		"flash":        boolToInt(s.flash),
 		"test":         boolToInt(s.testMode),
+	}
+
+	if len(attachments) > 0 {
+		params["attachments"] = attachmentsSMSEagleStyle(attachments)
 	}
 
 	return map[string]any{

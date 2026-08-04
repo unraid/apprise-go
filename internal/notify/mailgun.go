@@ -178,6 +178,10 @@ func (m *MailgunTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (m *MailgunTarget) Send(body, title string, notifyType NotifyType) error {
+	return m.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (m *MailgunTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	if m.disabled {
 		return nil
 	}
@@ -197,19 +201,32 @@ func (m *MailgunTarget) Send(body, title string, notifyType NotifyType) error {
 		}
 
 		payload := m.buildPayload(body, title, m.targets[index:end])
+
+		// Files turn the form-encoded body into a multipart one; the
+		// boundary the encoder picks decides the content type.
+		requestBody := payload.Encode()
+		contentType := "application/x-www-form-urlencoded"
+		if len(attachments) > 0 {
+			var err error
+			requestBody, contentType, err = mailgunAttachmentBody(payload, attachments)
+			if err != nil {
+				return err
+			}
+		}
+
 		spec := RequestSpec{
 			Method: "POST",
 			URL:    m.buildURL(),
 			Headers: map[string]string{
 				"User-Agent":   "Apprise",
 				"Accept":       "application/json",
-				"Content-Type": "application/x-www-form-urlencoded",
+				"Content-Type": contentType,
 				"Authorization": basicAuthHeader(
 					"api",
 					m.apiKey,
 				),
 			},
-			Body: payload.Encode(),
+			Body: requestBody,
 		}
 		if err := SendRequest(spec); err != nil {
 			return err

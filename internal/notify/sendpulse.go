@@ -197,13 +197,17 @@ func NewSendPulseTarget(target *ParsedURL) (*SendPulseTarget, error) {
 }
 
 func (s *SendPulseTarget) Send(body, title string, notifyType NotifyType) error {
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (s *SendPulseTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	token, err := s.login()
 	if err != nil {
 		return err
 	}
 
 	for _, target := range s.targets {
-		payload := s.buildEmailPayload(body, title, target)
+		payload := s.buildEmailPayload(body, title, target, attachments)
 		data, err := json.Marshal(payload)
 		if err != nil {
 			return err
@@ -291,7 +295,7 @@ func (s *SendPulseTarget) login() (string, error) {
 	return response.AccessToken, nil
 }
 
-func (s *SendPulseTarget) buildEmailPayload(body, title, target string) map[string]any {
+func (s *SendPulseTarget) buildEmailPayload(body, title, target string, attachments []Attachment) map[string]any {
 	subject := title
 	if subject == "" {
 		subject = sendPulseSubject
@@ -358,6 +362,15 @@ func (s *SendPulseTarget) buildEmailPayload(body, title, target string) map[stri
 			"id":        s.templateID,
 			"variables": s.templateData,
 		}
+	}
+
+	if len(attachments) > 0 {
+		// SendPulse keys these by filename rather than listing objects.
+		binary := map[string]string{}
+		for index, attachment := range attachments {
+			binary[attachment.FileName(index, ".dat")] = attachment.Base64()
+		}
+		emailPayload["attachments_binary"] = binary
 	}
 
 	return map[string]any{
