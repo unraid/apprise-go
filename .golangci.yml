@@ -109,7 +109,7 @@ linters:
         text: "G101"
       # InsecureSkipVerify is gated behind an explicit user opt-in (verify=no),
       # matching upstream Apprise behaviour; it is never unconditionally true.
-      - path: internal/notify/(mailto_target|mqtt_target|xmpp)\.go
+      - path: internal/notify/(mailto_target|mqtt_target|xmpp|irc)\.go
         text: "G402"
       # False positive: idx ranges over the slice it indexes, so it is in bounds.
       - path: internal/cli/config\.go

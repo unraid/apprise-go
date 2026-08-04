@@ -44,11 +44,24 @@ into a test failure.
 - `blink1` — a USB HID device on the machine running Apprise. Supporting it
   means cgo and a HID library, costing the pure-Go static build, and it is the
   least likely of anything here to be reached through a Go port in a container.
-- `irc` / `ircs` — no dependency needed, since upstream implements the protocol
-  itself. What it needs is a stateful client (registration, nick collision,
-  PING/PONG, JOIN confirmation, NickServ) and a fake IRC server for parity.
-  `internal/parity/smpp_parity_test.go` is the pattern: stand up a Go listener,
-  run both implementations against it, compare the frames.
+- `irc` / `ircs` are implemented now. `testutil/irc_capture.go` completes
+  registration, answers pings, confirms joins and can refuse a nick, and
+  `irc_parity_test.go` runs both implementations against it and compares the
+  command streams.
+
+  One thing that surfaced is worth knowing about rather than filing away.
+  Upstream declares `title_maxlen = 0`, so the framework folds the title into
+  the body with a CRLF, and the plugin puts the result straight into the
+  PRIVMSG. That newline ends the IRC line: everything after it is read by the
+  server as a fresh command. This port reproduces it, because matching
+  upstream is the contract, but it is a command-injection vector — a title or
+  body carrying a newline can issue arbitrary IRC commands as the sending
+  user. Diverging is a product decision rather than a porting one, so it is
+  flagged here rather than quietly fixed.
+
+  Not covered: ZNC bouncer mode (`?mode=znc`, which sends `user:password` in
+  PASS and then a PING/PONG liveness check), NickServ identify beyond the
+  line being sent, and `body_maxlen = 380` truncation.
 
 `attachment_support` is *not* excluded. It mirrors what upstream declares
 about the service, which the port does for every entry, and it is compared in

@@ -19,8 +19,6 @@ import "strings"
 // been done.
 var UnsupportedSchemas = map[string]struct{}{
 	"blink1": {},
-	"irc":    {},
-	"ircs":   {},
 }
 
 // IsKnownGapSchema reports whether a schema is a known, accepted gap. The

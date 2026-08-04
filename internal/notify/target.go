@@ -464,6 +464,12 @@ var targetBuilders = map[string]buildTargetFunc{
 	"fluxers": func(parsed *ParsedURL) (Sender, error) {
 		return NewFluxerTarget(parsed)
 	},
+	"irc": func(parsed *ParsedURL) (Sender, error) {
+		return NewIRCTarget(parsed)
+	},
+	"ircs": func(parsed *ParsedURL) (Sender, error) {
+		return NewIRCTarget(parsed)
+	},
 	"xmpp": func(parsed *ParsedURL) (Sender, error) {
 		return NewXMPPTarget(parsed)
 	},
