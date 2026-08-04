@@ -19,5 +19,26 @@
     "body": "hello from python",
     "title": "apprise parity",
     "type": "info"
+  },
+  {
+    "name": "attachment",
+    "url": "ntfy://topic?image=no",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
+  },
+  {
+    "name": "attachment-multiple",
+    "url": "ntfy://topic?image=no",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png",
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ]
   }
 ]

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -276,4 +277,35 @@ func attachmentsCustomXMLStyle(attachments []Attachment) string {
 	builder.WriteString("</Attachments>")
 
 	return builder.String()
+}
+
+// telegramMediaRoute names the endpoint and form field Telegram wants for a
+// given file. The table is ordered and scanned top to bottom, since the gif
+// rule has to win before the general image rule sees it.
+type telegramMediaRoute struct {
+	pattern *regexp.Regexp
+	method  string
+	field   string
+}
+
+var telegramMediaRoutes = []telegramMediaRoute{
+	// Animations are documented to support gif or H.264 only.
+	{regexp.MustCompile(`(?i)^(image/gif|video/H264)`), "sendAnimation", "animation"},
+	// Catches every remaining image type.
+	{regexp.MustCompile(`(?i)^image/.*`), "sendPhoto", "photo"},
+	{regexp.MustCompile(`(?i)^video/mp4`), "sendVideo", "video"},
+	{regexp.MustCompile(`(?i)^(application|audio)/ogg`), "sendVoice", "voice"},
+	{regexp.MustCompile(`(?i)^audio/(mpeg|mp4a-latm)`), "sendAudio", "audio"},
+	// Everything else.
+	{regexp.MustCompile(`.*`), "sendDocument", "document"},
+}
+
+func telegramRouteFor(mimeType string) telegramMediaRoute {
+	for _, route := range telegramMediaRoutes {
+		if route.pattern.MatchString(mimeType) {
+			return route
+		}
+	}
+
+	return telegramMediaRoutes[len(telegramMediaRoutes)-1]
 }

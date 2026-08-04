@@ -111,6 +111,13 @@ func NewNtfyTarget(target *ParsedURL) (*NtfyTarget, error) {
 }
 
 func (n *NtfyTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return n.buildRequest(body, title, notifyType, nil)
+}
+
+// buildRequest builds one request. With an attachment the file's bytes are the
+// body, the topic moves into the path and the message metadata into the query
+// string — ntfy has no envelope to put a file inside.
+func (n *NtfyTarget) buildRequest(body, title string, notifyType NotifyType, attachment *Attachment) (RequestSpec, error) {
 	if len(n.topics) == 0 {
 		return RequestSpec{}, fmt.Errorf("no topics")
 	}
@@ -120,27 +127,48 @@ func (n *NtfyTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 		return RequestSpec{}, err
 	}
 
-	payload := map[string]any{
-		"topic":   n.topics[0],
-		"title":   title,
-		"message": body,
-	}
-	if n.attach != "" {
-		payload["attach"] = n.attach
-		if n.filename != "" {
-			payload["filename"] = n.filename
-		}
-	}
+	requestBody := ""
+	contentType := "application/json"
 
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return RequestSpec{}, err
+	if attachment != nil {
+		query := url.Values{}
+		query.Set("filename", attachment.Name)
+		if title != "" {
+			query.Set("title", title)
+		}
+		if body != "" {
+			query.Set("message", body)
+		}
+
+		urlStr = strings.TrimRight(urlStr, "/") + "/" + n.topics[0] + "?" + query.Encode()
+		requestBody = string(attachment.Data)
+		contentType = ""
+	} else {
+		payload := map[string]any{
+			"topic":   n.topics[0],
+			"title":   title,
+			"message": body,
+		}
+		if n.attach != "" {
+			payload["attach"] = n.attach
+			if n.filename != "" {
+				payload["filename"] = n.filename
+			}
+		}
+
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		requestBody = string(data)
 	}
 
 	headers := map[string]string{
-		"User-Agent":   "Apprise",
-		"Accept":       "*/*",
-		"Content-Type": "application/json",
+		"User-Agent": "Apprise",
+		"Accept":     "*/*",
+	}
+	if contentType != "" {
+		headers["Content-Type"] = contentType
 	}
 
 	if n.mode == NtfyModePrivate {
@@ -190,17 +218,42 @@ func (n *NtfyTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 		Method:  "POST",
 		URL:     urlStr,
 		Headers: headers,
-		Body:    string(data),
+		Body:    requestBody,
 	}, nil
 }
 
 func (n *NtfyTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := n.BuildRequest(body, title, notifyType)
-	if err != nil {
-		return err
+	return n.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments posts one request per file. Only the first carries the
+// message text; repeating it under every attachment would notify twice.
+func (n *NtfyTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	if len(attachments) == 0 {
+		spec, err := n.buildRequest(body, title, notifyType, nil)
+		if err != nil {
+			return err
+		}
+
+		return SendRequest(spec)
 	}
 
-	return SendRequest(spec)
+	for index := range attachments {
+		messageBody, messageTitle := "", ""
+		if index == 0 {
+			messageBody, messageTitle = body, title
+		}
+
+		spec, err := n.buildRequest(messageBody, messageTitle, notifyType, &attachments[index])
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (n *NtfyTarget) notifyURL() (string, error) {

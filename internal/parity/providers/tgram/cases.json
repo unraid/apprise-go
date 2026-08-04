@@ -4,5 +4,25 @@
     "url": "tgram://123456%3Aabcdef/12345",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "attachment-image",
+    "url": "tgram://123456%3Aabcdef/12345",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
+  },
+  {
+    "name": "attachment-document",
+    "url": "tgram://123456%3Aabcdef/12345",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ]
   }
 ]

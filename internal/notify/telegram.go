@@ -20,6 +20,7 @@ type telegramRecipient struct {
 
 type TelegramTarget struct {
 	botToken     string
+	content      string
 	targets      []telegramRecipient
 	notifyFormat string
 	markdownMode string
@@ -87,6 +88,7 @@ func NewTelegramTarget(target *ParsedURL) (*TelegramTarget, error) {
 
 	return &TelegramTarget{
 		botToken:     botToken,
+		content:      telegramContentPlacement(target.Query["content"]),
 		targets:      targets,
 		notifyFormat: format,
 		markdownMode: telegramMarkdownMode(target.Query["mdv"]),
@@ -117,6 +119,22 @@ func (t *TelegramTarget) BuildRequest(body, title string, notifyType NotifyType)
 }
 
 func (t *TelegramTarget) Send(body, title string, notifyType NotifyType) error {
+	return t.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// telegramCaptionMaxLen is the longest message Telegram will carry as a
+// caption on a media item.
+const telegramCaptionMaxLen = 1024
+
+func telegramContentPlacement(raw string) string {
+	if strings.EqualFold(strings.TrimSpace(raw), "after") {
+		return "after"
+	}
+
+	return "before"
+}
+
+func (t *TelegramTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	if len(t.targets) == 0 {
 		if t.detect {
 			return SendRequest(t.buildDetectSpec())
@@ -125,6 +143,14 @@ func (t *TelegramTarget) Send(body, title string, notifyType NotifyType) error {
 	}
 
 	message := formatTelegramMessage(title, body, t.notifyFormat, t.markdownMode)
+
+	// A short message rides along as the media caption rather than being
+	// sent on its own; sending both would notify twice for one notification.
+	caption := ""
+	if len(attachments) > 0 && body != "" && len(message) < telegramCaptionMaxLen {
+		caption = message
+	}
+
 	for _, recipient := range t.targets {
 		if t.includeImage {
 			spec, err := t.buildImageSpec(recipient)
@@ -135,12 +161,32 @@ func (t *TelegramTarget) Send(body, title string, notifyType NotifyType) error {
 				return err
 			}
 		}
-		spec, err := t.buildSpec(message, recipient)
-		if err != nil {
-			return err
+		if caption == "" {
+			spec, err := t.buildSpec(message, recipient)
+			if err != nil {
+				return err
+			}
+			if err := SendRequest(spec); err != nil {
+				return err
+			}
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
+
+		// Each file goes to the endpoint Telegram wants for its type; a
+		// photo posted as a document arrives as an unpreviewable file. Only
+		// the first carries the caption.
+		for index, attachment := range attachments {
+			attachmentCaption := ""
+			if index == 0 {
+				attachmentCaption = caption
+			}
+
+			spec, err := t.buildAttachmentSpec(recipient, attachment, attachmentCaption, index)
+			if err != nil {
+				return err
+			}
+			if err := SendRequest(spec); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -181,6 +227,45 @@ func (t *TelegramTarget) buildSpec(body string, recipient telegramRecipient) (Re
 			"Content-Type": "application/json",
 		},
 		Body: string(data),
+	}, nil
+}
+
+func (t *TelegramTarget) buildAttachmentSpec(
+	recipient telegramRecipient,
+	attachment Attachment,
+	caption string,
+	index int,
+) (RequestSpec, error) {
+	route := telegramRouteFor(attachment.MimeType)
+
+	values := url.Values{}
+	if caption != "" {
+		values.Set("caption", caption)
+		values.Set("show_caption_above_media", telegramTitleCase(t.content == "before"))
+		values.Set("parse_mode", t.parseMode())
+	}
+	values.Set("title", attachment.FileName(index, ".dat"))
+	values.Set("chat_id", recipient.chatID)
+	if recipient.messageTopic > 0 {
+		values.Set("message_thread_id", strconv.Itoa(recipient.messageTopic))
+	}
+
+	// Telegram is handed a filename and a handle with no type, so the part
+	// carries no content type of its own.
+	requestBody, contentType, err := singleFileAttachmentBody(values, route.field, attachment, false)
+	if err != nil {
+		return RequestSpec{}, err
+	}
+
+	return RequestSpec{
+		Method: "POST",
+		URL:    telegramAPIBase + t.botToken + "/" + route.method,
+		Headers: map[string]string{
+			"User-Agent":   "Apprise",
+			"Accept":       "*/*",
+			"Content-Type": contentType,
+		},
+		Body: requestBody,
 	}, nil
 }
 
@@ -569,4 +654,14 @@ func init() {
 		"service_url":      "https://telegram.org/",
 		"setup_url":        "https://appriseit.com/services/telegram/",
 	})
+}
+
+// telegramTitleCase renders a boolean the way Python's str() does, which is
+// what the form field carries upstream.
+func telegramTitleCase(value bool) string {
+	if value {
+		return "True"
+	}
+
+	return "False"
 }

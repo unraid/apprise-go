@@ -18,11 +18,11 @@ func TestAttachmentIsNotSilentlyDropped(t *testing.T) {
 	}
 
 	var stdout, stderr bytes.Buffer
-	// ntfy cannot carry an attachment yet, so this must fail rather than
-	// quietly deliver a notification without it. Swap this for another
-	// unsupported service if ntfy gains support.
+	// This service cannot carry an attachment yet, so the run must fail rather
+	// than quietly deliver a notification without it. Swap the URL for another
+	// unsupported service if this one gains support.
 	code := Run([]string{
-		"--body", "hello", "--attach", path, "ntfy://localhost/topic",
+		"--body", "hello", "--attach", path, "gotify://localhost/token",
 	}, &stdout, &stderr)
 
 	if code == 0 {
@@ -40,7 +40,7 @@ func TestAttachmentIsNotSilentlyDropped(t *testing.T) {
 func TestMissingAttachmentFailsBeforeSending(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	code := Run([]string{
-		"--body", "hello", "--attach", filepath.Join(t.TempDir(), "absent.png"), "ntfy://localhost/topic",
+		"--body", "hello", "--attach", filepath.Join(t.TempDir(), "absent.png"), "gotify://localhost/token",
 	}, &stdout, &stderr)
 
 	if code == 0 {
