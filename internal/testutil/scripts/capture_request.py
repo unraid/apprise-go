@@ -831,6 +831,12 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
                 )
             else:
                 response._content = b'{"id":"message-id"}'
+        elif parsed.path.endswith("/api/v4/files"):
+            # Mattermost answers an upload with the file ids a post uses.
+            response._content = b'{"file_infos":[{"id":"fileid123"}]}'
+        elif parsed.path == "/api/v1/media":
+            # Mastodon answers a media upload with the id a status references.
+            response._content = b'{"id":"110001"}'
         elif parsed.path == "/api/v3/asset/create":
             # Kook answers a CDN upload with the URL a message references.
             response._content = (

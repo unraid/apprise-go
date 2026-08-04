@@ -3,12 +3,16 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 	"unicode/utf8"
 )
 
 const mastodonStatusPath = "/api/v1/statuses"
+
+// Media is uploaded first and the status then references the ids it gets back.
+const mastodonMediaPath = "/api/v1/media"
 const mastodonDefaultVisibility = "default"
 const tootDefaultVisibility = "public"
 
@@ -123,6 +127,10 @@ func NewMastodonTarget(target *ParsedURL) (*MastodonTarget, error) {
 }
 
 func (m *MastodonTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return m.buildRequest(body, title, notifyType, nil)
+}
+
+func (m *MastodonTarget) buildRequest(body, title string, notifyType NotifyType, mediaIDs []string) (RequestSpec, error) {
 	message := mergeTitleBody(title, body)
 
 	// Only a direct message prefixes its recipients, and a mention already
@@ -161,6 +169,9 @@ func (m *MastodonTarget) BuildRequest(body, title string, notifyType NotifyType)
 	}
 	if m.idempotencyKey != "" {
 		payload["Idempotency-Key"] = m.idempotencyKey
+	}
+	if len(mediaIDs) > 0 {
+		payload["media_ids"] = mediaIDs
 	}
 
 	data, err := json.Marshal(payload)
@@ -217,6 +228,75 @@ func isMentionDelimiter(r rune) bool {
 	default:
 		return false
 	}
+}
+
+// mastodonMediaPattern is what Mastodon will transcode; anything else is
+// ignored rather than rejected, so it would silently never appear.
+var mastodonMediaPattern = regexp.MustCompile(`(?i)^(image|video|audio)/.*`)
+
+func (m *MastodonTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	mediaIDs := []string{}
+	for index, attachment := range attachments {
+		if !mastodonMediaPattern.MatchString(attachment.MimeType) {
+			continue
+		}
+
+		id, err := m.uploadMedia(attachment, index)
+		if err != nil {
+			return err
+		}
+		mediaIDs = append(mediaIDs, id)
+	}
+
+	spec, err := m.buildRequest(body, title, notifyType, mediaIDs)
+	if err != nil {
+		return err
+	}
+
+	return SendRequest(spec)
+}
+
+// uploadMedia posts one file and returns the id the status references.
+func (m *MastodonTarget) uploadMedia(attachment Attachment, index int) (string, error) {
+	name := attachment.FileName(index, ".dat")
+
+	// The filename doubles as the media description, which is what a client
+	// reads out as alt text.
+	fields := url.Values{}
+	fields.Set("description", name)
+
+	// Mastodon is handed a filename and a handle without a type, so the part
+	// is labelled application/octet-stream rather than the file's own type.
+	requestBody, contentType, err := singleFileAttachmentBody(
+		fields, "file",
+		Attachment{
+			Name: name,
+			Data: attachment.Data,
+		}, true)
+	if err != nil {
+		return "", err
+	}
+
+	var response struct {
+		ID json.Number `json:"id"`
+	}
+	if err := doJSONRequest(RequestSpec{
+		Method: "POST",
+		URL:    m.baseURL() + mastodonMediaPath,
+		Headers: map[string]string{
+			"User-Agent":    "Apprise",
+			"Authorization": "Bearer " + m.token,
+			"Content-Type":  contentType,
+		},
+		Body: requestBody,
+	}, &response); err != nil {
+		return "", err
+	}
+	if response.ID.String() == "" {
+		return "", fmt.Errorf("mastodon media upload returned no id")
+	}
+
+	return response.ID.String(), nil
 }
 
 func (m *MastodonTarget) Send(body, title string, notifyType NotifyType) error {

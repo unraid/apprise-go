@@ -3,6 +3,7 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -117,6 +118,13 @@ func NewMattermostTarget(target *ParsedURL) (*MattermostTarget, error) {
 }
 
 func (m *MattermostTarget) Send(body, title string, notifyType NotifyType) error {
+	return m.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments uploads each file against the channel it is going to,
+// then references the returned ids in the post. Only bot mode can upload;
+// a webhook has no file API.
+func (m *MattermostTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	message := mergeTitleBody(title, body)
 
 	// A webhook with no channel posts to whichever one it is bound to.
@@ -134,7 +142,18 @@ func (m *MattermostTarget) Send(body, title string, notifyType NotifyType) error
 			channel = mattermostTarget{value: resolved}
 		}
 
-		spec, err := m.buildSpec(message, notifyType, channel)
+		fileIDs := []string{}
+		if m.mode == "bot" {
+			for index, attachment := range attachments {
+				id, err := m.uploadFile(channel.value, attachment, index)
+				if err != nil {
+					return err
+				}
+				fileIDs = append(fileIDs, id)
+			}
+		}
+
+		spec, err := m.buildSpec(message, notifyType, channel, fileIDs)
 		if err != nil {
 			return err
 		}
@@ -146,6 +165,48 @@ func (m *MattermostTarget) Send(body, title string, notifyType NotifyType) error
 	return nil
 }
 
+// uploadFile posts one file to the channel and returns the id the post
+// references.
+func (m *MattermostTarget) uploadFile(channelID string, attachment Attachment, index int) (string, error) {
+	fields := url.Values{}
+	fields.Set("channel_id", channelID)
+
+	requestBody, contentType, err := singleFileAttachmentBody(
+		fields, "files",
+		Attachment{
+			Name:     attachment.FileName(index, ".dat"),
+			MimeType: attachment.MimeType,
+			Data:     attachment.Data,
+		}, true)
+	if err != nil {
+		return "", err
+	}
+
+	var response struct {
+		FileInfos []struct {
+			ID string `json:"id"`
+		} `json:"file_infos"`
+	}
+	if err := doJSONRequest(RequestSpec{
+		Method: "POST",
+		URL:    m.baseURL() + "/api/v4/files",
+		Headers: map[string]string{
+			"User-Agent":    "Apprise",
+			"Accept":        "*/*",
+			"Authorization": "Bearer " + m.token,
+			"Content-Type":  contentType,
+		},
+		Body: requestBody,
+	}, &response); err != nil {
+		return "", err
+	}
+	if len(response.FileInfos) == 0 || response.FileInfos[0].ID == "" {
+		return "", fmt.Errorf("mattermost file upload returned no id")
+	}
+
+	return response.FileInfos[0].ID, nil
+}
+
 func (m *MattermostTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
 	message := mergeTitleBody(title, body)
 	channel := mattermostTarget{}
@@ -153,7 +214,7 @@ func (m *MattermostTarget) BuildRequest(body, title string, notifyType NotifyTyp
 		channel = m.channels[0]
 	}
 
-	return m.buildSpec(message, notifyType, channel)
+	return m.buildSpec(message, notifyType, channel, nil)
 }
 
 // resolveChannelID turns a channel name into the ID the API posts to, which
@@ -198,7 +259,7 @@ func (m *MattermostTarget) baseURL() string {
 	return fmt.Sprintf("%s://%s%s", scheme, host, strings.TrimRight(m.fullPath, "/"))
 }
 
-func (m *MattermostTarget) buildSpec(message string, notifyType NotifyType, channel mattermostTarget) (RequestSpec, error) {
+func (m *MattermostTarget) buildSpec(message string, notifyType NotifyType, channel mattermostTarget, fileIDs []string) (RequestSpec, error) {
 	headers := map[string]string{
 		"User-Agent":   "Apprise",
 		"Accept":       "*/*",
@@ -214,6 +275,9 @@ func (m *MattermostTarget) buildSpec(message string, notifyType NotifyType, chan
 		payload = map[string]any{
 			"channel_id": channel.value,
 			"message":    message,
+		}
+		if len(fileIDs) > 0 {
+			payload["file_ids"] = fileIDs
 		}
 		headers["Authorization"] = "Bearer " + m.token
 		url = m.baseURL() + "/api/v4/posts"

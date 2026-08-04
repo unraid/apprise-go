@@ -64,5 +64,25 @@
     "body": "hello",
     "title": "t",
     "type": "info"
+  },
+  {
+    "name": "attachment-image",
+    "url": "mastodons://token@mastodon.local",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
+  },
+  {
+    "name": "attachment-unsupported-type",
+    "url": "mastodons://token@mastodon.local",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ]
   }
 ]

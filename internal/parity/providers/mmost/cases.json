@@ -54,5 +54,15 @@
     "body": "body",
     "title": "t",
     "type": "info"
+  },
+  {
+    "name": "attachment",
+    "url": "mmost://team@mattermost.example.com/bot-token?mode=bot&channel=abc123def456",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
   }
 ]
