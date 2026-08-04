@@ -56,18 +56,33 @@ full. An exclusion was briefly added here on the mistaken belief that the flag
 described whether this port sends attachments; it does not, and ten entries
 were simply carrying wrong data.
 
-### XMPP is unverified against upstream
+### XMPP is now compared against upstream
 
-`xmpp` and `xmpps` are implemented on `mellium.im/xmpp` and are listed in
-`non_http_schemas.go`, so no fixture compares them to upstream. That is honest
-about the harness — an XML stream over a raw socket is invisible to an HTTP
-capture — but it does mean the wire format has not been checked the way every
-HTTP provider has. A fake XMPP server, again modelled on the SMPP test, is
-what would close that.
+`testutil/xmpp_capture.go` is a server that negotiates enough of a stream to
+receive stanzas — STARTTLS with a certificate minted per run, SASL PLAIN,
+resource binding, and the MUC join sequence — and `xmpp_parity_test.go` runs
+both implementations against it. It speaks STARTTLS rather than plaintext
+because neither client will authenticate over a socket in the clear: mellium's
+SASL feature requires a secure session, and slixmpp defaults
+`unencrypted_plain` and `unencrypted_scram` to off.
 
-Not covered either: `?roster=`, `?keepalive=` and SCRAM-PLUS channel binding
+Three differences surfaced the moment there was something to compare against,
+all of which had been invisible:
+
+- `xmpp://` defaulted to starttls. Upstream applies the declared default only
+  to `xmpps://`; a plain `xmpp://` is plaintext.
+- The mode was matched exactly where upstream matches a prefix, so `?mode=start`
+  was an error here and starttls there.
+- A folded title was joined to the body with CRLF. Upstream writes the same
+  CRLF, but XML normalizes a literal one to a newline before the recipient
+  sees it, while Go's encoder escapes the carriage return as `&#xD;` — a
+  character reference, which survives normalization. The recipient got an
+  extra carriage return.
+
+Still not covered: `?roster=`, `?keepalive=` and SCRAM-PLUS channel binding
 (`?scramplus=`). The arguments parse and round-trip; the behaviour behind them
-does not exist.
+does not exist. Nor is the plaintext mode reachable — neither implementation
+will authenticate over it.
 
 ### Matrix e2ee has one harness gap
 

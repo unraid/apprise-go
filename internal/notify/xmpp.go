@@ -29,6 +29,9 @@ const (
 	xmppModeStartTLS = "starttls"
 )
 
+// xmppModeOrder fixes the order a prefix is matched in, which a map cannot.
+var xmppModeOrder = []string{xmppModeStartTLS, xmppModeTLS, xmppModeNone}
+
 // Each secure mode has its own conventional port.
 var xmppModePorts = map[string]int{
 	xmppModeNone:     5222,
@@ -65,12 +68,24 @@ func NewXMPPTarget(target *ParsedURL) (*XMPPTarget, error) {
 		return nil, fmt.Errorf("missing host")
 	}
 
-	mode := strings.ToLower(strings.TrimSpace(target.Query["mode"]))
-	if mode == "" {
+	// A mode is matched by prefix, so ?mode=start reaches starttls. Absent
+	// one, the schema decides: xmpp:// is plaintext and xmpps:// negotiates,
+	// so the declared default only applies to the secure schema.
+	mode := ""
+	if raw := strings.ToLower(strings.TrimSpace(target.Query["mode"])); raw != "" {
+		for _, candidate := range xmppModeOrder {
+			if strings.HasPrefix(candidate, raw) {
+				mode = candidate
+				break
+			}
+		}
+		if mode == "" {
+			return nil, fmt.Errorf("invalid secure mode: %s", target.Query["mode"])
+		}
+	} else if strings.EqualFold(target.Scheme, "xmpps") {
 		mode = xmppModeStartTLS
-	}
-	if _, ok := xmppModePorts[mode]; !ok {
-		return nil, fmt.Errorf("invalid secure mode: %s", mode)
+	} else {
+		mode = xmppModeNone
 	}
 
 	// The connection host may differ from the JID's domain, the same way the
@@ -153,6 +168,15 @@ func (x *XMPPTarget) Send(body, title string, notifyType NotifyType) error {
 		message = mergeTitleBody(title, body)
 	}
 
+	// The separator has to be a bare newline by the time it reaches the
+	// recipient. Upstream writes a literal CRLF into the stanza and every
+	// conformant XML parser normalizes it to a newline before the recipient
+	// sees it, but Go's encoder escapes the carriage return as &#xD;, which
+	// is a character reference and survives that normalization. Left alone,
+	// the same message arrives with an extra carriage return in it.
+	message = strings.ReplaceAll(message, "\r\n", "\n")
+	subject = strings.ReplaceAll(subject, "\r\n", "\n")
+
 	for _, recipient := range x.targets {
 		to, err := jid.Parse(recipient.address)
 		if err != nil {
@@ -215,6 +239,13 @@ func (x *XMPPTarget) dial(ctx context.Context) (*xmpp.Session, error) {
 		xmpp.BindResource(),
 		// SCRAM before PLAIN so a password is never sent in the clear when
 		// the server offers anything better.
+		//
+		// The library will not authenticate at all over an unencrypted
+		// socket, so mode=none reaches a server and then stops. Upstream
+		// ends up in the same place for its own reason — slixmpp defaults
+		// unencrypted_plain and unencrypted_scram to off and apprise does
+		// not turn them on — so both refuse to send credentials in the
+		// clear, and relaxing it here would be a divergence, not a fix.
 		xmpp.SASL("", x.password, sasl.ScramSha256, sasl.ScramSha1, sasl.Plain),
 	}
 	if x.mode == xmppModeStartTLS {
@@ -511,4 +542,12 @@ func init() {
 		"service_url":      "https://xmpp.org/",
 		"setup_url":        "https://appriseit.com/services/xmpp/",
 	})
+}
+
+// SecureMode reports the negotiated transport mode. The schema decides it when
+// the URL does not: xmpp:// is plaintext, xmpps:// negotiates. Exported so the
+// distinction can be tested — none and starttls share a port, so nothing else
+// about the target tells them apart.
+func (x *XMPPTarget) SecureMode() string {
+	return x.mode
 }

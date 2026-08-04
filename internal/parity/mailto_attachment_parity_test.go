@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -90,7 +91,7 @@ func TestMailtoAttachmentParity(t *testing.T) {
 			attachments: []string{imagePath},
 		},
 		{
-			// A cid: the caller wrote is honoured as-is, with no anchor
+			// A cid: the caller wrote is honored as-is, with no anchor
 			// appended for an image already referenced.
 			name:        "explicit cid reference",
 			query:       "&inline=yes&format=html",
@@ -300,7 +301,7 @@ func flattenSMTPParts(t *testing.T, header map[string]string, body []byte) []smt
 		reader := multipart.NewReader(bytes.NewReader(body), params["boundary"])
 		for {
 			part, err := reader.NextPart()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			if err != nil {

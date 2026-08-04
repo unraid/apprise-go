@@ -492,15 +492,15 @@ func buildMailtoBody(body, format string, inline bool, attachments []Attachment)
 		builder.WriteString("Content-Type: " + mimeType + "\r\n")
 
 		if _, embedded := cidRefs[name]; embedded {
-			builder.WriteString(fmt.Sprintf(
-				"Content-Disposition: inline; filename=%q\r\n", name))
+			fmt.Fprintf(&builder,
+				"Content-Disposition: inline; filename=%q\r\n", name)
 			// Spaces are escaped so the id still matches the cid: URI in
 			// the body, which cannot carry a raw space.
-			builder.WriteString(fmt.Sprintf("Content-ID: <%s>\r\n",
-				strings.ReplaceAll(name, " ", "%20")))
+			fmt.Fprintf(&builder, "Content-ID: <%s>\r\n",
+				strings.ReplaceAll(name, " ", "%20"))
 		} else {
-			builder.WriteString(fmt.Sprintf(
-				"Content-Disposition: attachment; filename=%q\r\n", name))
+			fmt.Fprintf(&builder,
+				"Content-Disposition: attachment; filename=%q\r\n", name)
 		}
 
 		builder.WriteString("\r\n")
@@ -515,7 +515,7 @@ func buildMailtoBody(body, format string, inline bool, attachments []Attachment)
 // applyMailtoInline rewrites the body so images are referenced from it, and
 // reports which filenames ended up embedded.
 //
-// A cid: URI the caller already wrote is honoured for any attachment type —
+// A cid: URI the caller already wrote is honored for any attachment type —
 // it can only resolve inside the same message, so writing one is a deliberate
 // act. Images not already referenced get an anchor appended.
 func applyMailtoInline(body, format string, attachments []Attachment) (string, map[string]struct{}) {
