@@ -70,6 +70,9 @@ func (g *GoogleChatTarget) BuildRequest(body, title string, notifyType NotifyTyp
 		message = title + "\r\n" + body
 	}
 
+	// Google Chat speaks its own markdown dialect, not CommonMark.
+	message = commonMarkToGoogleChat(message)
+
 	payload := map[string]any{
 		"text": message,
 	}

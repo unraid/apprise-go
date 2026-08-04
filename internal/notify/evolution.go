@@ -110,7 +110,8 @@ func (e *EvolutionTarget) buildRequests(body, title string, notifyType NotifyTyp
 	for _, number := range e.phones {
 		data, err := json.Marshal(map[string]any{
 			"number": number,
-			"text":   mergeTitleBody(title, body),
+			// WhatsApp has its own markdown dialect, not CommonMark.
+			"text": commonMarkToWhatsApp(mergeTitleBody(title, body)),
 		})
 		if err != nil {
 			return nil, err

@@ -476,7 +476,7 @@ func (s *SlackTarget) buildPayload(body, title string, notifyType NotifyType) (m
 			"type": "section",
 			"text": map[string]any{
 				"type": "mrkdwn",
-				"text": body,
+				"text": commonMarkToSlack(body),
 			},
 		}
 		blocks := []any{blockText}
@@ -528,7 +528,7 @@ func (s *SlackTarget) buildPayload(body, title string, notifyType NotifyType) (m
 		payload["mrkdwn"] = s.notifyFormat == "markdown"
 		attachment := map[string]any{
 			"title": title,
-			"text":  body,
+			"text":  commonMarkToSlack(body),
 			"color": appriseColor(notifyType),
 		}
 		if imageURL != "" {

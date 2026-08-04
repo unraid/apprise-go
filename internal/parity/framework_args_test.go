@@ -108,3 +108,45 @@ func loadUpstreamFrameworkArgs(t *testing.T) map[string]any {
 
 	return args
 }
+
+// TestKnownDivergencesAreDeclared checks that every case excused from
+// comparison says why, and reports the whole list so it is visible rather than
+// buried in one provider's fixtures.
+//
+// A case marked this way still runs and still refreshes its golden — what it
+// skips is the assertion. That is the alternative to deleting a red fixture,
+// which removes the evidence of the gap along with the failure.
+func TestKnownDivergencesAreDeclared(t *testing.T) {
+	defs := loadProviderDefinitions(t)
+
+	declared := []string{}
+	for name := range defs {
+		for _, c := range defs[name].Cases {
+			if c.KnownDivergence == "" {
+				continue
+			}
+			if len(strings.TrimSpace(c.KnownDivergence)) < 40 {
+				t.Errorf("%s/%s is excused from comparison without saying "+
+					"enough about why", name, c.Name)
+			}
+			declared = append(declared, name+"/"+c.Name)
+		}
+	}
+
+	sort.Strings(declared)
+	if len(declared) > 0 {
+		t.Logf("%d case(s) are not compared against upstream:\n  %s",
+			len(declared), strings.Join(declared, "\n  "))
+	}
+
+	// One entry per plugin that takes over its own splitting. The list is
+	// expected to shrink as those are ported; a new entry should be a
+	// deliberate decision rather than something that accumulates quietly.
+	// Nothing is excused today. Any entry is a difference in what this port
+	// sends, so the bar for adding one is a deliberate decision.
+	const allowed = 0
+	if len(declared) > allowed {
+		t.Errorf("%d cases are excused from comparison, up from %d; each one "+
+			"is a difference in what this port sends", len(declared), allowed)
+	}
+}

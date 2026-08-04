@@ -51,7 +51,7 @@ func CapturePythonRequests(t *testing.T, url, body, title string) []notify.Reque
 func CapturePythonRequestsWithType(t *testing.T, url, body, title string, notifyType notify.NotifyType) []notify.RequestSpec {
 	t.Helper()
 
-	specs, _ := CapturePythonRequestsWithTypeResult(t, url, body, title, notifyType)
+	specs, _ := CapturePythonRequestsWithTypeResult(t, url, body, title, "", notifyType)
 	return specs
 }
 
@@ -125,7 +125,10 @@ func CapturePythonRequestsResult(t *testing.T, url, body, title string) ([]notif
 	return payload.specs(), payload.Success
 }
 
-func CapturePythonRequestsWithTypeResult(t *testing.T, url, body, title string, notifyType notify.NotifyType, attachments ...string) ([]notify.RequestSpec, *bool) {
+// CapturePythonRequestsWithTypeResult captures upstream's requests. bodyFormat
+// is the format the caller declares the body is in, which several plugins
+// branch on independently of their own ?format=.
+func CapturePythonRequestsWithTypeResult(t *testing.T, url, body, title, bodyFormat string, notifyType notify.NotifyType, attachments ...string) ([]notify.RequestSpec, *bool) {
 	t.Helper()
 
 	args := []string{
@@ -133,6 +136,9 @@ func CapturePythonRequestsWithTypeResult(t *testing.T, url, body, title string, 
 		"--body", body,
 		"--title", title,
 		"--type", string(notifyType),
+	}
+	if bodyFormat != "" {
+		args = append(args, "--body-format", bodyFormat)
 	}
 	for _, attachment := range attachments {
 		args = append(args, "--attach", attachment)

@@ -90,13 +90,31 @@ func TestProviderGoldenRequests(t *testing.T) {
 				}
 
 				attachments := loadCaseAttachments(t, c)
+				sendBody := c.Body
+				if c.BodyFormat != "" {
+					converted, err := notify.ConvertMessageFormatForTarget(
+						parsedURL, c.Body, c.BodyFormat)
+					if err != nil {
+						t.Fatalf("convert body format: %v", err)
+					}
+					sendBody = converted
+				}
 				goSpecs := testutil.CaptureGoRequests(t, func() error {
 					// The overflow-aware entry point, so a fixture exercises the
 					// path a caller actually takes rather than the provider in
 					// isolation.
-					return notify.DispatchSendWithOverflow(
-						target, parsedURL, c.Body, c.Title, notifyType, attachments)
+					return notify.DispatchSendWithInput(
+						target, parsedURL, sendBody, c.Title, c.BodyFormat,
+						notifyType, attachments)
 				})
+
+				if c.KnownDivergence != "" {
+					// Reported, not compared: the case stays so the
+					// difference is visible and its golden stays current.
+					t.Logf("known divergence, not compared: %s", c.KnownDivergence)
+
+					return
+				}
 
 				assertRequestSpecSequenceMatchesExcept(t, expected.specs(t), goSpecs,
 					caseVolatileHeaders(def, c))

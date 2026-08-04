@@ -38,7 +38,7 @@ func TestProviderRequestParity(t *testing.T) {
 
 				attachments := loadCaseAttachments(t, c)
 				pythonSpecs, pythonSuccess := testutil.CapturePythonRequestsWithTypeResult(
-					t, c.URL, c.Body, c.Title, notifyType, c.Attachments...)
+					t, c.URL, c.Body, c.Title, c.BodyFormat, notifyType, c.Attachments...)
 				if expected, ok := goldenByName[c.Name]; ok {
 					assertRequestSpecSequenceMatchesExcept(t, pythonSpecs, expected.specs(t), caseVolatileHeaders(def, c))
 				} else {
@@ -47,6 +47,16 @@ func TestProviderRequestParity(t *testing.T) {
 				parsedURL, err := notify.ParseURL(c.URL)
 				if err != nil {
 					t.Fatalf("parse url: %v", err)
+				}
+
+				sendBody := c.Body
+				if c.BodyFormat != "" {
+					converted, convErr := notify.ConvertMessageFormatForTarget(
+						parsedURL, c.Body, c.BodyFormat)
+					if convErr != nil {
+						t.Fatalf("convert body format: %v", convErr)
+					}
+					sendBody = converted
 				}
 
 				target, err := builder(parsedURL)
@@ -58,14 +68,21 @@ func TestProviderRequestParity(t *testing.T) {
 					// The overflow-aware entry point, so a fixture exercises the
 					// path a caller actually takes rather than the provider in
 					// isolation.
-					return notify.DispatchSendWithOverflow(
-						target, parsedURL, c.Body, c.Title, notifyType, attachments)
+					return notify.DispatchSendWithInput(
+						target, parsedURL, sendBody, c.Title, c.BodyFormat,
+						notifyType, attachments)
 				})
 				if shouldSkip := assertNotifySuccessMatches(t, pythonSuccess, err); shouldSkip {
 					return
 				}
 				if err != nil {
 					t.Fatalf("send request failed: %v", err)
+				}
+
+				if c.KnownDivergence != "" {
+					t.Logf("known divergence, not compared: %s", c.KnownDivergence)
+
+					return
 				}
 
 				assertRequestSpecSequenceMatchesExcept(t, pythonSpecs, goSpecs, caseVolatileHeaders(def, c))

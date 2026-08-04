@@ -59,5 +59,20 @@
         "url": "https://api.telegram.org/bot123456:abcdef/sendMessage"
       }
     ]
+  },
+  {
+    "name": "override-html-input",
+    "requests": [
+      {
+        "body": "{\"disable_notification\": false, \"disable_web_page_preview\": true, \"parse_mode\": \"HTML\", \"text\": \"<b>over</b>\\r\\n<b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>.\", \"chat_id\": 12345}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.telegram.org/bot123456:abcdef/sendMessage"
+      }
+    ]
   }
 ]

@@ -194,7 +194,10 @@ def main():
                 case.get("body", ""),
                 case.get("title", ""),
                 parse_notify_type(case.get("type")),
-                None,
+                # The format the caller declares the body is in. Several
+                # plugins branch on it independently of their own ?format=,
+                # so a golden captured without it describes a different send.
+                case.get("body_format") or None,
                 case_attach or None,
             )
             specs = normalize_multipart(rewrite_values(payload.get("requests", [])))

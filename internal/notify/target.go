@@ -63,8 +63,8 @@ func SendTargetURLWithAttachments(rawURL, body, title, inputFormat string, notif
 	if err != nil {
 		return err
 	}
-	return DispatchSendWithOverflow(
-		target, parsed, sendBody, title, notifyType, attachments)
+	return DispatchSendWithInput(
+		target, parsed, sendBody, title, inputFormat, notifyType, attachments)
 }
 
 // DispatchSendWithOverflow applies the service's overflow rules before
@@ -78,6 +78,18 @@ func DispatchSendWithOverflow(
 	target Sender,
 	parsed *ParsedURL,
 	body, title string,
+	notifyType NotifyType,
+	attachments []Attachment,
+) error {
+	return DispatchSendWithInput(target, parsed, body, title, "", notifyType, attachments)
+}
+
+// DispatchSendWithInput is DispatchSendWithOverflow with the format the caller
+// declared the body was in, which decides how a folded title is rendered.
+func DispatchSendWithInput(
+	target Sender,
+	parsed *ParsedURL,
+	body, title, inputFormat string,
 	notifyType NotifyType,
 	attachments []Attachment,
 ) error {
@@ -130,7 +142,7 @@ func DispatchSendWithOverflow(
 		}
 	}
 
-	parts := ApplyOverflowForURL(parsed, mode, format, title, body)
+	parts := ApplyOverflowForURLWithInput(parsed, mode, format, inputFormat, title, body)
 	for index, part := range parts {
 		// Attachments ride with the first part only; upstream does not repeat
 		// them across a split.

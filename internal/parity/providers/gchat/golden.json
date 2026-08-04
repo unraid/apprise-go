@@ -43,5 +43,20 @@
         "url": "https://chat.googleapis.com/v1/spaces/workspace123/messages?token=token789&key=key456"
       }
     ]
+  },
+  {
+    "name": "override-html-input",
+    "requests": [
+      {
+        "body": "{\"text\": \"# over\\n*bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`.\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://chat.googleapis.com/v1/spaces/workspace123/messages?token=token789&key=key456"
+      }
+    ]
   }
 ]

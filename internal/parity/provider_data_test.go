@@ -34,6 +34,22 @@ type providerCase struct {
 	Title string `json:"title"`
 	Type  string `json:"type"`
 
+	// BodyFormat is the format the caller says the body is in, which is not
+	// the same as the provider's own ?format=. Four plugins upstream only
+	// diverge from the framework when a markdown-native service is handed
+	// HTML, so without this no fixture could reach that path.
+	BodyFormat string `json:"body_format"`
+
+	// KnownDivergence records a case this port does not match upstream on,
+	// with the reason. The case still runs — the capture still happens and
+	// the golden is still refreshed — but the comparison is reported rather
+	// than failed.
+	//
+	// It exists so a gap can be kept in the fixture set instead of deleted.
+	// Removing a red fixture removes the evidence, which is how a difference
+	// stops being visible to anyone.
+	KnownDivergence string `json:"known_divergence"`
+
 	// SendsNothing marks a case where upstream deliberately issues no request
 	// at all — an Opsgenie note against an alert that was never created, for
 	// instance. Sending nothing is a real behavior worth pinning, but an

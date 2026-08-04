@@ -44,7 +44,10 @@ func convertTelegramMessageFormat(content, inputFormat, outputFormat, markdownVe
 		case "markdown":
 			return telegramHTMLFromHTML(markdownToHTML(content)), nil
 		case "html":
-			return telegramHTMLFromHTML(content), nil
+			// Upstream rewrites HTML with regexes rather than parsing and
+			// re-serializing it, so attribute quoting survives untouched.
+			// The rewrite itself runs in buildSpec.
+			return content, nil
 		case "text":
 			return html.EscapeString(content), nil
 		}
