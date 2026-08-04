@@ -72,17 +72,20 @@ func TestProviderRequestParity(t *testing.T) {
 						target, parsedURL, sendBody, c.Title, c.BodyFormat,
 						notifyType, attachments)
 				})
+				if c.KnownDivergence != "" {
+					// Checked before the success comparison, because a case
+					// may be recorded precisely because upstream fails where
+					// this port does not.
+					t.Logf("known divergence, not compared: %s", c.KnownDivergence)
+
+					return
+				}
+
 				if shouldSkip := assertNotifySuccessMatches(t, pythonSuccess, err); shouldSkip {
 					return
 				}
 				if err != nil {
 					t.Fatalf("send request failed: %v", err)
-				}
-
-				if c.KnownDivergence != "" {
-					t.Logf("known divergence, not compared: %s", c.KnownDivergence)
-
-					return
 				}
 
 				assertRequestSpecSequenceMatchesExcept(t, pythonSpecs, goSpecs, caseVolatileHeaders(def, c))

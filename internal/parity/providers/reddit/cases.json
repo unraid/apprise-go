@@ -11,6 +11,7 @@
     "body": "<b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>.",
     "title": "over",
     "type": "info",
-    "body_format": "html"
+    "body_format": "html",
+    "known_divergence": "Upstream crashes rather than diverges. A body carrying a markdown link makes its URL parsing read the square brackets as IPv6 syntax and raise ValueError: Invalid IPv6 URL, so it authenticates and never submits. This port posts the message. Reproducing a crash is not parity, so the case records the upstream defect rather than asserting agreement."
   }
 ]

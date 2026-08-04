@@ -142,9 +142,9 @@ func TestKnownDivergencesAreDeclared(t *testing.T) {
 	// One entry per plugin that takes over its own splitting. The list is
 	// expected to shrink as those are ported; a new entry should be a
 	// deliberate decision rather than something that accumulates quietly.
-	// Nothing is excused today. Any entry is a difference in what this port
-	// sends, so the bar for adding one is a deliberate decision.
-	const allowed = 0
+	// One: a case where upstream raises rather than sends. A difference in
+	// what this port sends is never an acceptable reason to add another.
+	const allowed = 1
 	if len(declared) > allowed {
 		t.Errorf("%d cases are excused from comparison, up from %d; each one "+
 			"is a difference in what this port sends", len(declared), allowed)
