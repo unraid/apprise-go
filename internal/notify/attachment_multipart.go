@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/textproto"
-	"net/url"
 	"regexp"
-	"sort"
 	"strings"
 )
 
@@ -81,23 +79,12 @@ func escapeMultipartValue(value string) string {
 // mailgunAttachmentBody converts a form-encoded payload into the multipart
 // body Mailgun needs once files are present: every existing field is carried
 // over, then one part per file named attachment[N].
-func mailgunAttachmentBody(values url.Values, attachments []Attachment) (body string, contentType string, err error) {
+func mailgunAttachmentBody(fields formFields, attachments []Attachment) (body string, contentType string, err error) {
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
 
-	// Sorted so the body is reproducible; url.Values iterates a map.
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		for _, value := range values[key] {
-			if err := writer.WriteField(key, value); err != nil {
-				return "", "", err
-			}
-		}
+	if err := writeFormFields(writer, fields); err != nil {
+		return "", "", err
 	}
 
 	for index, attachment := range attachments {
@@ -124,22 +111,12 @@ func mailgunAttachmentBody(values url.Values, attachments []Attachment) (body st
 // sends. The field name comes from ?attach_as=; a wildcard in it is replaced
 // by a two-digit counter so several files get distinct names, and without one
 // every file reuses the same field.
-func formAttachmentBody(values url.Values, attachAs string, attachments []Attachment) (body string, contentType string, err error) {
+func formAttachmentBody(fields formFields, attachAs string, attachments []Attachment) (body string, contentType string, err error) {
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
 
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		for _, value := range values[key] {
-			if err := writer.WriteField(key, value); err != nil {
-				return "", "", err
-			}
-		}
+	if err := writeFormFields(writer, fields); err != nil {
+		return "", "", err
 	}
 
 	for index, attachment := range attachments {
@@ -182,7 +159,7 @@ func formAttachmentField(attachAs string, index int) string {
 // one file under the given field name. Pushover and the services shaped like
 // it send exactly one attachment per request.
 func singleFileAttachmentBody(
-	values url.Values,
+	fields formFields,
 	field string,
 	attachment Attachment,
 	withType bool,
@@ -190,18 +167,8 @@ func singleFileAttachmentBody(
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
 
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		for _, value := range values[key] {
-			if err := writer.WriteField(key, value); err != nil {
-				return "", "", err
-			}
-		}
+	if err := writeFormFields(writer, fields); err != nil {
+		return "", "", err
 	}
 
 	part, err := writer.CreatePart(attachmentPartHeader(field, attachment, withType))
@@ -221,22 +188,12 @@ func singleFileAttachmentBody(
 
 // appriseAPIFormAttachmentBody numbers its file fields fileNN, which is what
 // the Apprise API expects in form mode.
-func appriseAPIFormAttachmentBody(values url.Values, attachments []Attachment) (body string, contentType string, err error) {
+func appriseAPIFormAttachmentBody(fields formFields, attachments []Attachment) (body string, contentType string, err error) {
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
 
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		for _, value := range values[key] {
-			if err := writer.WriteField(key, value); err != nil {
-				return "", "", err
-			}
-		}
+	if err := writeFormFields(writer, fields); err != nil {
+		return "", "", err
 	}
 
 	for index, attachment := range attachments {
@@ -266,7 +223,7 @@ func appriseAPIFormAttachmentBody(values url.Values, attachments []Attachment) (
 // named by a template taking the file's index — SMSC uses mes1, mes2 and
 // 800.com repeats media[].
 func indexedFileAttachmentBody(
-	values url.Values,
+	fields formFields,
 	fieldFor func(index int) string,
 	attachments []Attachment,
 	withType bool,
@@ -274,18 +231,8 @@ func indexedFileAttachmentBody(
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
 
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		for _, value := range values[key] {
-			if err := writer.WriteField(key, value); err != nil {
-				return "", "", err
-			}
-		}
+	if err := writeFormFields(writer, fields); err != nil {
+		return "", "", err
 	}
 
 	for index, attachment := range attachments {
@@ -352,4 +299,16 @@ func ringCentralMMSBody(metadata map[string]any, attachments []Attachment) (body
 	}
 
 	return buffer.String(), writer.FormDataContentType(), nil
+}
+
+// writeFormFields writes the fields in the order they were added, which is the
+// order upstream's payload dictionary declares them.
+func writeFormFields(writer *multipart.Writer, fields formFields) error {
+	for i, name := range fields.names {
+		if err := writer.WriteField(name, fields.values[i]); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -197,7 +197,7 @@ func (t *TwitterTarget) uploadOne(attachment Attachment, index int) (string, err
 		category = "dm_image"
 	}
 
-	fields := url.Values{}
+	fields := formFields{}
 	fields.Set("media_category", category)
 
 	// Twitter is handed a filename and a handle with no type, so the part

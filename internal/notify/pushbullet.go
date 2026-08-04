@@ -3,7 +3,6 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"strings"
 )
 
@@ -146,7 +145,7 @@ func (p *PushbulletTarget) uploadAttachment(attachment Attachment, index int) (m
 
 	// The upload itself is multipart and carries no auth of its own.
 	uploadBody, contentType, err := singleFileAttachmentBody(
-		url.Values{}, "file", Attachment{
+		formFields{}, "file", Attachment{
 			Name:     upload.FileName,
 			MimeType: upload.FileType,
 			Data:     attachment.Data,

@@ -3,7 +3,6 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"regexp"
 	"strings"
 )
@@ -114,27 +113,21 @@ func (s *SerwerSMSTarget) buildRequests(body, title string, notifyType NotifyTyp
 		headers["Content-Type"] = "application/json"
 	}
 
-	build := func(extra map[string]any) (RequestSpec, error) {
-		fields := map[string]any{
-			"username": s.user,
-			"password": s.password,
-			"text":     mergeTitleBody(title, body),
-			"sender":   s.sender,
-		}
-		for key, value := range extra {
-			fields[key] = value
-		}
+	// The target field is appended rather than merged from a map, because a
+	// multipart body sends these as parts in this order.
+	build := func(targetField, targetValue string) (RequestSpec, error) {
+		fields := formFields{}
+		fields.Set("username", s.user)
+		fields.Set("password", s.password)
+		fields.Set("text", mergeTitleBody(title, body))
+		fields.Set("sender", s.sender)
+		fields.Set(targetField, targetValue)
 
 		if len(attachments) > 0 {
 			// The same fields travel as form parts, each file repeating the
 			// field name file.
-			values := url.Values{}
-			for key, value := range fields {
-				values.Set(key, fmt.Sprintf("%v", value))
-			}
-
 			requestBody, contentType, err := indexedFileAttachmentBody(
-				values,
+				fields,
 				func(int) string { return "file" },
 				attachments, true)
 			if err != nil {
@@ -155,7 +148,12 @@ func (s *SerwerSMSTarget) buildRequests(body, title string, notifyType NotifyTyp
 			}, nil
 		}
 
-		data, err := json.Marshal(fields)
+		payload := map[string]any{}
+		for i, name := range fields.names {
+			payload[name] = fields.values[i]
+		}
+
+		data, err := json.Marshal(payload)
 		if err != nil {
 			return RequestSpec{}, err
 		}
@@ -170,14 +168,14 @@ func (s *SerwerSMSTarget) buildRequests(body, title string, notifyType NotifyTyp
 
 	specs := make([]RequestSpec, 0, len(s.phones)+len(s.groups))
 	for _, phone := range s.phones {
-		spec, err := build(map[string]any{"phone": "+" + phone})
+		spec, err := build("phone", "+"+phone)
 		if err != nil {
 			return nil, err
 		}
 		specs = append(specs, spec)
 	}
 	for _, group := range s.groups {
-		spec, err := build(map[string]any{"group_id": group})
+		spec, err := build("group_id", group)
 		if err != nil {
 			return nil, err
 		}

@@ -3,6 +3,7 @@ package parity
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -401,64 +402,111 @@ func isMultipartBody(headers map[string]string) bool {
 	return strings.Contains(strings.ToLower(headers["content-type"]), "multipart/")
 }
 
-// assertMultipartBodyEqual compares two multipart bodies field by field.
+// assertMultipartBodyEqual compares two multipart bodies part by part, in
+// order.
 //
-// Parts are matched by name rather than by position: upstream emits them in
-// dictionary insertion order and this port sorts them, and for form-data
-// neither ordering carries meaning. A part carrying JSON is compared
-// structurally, since key order and whitespace differ between the encoders
-// and neither is meaningful either.
+// Order used to be ignored: parts were indexed into a map by field name and
+// matched that way, on the reasoning that neither side's ordering carried
+// meaning. Two things were wrong with that. A receiver reads the stream in
+// order, so a service that acts on a field before the part depending on it
+// can tell the difference — and this port emitted fields sorted while upstream
+// emits them in the order its payload dictionary declares them, so almost
+// every multi-field request disagreed and nothing said so.
+//
+// The map also silently discarded repeats. Services that send several files
+// under one field name — RingCentral's attachment, SerwerSMS's file, 800.com's
+// media[] — had every part but the last thrown away before comparison, so a
+// second attachment was never checked at all.
+//
+// A part carrying JSON is still compared structurally, since key order and
+// whitespace differ between the encoders and neither is meaningful.
 func assertMultipartBodyEqual(t *testing.T, pythonBody, goBody string) {
 	t.Helper()
 
-	pythonParts := indexMultipartParts(t, "python", pythonBody)
-	goParts := indexMultipartParts(t, "go", goBody)
-
-	for name, pythonPart := range pythonParts {
-		goPart, ok := goParts[name]
-		if !ok {
-			t.Fatalf("multipart part %q is missing from the go request", name)
-		}
-
-		if pythonPart.header != goPart.header {
-			t.Fatalf("multipart part %q header mismatch:\npython=%s\ngo=%s",
-				name, pythonPart.header, goPart.header)
-		}
-
-		if shouldCompareBodyAsJSON(pythonPart.content, goPart.content) {
-			assertJSONBodyEqual(t, pythonPart.content, goPart.content)
-			continue
-		}
-		if pythonPart.content != goPart.content {
-			t.Fatalf("multipart part %q content mismatch:\npython=%s\ngo=%s",
-				name, pythonPart.content, goPart.content)
-		}
-	}
-
-	for name := range goParts {
-		if _, ok := pythonParts[name]; !ok {
-			t.Fatalf("multipart part %q is in the go request but not upstream's", name)
-		}
+	if err := compareMultipartBodies(pythonBody, goBody); err != nil {
+		t.Fatal(err)
 	}
 }
 
-// multipartPartName reads the field name out of a part's headers, which is
-// what identifies it independently of position.
-var multipartPartName = regexp.MustCompile(`name="([^"]*)"`)
+// compareMultipartBodies returns the difference rather than failing, so the
+// comparison itself can be tested. The order rule it enforces was previously
+// stated in a comment and enforced nowhere, which is the kind of thing that
+// only shows up if you can write a case the checker is supposed to reject.
+func compareMultipartBodies(pythonBody, goBody string) error {
+	pythonParts := splitMultipartParts(pythonBody)
+	goParts := splitMultipartParts(goBody)
 
-func indexMultipartParts(t *testing.T, side, body string) map[string]multipartPart {
-	t.Helper()
-
-	indexed := map[string]multipartPart{}
-	for _, part := range splitMultipartParts(body) {
-		matches := multipartPartName.FindStringSubmatch(part.header)
-		if len(matches) < 2 {
-			t.Fatalf("%s multipart part has no field name: %s", side, part.header)
-		}
-		indexed[matches[1]] = part
+	if len(pythonParts) != len(goParts) {
+		return fmt.Errorf("multipart part count mismatch: python has %d (%s), go has %d (%s)",
+			len(pythonParts), strings.Join(multipartPartNames(pythonParts), ", "),
+			len(goParts), strings.Join(multipartPartNames(goParts), ", "))
 	}
 
-	return indexed
+	for i := range pythonParts {
+		pythonPart, goPart := pythonParts[i], goParts[i]
+
+		if pythonPart.header != goPart.header {
+			return fmt.Errorf("multipart part %d header mismatch:\npython=%s\ngo=%s\n"+
+				"python order: %s\ngo order:     %s",
+				i, pythonPart.header, goPart.header,
+				strings.Join(multipartPartNames(pythonParts), ", "),
+				strings.Join(multipartPartNames(goParts), ", "))
+		}
+
+		if equal, ok := jsonBodiesEqual(pythonPart.content, goPart.content); ok {
+			if !equal {
+				return fmt.Errorf("multipart part %d json content mismatch:\npython=%s\ngo=%s",
+					i, pythonPart.content, goPart.content)
+			}
+			continue
+		}
+		if pythonPart.content != goPart.content {
+			return fmt.Errorf("multipart part %d (%s) content mismatch:\npython=%s\ngo=%s",
+				i, multipartPartName.FindString(pythonPart.header),
+				pythonPart.content, goPart.content)
+		}
+	}
+
+	return nil
+}
+
+// jsonBodiesEqual reports whether two bodies are equivalent JSON. The second
+// return says whether they were JSON at all; a caller comparing raw bytes
+// needs to tell "not JSON" from "different JSON".
+func jsonBodiesEqual(pythonBody, goBody string) (equal bool, isJSON bool) {
+	if !shouldCompareBodyAsJSON(pythonBody, goBody) {
+		return false, false
+	}
+
+	var pythonValue, goValue any
+	if err := json.Unmarshal([]byte(pythonBody), &pythonValue); err != nil {
+		return false, false
+	}
+	if err := json.Unmarshal([]byte(goBody), &goValue); err != nil {
+		return false, false
+	}
+
+	return reflect.DeepEqual(
+		normalizeJSONValue(pythonValue), normalizeJSONValue(goValue)), true
+}
+
+// multipartPartName reads the field name out of a part's headers.
+var multipartPartName = regexp.MustCompile(`(?:^|[^a-z])name="([^"]*)"`)
+
+// multipartPartNames lists the field names in order, for failure messages —
+// an order mismatch is unreadable without seeing both sequences.
+func multipartPartNames(parts []multipartPart) []string {
+	names := make([]string, 0, len(parts))
+	for _, part := range parts {
+		matches := multipartPartName.FindStringSubmatch(part.header)
+		if len(matches) < 2 {
+			names = append(names, "?")
+			continue
+		}
+		names = append(names, matches[1])
+	}
+
+	return names
 }
 
 type multipartPart struct {

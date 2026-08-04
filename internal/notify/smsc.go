@@ -2,7 +2,6 @@ package notify
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 )
 
@@ -64,7 +63,7 @@ func (s *SMSCTarget) buildRequest(body, title string, notifyType NotifyType, att
 	_ = notifyType
 
 	// One request carries every recipient, comma separated.
-	values := url.Values{}
+	values := formFields{}
 	values.Set("login", s.user)
 	values.Set("psw", s.password)
 	values.Set("phones", strings.Join(s.targets, ","))
@@ -84,10 +83,7 @@ func (s *SMSCTarget) buildRequest(body, title string, notifyType NotifyType, att
 		var err error
 		// The mms flag is what tells SMSC this is a multimedia message, and
 		// the files are numbered from zero rather than one.
-		mmsValues := url.Values{}
-		for key, entries := range values {
-			mmsValues[key] = entries
-		}
+		mmsValues := values.Clone()
 		mmsValues.Set("mms", "1")
 
 		requestBody, contentType, err = indexedFileAttachmentBody(

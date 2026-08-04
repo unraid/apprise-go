@@ -112,9 +112,6 @@ Three cases needed something beyond a golden, each documented in its own test:
 
 - The persistent store now exists, so `wechat` and `ringc` could cache their
   tokens instead of refetching on every send.
-- Multipart part *order* is not compared. Upstream emits dict insertion order
-  and this port sorts, so parts are matched by field name instead. A service
-  that cares about order would not be caught.
 
 ## Guardrails that now exist
 
@@ -139,6 +136,15 @@ Do not remove these; each one exists because something got through.
   which is how the first attempt silently failed.
 - `content-range` is kept when comparing headers. It was being dropped, which
   left the whole protocol of a chunked upload uncompared.
+- Multipart parts are compared **in order**, by position. They used to be
+  indexed into a map by field name, which ignored order and silently discarded
+  repeats — a service sending several files under one field name had every
+  part but the last thrown away before comparison. Build form fields with
+  `formFields` (`internal/notify/form_fields.go`), not `url.Values`: a map has
+  no order to emit, and upstream sends fields in the order its payload
+  dictionary declares them.
+- `multipart_order_test.go` tests the comparison itself. A checker that cannot
+  reject anything passes every fixture, which is exactly how the old one hid.
 - A manifest may declare `volatile_headers` for values that cannot be
   reproduced across runs, such as SOGS signing a random nonce and the current
   time. They are asserted present, never equal. Anything listed there owes a

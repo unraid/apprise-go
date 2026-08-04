@@ -238,7 +238,7 @@ func (t *TelegramTarget) buildAttachmentSpec(
 ) (RequestSpec, error) {
 	route := telegramRouteFor(attachment.MimeType)
 
-	values := url.Values{}
+	values := formFields{}
 	if caption != "" {
 		values.Set("caption", caption)
 		values.Set("show_caption_above_media", telegramTitleCase(t.content == "before"))

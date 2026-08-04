@@ -102,7 +102,7 @@ func (a *AppriseTarget) buildRequest(body, title string, notifyType NotifyType, 
 	}
 
 	if a.method == appriseMethodForm {
-		values := url.Values{}
+		values := formFields{}
 		values.Set("title", title)
 		values.Set("body", body)
 		values.Set("type", string(notifyType))

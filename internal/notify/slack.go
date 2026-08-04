@@ -289,7 +289,7 @@ func (s *SlackTarget) uploadAttachment(attachment Attachment, index int, channel
 	// Slack is handed a filename and a handle with no type, so the part
 	// carries no content type of its own.
 	uploadBody, contentType, err := singleFileAttachmentBody(
-		url.Values{}, "file",
+		formFields{}, "file",
 		Attachment{Name: name, Data: attachment.Data}, false)
 	if err != nil {
 		return err

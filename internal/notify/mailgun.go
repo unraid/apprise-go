@@ -2,7 +2,6 @@ package notify
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 )
 
@@ -238,8 +237,8 @@ func (m *MailgunTarget) SendWithAttachments(body, title string, notifyType Notif
 	return nil
 }
 
-func (m *MailgunTarget) buildPayload(body, title string, recipients []emailEntry) url.Values {
-	values := url.Values{}
+func (m *MailgunTarget) buildPayload(body, title string, recipients []emailEntry) formFields {
+	values := formFields{}
 	if m.verify {
 		values.Set("o:skip-verification", "False")
 	} else {
@@ -271,11 +270,14 @@ func (m *MailgunTarget) buildPayload(body, title string, recipients []emailEntry
 		values.Set("bcc", strings.Join(bcc, ","))
 	}
 
-	for key, value := range m.tokens {
-		values.Set("v:"+key, value)
+	// Sorted because a Go map has no order to preserve. Upstream emits these
+	// in the order the URL named them, which this port does not carry
+	// through parsing, so deterministic is the best available.
+	for _, key := range sortedKeys(m.tokens) {
+		values.Set("v:"+key, m.tokens[key])
 	}
-	for key, value := range m.headers {
-		values.Set("h:"+key, value)
+	for _, key := range sortedKeys(m.headers) {
+		values.Set("h:"+key, m.headers[key])
 	}
 
 	return values

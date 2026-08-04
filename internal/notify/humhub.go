@@ -3,7 +3,6 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"strings"
 )
 
@@ -91,7 +90,7 @@ func (h *HumHubTarget) SendWithAttachments(body, title string, notifyType Notify
 			// HumHub is handed a filename and a handle with no type, so the
 			// part carries no content type.
 			requestBody, contentType, err := singleFileAttachmentBody(
-				url.Values{}, "files[]", attachment, false)
+				formFields{}, "files[]", attachment, false)
 			if err != nil {
 				return err
 			}

@@ -3,7 +3,6 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"regexp"
 	"strings"
 )
@@ -168,7 +167,7 @@ func (m *MattermostTarget) SendWithAttachments(body, title string, notifyType No
 // uploadFile posts one file to the channel and returns the id the post
 // references.
 func (m *MattermostTarget) uploadFile(channelID string, attachment Attachment, index int) (string, error) {
-	fields := url.Values{}
+	fields := formFields{}
 	fields.Set("channel_id", channelID)
 
 	requestBody, contentType, err := singleFileAttachmentBody(

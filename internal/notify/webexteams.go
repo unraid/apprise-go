@@ -3,7 +3,6 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"regexp"
 	"strings"
 )
@@ -187,7 +186,7 @@ func (w *WebexTeamsTarget) SendWithAttachments(body, title string, notifyType No
 
 	for _, room := range w.rooms {
 		for index, attachment := range attachments {
-			values := url.Values{}
+			values := formFields{}
 			values.Set("roomId", room)
 			if index == 0 {
 				values.Set(messageKey, message)

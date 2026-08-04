@@ -3,7 +3,6 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"strings"
 )
 
@@ -109,7 +108,7 @@ func (e *Eight00comTarget) buildRequests(body, title string, notifyType NotifyTy
 		if len(attachments) > 0 {
 			// An MMS sends the same fields as form parts alongside the files,
 			// each named media[].
-			fields := url.Values{}
+			fields := formFields{}
 			fields.Set("sender", "+"+e.source)
 			fields.Set("recipient", "+"+recipient)
 			fields.Set("message", message)

@@ -3,7 +3,6 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -262,7 +261,7 @@ func (m *MastodonTarget) uploadMedia(attachment Attachment, index int) (string, 
 
 	// The filename doubles as the media description, which is what a client
 	// reads out as alt text.
-	fields := url.Values{}
+	fields := formFields{}
 	fields.Set("description", name)
 
 	// Mastodon is handed a filename and a handle without a type, so the part

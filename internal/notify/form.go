@@ -82,25 +82,28 @@ func (f *FormTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 }
 
 func (f *FormTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
-	payload := map[string]string{}
-
-	base := map[string]string{
-		"version": "1.0",
-		"title":   title,
-		"message": body,
-		"type":    string(notifyType),
+	// Upstream walks these four in this order and the extras follow, which
+	// is the order a receiver reads the fields off the wire in.
+	base := []struct{ key, value string }{
+		{"version", "1.0"},
+		{"title", title},
+		{"message", body},
+		{"type", string(notifyType)},
 	}
 
-	for key, value := range base {
-		mapped := f.payloadMap[key]
+	payload := formFields{}
+	for _, entry := range base {
+		mapped := f.payloadMap[entry.key]
 		if mapped == "" {
 			continue
 		}
-		payload[mapped] = value
+		payload.Set(mapped, entry.value)
 	}
 
-	for key, value := range f.payloadExtras {
-		payload[key] = value
+	// Sorted because a Go map has no order to preserve; upstream emits these
+	// in the order the URL named them.
+	for _, key := range sortedKeys(f.payloadExtras) {
+		payload.Set(key, f.payloadExtras[key])
 	}
 
 	scheme := "http"
@@ -123,43 +126,35 @@ func (f *FormTarget) buildRequest(body, title string, notifyType NotifyType, att
 	}
 
 	if f.method == "GET" {
-		values := url.Values{}
-		for key, value := range payload {
-			values.Set(key, value)
+		query := payload.Clone()
+		for _, key := range sortedKeys(f.params) {
+			query.Set(key, f.params[key])
 		}
-		for key, value := range f.params {
-			values.Set(key, value)
-		}
-		u.RawQuery = values.Encode()
+		u.RawQuery = query.Encode()
 	}
 
 	bodyPayload := ""
 	contentType := ""
 	if f.method != "GET" {
-		values := url.Values{}
-		for key, value := range payload {
-			values.Set(key, value)
-		}
-
 		if len(attachments) > 0 {
 			// Files turn the form-encoded body multipart; the field name
 			// comes from ?attach_as=, numbered when it carries a wildcard.
 			var err error
-			bodyPayload, contentType, err = formAttachmentBody(values, f.attachAs, attachments)
+			bodyPayload, contentType, err = formAttachmentBody(payload, f.attachAs, attachments)
 			if err != nil {
 				return RequestSpec{}, err
 			}
 		} else {
-			bodyPayload = values.Encode()
+			bodyPayload = payload.Encode()
 		}
 	}
 
 	if f.method != "GET" && len(f.params) > 0 {
-		values := url.Values{}
-		for key, value := range f.params {
-			values.Set(key, value)
+		query := formFields{}
+		for _, key := range sortedKeys(f.params) {
+			query.Set(key, f.params[key])
 		}
-		u.RawQuery = values.Encode()
+		u.RawQuery = query.Encode()
 	}
 
 	headers := map[string]string{

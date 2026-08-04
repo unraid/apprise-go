@@ -11,7 +11,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -221,8 +220,8 @@ func (p *PushoverTarget) buildRequests(body, title string, notifyType NotifyType
 		}
 	}
 
-	base := func() url.Values {
-		values := url.Values{}
+	base := func() formFields {
+		values := formFields{}
 		values.Set("token", p.token)
 		values.Set("priority", fmt.Sprintf("%d", p.priority))
 		values.Set("title", resolvedTitle)
@@ -254,7 +253,7 @@ func (p *PushoverTarget) buildRequests(body, title string, notifyType NotifyType
 		"Authorization": basicAuthHeader(p.token, ""),
 	}
 
-	build := func(values url.Values) RequestSpec {
+	build := func(values formFields) RequestSpec {
 		requestBody := values.Encode()
 		spec := RequestSpec{
 			Method:  "POST",

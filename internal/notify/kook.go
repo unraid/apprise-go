@@ -3,7 +3,6 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"regexp"
 	"strings"
 )
@@ -185,7 +184,7 @@ func (k *KookTarget) endpoints() []kookEndpoint {
 
 func (k *KookTarget) uploadAsset(attachment Attachment, index int) (string, error) {
 	requestBody, contentType, err := singleFileAttachmentBody(
-		url.Values{}, "file",
+		formFields{}, "file",
 		Attachment{
 			Name:     attachment.FileName(index, ".dat"),
 			MimeType: attachment.MimeType,
