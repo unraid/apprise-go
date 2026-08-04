@@ -33,5 +33,22 @@
         "url": "https://email.us-east-1.amazonaws.com/"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "Action=SendRawEmail&Version=2010-12-01&RawMessage.Data=Q29udGVudC1UeXBlOiBtdWx0aXBhcnQvbWl4ZWQ7IGJvdW5kYXJ5PSI9PT09PT09PT09PT09PT0xMzY1NjM4MDEwNjYyNDMxNzc1PT0iCk1JTUUtVmVyc2lvbjogMS4wClN1YmplY3Q6ID0%2FdXRmLTg%2FcT90aXRsZT89CkZyb206IEFwcHJpc2UgTm90aWZpY2F0aW9ucyA8c2VuZGVyQGV4YW1wbGUuY29tPgpUbzogdGFyZ2V0QGV4YW1wbGUuY29tCkNjOiAKRGF0ZTogTW9uLCAwMSBKYW4gMjAyNCAwMDowMDowMCArMDAwMApYLUFwcGxpY2F0aW9uOiBBcHByaXNlCgotLT09PT09PT09PT09PT09PTEzNjU2MzgwMTA2NjI0MzE3NzU9PQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD0idXRmLTgiCk1JTUUtVmVyc2lvbjogMS4wCkNvbnRlbnQtVHJhbnNmZXItRW5jb2Rpbmc6IHF1b3RlZC1wcmludGFibGUKCmJvZHkKLS09PT09PT09PT09PT09PT0xMzY1NjM4MDEwNjYyNDMxNzc1PT0KQ29udGVudC1UcmFuc2Zlci1FbmNvZGluZzogYmFzZTY0Ck1JTUUtVmVyc2lvbjogMS4wCkNvbnRlbnQtVHlwZTogaW1hZ2UvcG5nCkNvbnRlbnQtRGlzcG9zaXRpb246IGF0dGFjaG1lbnQ7IGZpbGVuYW1lPSJwaXhlbC5wbmciCgppVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBQUVBQUFBQkNBWUFBQUFmRmNTSkFBQUFEVWxFUVZSNDJtUDh6OEJRRHdBRWhRR0FoS21NCklRQUFBQUJKUlU1RXJrSmdnZz09CgotLT09PT09PT09PT09PT09PTEzNjU2MzgwMTA2NjI0MzE3NzU9PQpDb250ZW50LVRyYW5zZmVyLUVuY29kaW5nOiBiYXNlNjQKTUlNRS1WZXJzaW9uOiAxLjAKQ29udGVudC1UeXBlOiB0ZXh0L3BsYWluCkNvbnRlbnQtRGlzcG9zaXRpb246IGF0dGFjaG1lbnQ7IGZpbGVuYW1lPSJub3Rlcy50eHQiCgpjR3hoYVc0Z2RHVjRkQ0JoZEhSaFkyaHRaVzUwQ2c9PQoKLS09PT09PT09PT09PT09PT0xMzY1NjM4MDEwNjYyNDMxNzc1PT0tLQo%3D&Destinations.member.1=target%40example.com&Source=Apprise%20Notifications%20%3Csender%40example.com%3E",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "AWS4-HMAC-SHA256 Credential=access123/20240101/us-east-1/ses/aws4_request, SignedHeaders=content-type;host;x-amz-date, Signature=3331e41bdccee119083f2b1729b806d44d959e410cbdc67566c4dc4a6ed709b1",
+          "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+          "user-agent": "Apprise",
+          "x-amz-date": "20240101T000000Z"
+        },
+        "method": "POST",
+        "url": "https://email.us-east-1.amazonaws.com/"
+      }
+    ]
   }
 ]

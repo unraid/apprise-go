@@ -46,6 +46,14 @@ type providerCase struct {
 	// stays portable.
 	Attachments []string `json:"attachments"`
 
+	// VolatileHeaders names headers this case alone cannot reproduce, added to
+	// whatever the manifest already lists. SES signs the request body, and a
+	// body carrying attachments carries a randomly generated MIME boundary, so
+	// the two sides sign different bytes by construction. Everything else about
+	// the request is still compared, and ses_signature_test.go pins how the
+	// signature is built.
+	VolatileHeaders []string `json:"volatile_headers"`
+
 	// AttachmentDropped marks a case where the service deliberately refuses
 	// the attachment — an image-only service handed a PDF, or an upload that
 	// needs credentials the URL does not carry. The request is still made,
@@ -214,4 +222,17 @@ func formatList(values []string) string {
 	}
 	sort.Strings(values)
 	return fmt.Sprintf("[%s]", strings.Join(values, ", "))
+}
+
+// caseVolatileHeaders merges the headers a provider always fails to reproduce
+// with the ones only this case does.
+func caseVolatileHeaders(def providerDefinition, c providerCase) []string {
+	if len(c.VolatileHeaders) == 0 {
+		return def.VolatileHeaders
+	}
+
+	merged := make([]string, 0, len(def.VolatileHeaders)+len(c.VolatileHeaders))
+	merged = append(merged, def.VolatileHeaders...)
+
+	return append(merged, c.VolatileHeaders...)
 }

@@ -358,6 +358,16 @@ def normalize_headers(headers, keep_user_agent):
     return normalized
 
 
+# The multipart boundary Python invents for an email is random, so a capture
+# would differ on every run and --check could never pass. Pinning it here is
+# the same trick the frozen clock plays on the Date header; the Go comparison
+# rewrites its own generated boundary to this before diffing.
+def apply_fixed_mime_boundary():
+    import email.generator
+
+    email.generator._make_boundary = lambda text=None: "APPRISE-PARITY-BOUNDARY"
+
+
 def apply_fixed_time():
     raw = os.environ.get("APPRISE_FIXED_TIME", "").strip()
     if not raw:
@@ -527,6 +537,7 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
         return cached
 
     apply_fixed_time()
+    apply_fixed_mime_boundary()
     apply_store_fix()
     apply_oauth_fixes()
     apply_vapid_fixes()

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // loadAttachmentBytes reads each attachment a case names.
@@ -82,16 +83,7 @@ func TestAttachmentGoldensCarryTheirFiles(t *testing.T) {
 }
 
 // goldenCarries reports whether any request in the case carries the file.
-// Services transmit it as raw bytes, as base64, or as base64 inside a
-// form-encoded field, so all three spellings count.
 func goldenCarries(entry goldenCase, data []byte) bool {
-	encoded := base64.StdEncoding.EncodeToString(data)
-	wanted := []string{
-		string(data),
-		encoded,
-		url.QueryEscape(encoded),
-	}
-
 	for _, request := range entry.Requests {
 		body := request.Body
 		if request.BodyBase64 != "" {
@@ -99,12 +91,58 @@ func goldenCarries(entry goldenCase, data []byte) bool {
 				body = string(decoded)
 			}
 		}
-		for _, candidate := range wanted {
-			if strings.Contains(body, candidate) {
+
+		if bodyCarries(body, data) {
+			return true
+		}
+
+		// A service that builds an email posts the whole message base64'd,
+		// the attachment's own base64 included, so the file only turns up
+		// one layer down.
+		for _, nested := range nestedBodies(body) {
+			if bodyCarries(nested, data) {
 				return true
 			}
 		}
 	}
 
 	return false
+}
+
+// bodyCarries reports whether a single body carries the file. Services
+// transmit it as raw bytes, as base64, or as base64 inside a form-encoded
+// field, so all three spellings count.
+func bodyCarries(body string, data []byte) bool {
+	encoded := base64.StdEncoding.EncodeToString(data)
+	for _, candidate := range []string{string(data), encoded, url.QueryEscape(encoded)} {
+		if strings.Contains(body, candidate) {
+			return true
+		}
+	}
+
+	// Base64 inside a MIME part is broken into fixed-width lines, so it only
+	// matches once the line breaks are out of the way.
+	return strings.Contains(stripWhitespace(body), encoded)
+}
+
+// nestedBodies returns the decoded form of every form field that turns out to
+// hold base64-encoded text.
+func nestedBodies(body string) []string {
+	values, err := url.ParseQuery(body)
+	if err != nil {
+		return nil
+	}
+
+	var nested []string
+	for _, list := range values {
+		for _, value := range list {
+			decoded, err := base64.StdEncoding.DecodeString(value)
+			if err != nil || !utf8.Valid(decoded) {
+				continue
+			}
+			nested = append(nested, string(decoded))
+		}
+	}
+
+	return nested
 }

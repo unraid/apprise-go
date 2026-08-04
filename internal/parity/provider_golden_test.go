@@ -94,7 +94,8 @@ func TestProviderGoldenRequests(t *testing.T) {
 					return notify.SendWithAttachments(target, c.Body, c.Title, notifyType, attachments)
 				})
 
-				assertRequestSpecSequenceMatchesExcept(t, expected.specs(t), goSpecs, def.VolatileHeaders)
+				assertRequestSpecSequenceMatchesExcept(t, expected.specs(t), goSpecs,
+					caseVolatileHeaders(def, c))
 			})
 		}
 	}

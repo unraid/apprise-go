@@ -1,6 +1,7 @@
 package parity
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/url"
 	"reflect"
@@ -268,6 +269,10 @@ func normalizeQueryValues(values url.Values) url.Values {
 }
 
 func normalizeQueryValue(value string) string {
+	if normalized, ok := normalizeEmbeddedEmail(value); ok {
+		return normalized
+	}
+
 	trimmed := strings.TrimSpace(value)
 	if strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") {
 		var parsed any
@@ -314,6 +319,42 @@ func normalizeAppriseURL(value string) string {
 	}
 	return value
 }
+
+// normalizeEmbeddedEmail rewrites the multipart boundary inside a base64
+// field that carries a whole email — SES posts its message that way, as
+// RawMessage.Data. The boundary is generated per message, so without this the
+// two sides can never compare equal. It is returned still base64-encoded so
+// the caller compares like for like.
+func normalizeEmbeddedEmail(value string) (string, bool) {
+	decoded, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return "", false
+	}
+
+	message := string(decoded)
+	if !strings.HasPrefix(message, "Content-Type: multipart/") {
+		return "", false
+	}
+
+	match := emailBoundaryPattern.FindStringSubmatch(message)
+	if match == nil {
+		return "", false
+	}
+
+	boundary := match[1]
+	if boundary == "" || boundary == multipartFixedBoundary {
+		return value, true
+	}
+
+	message = strings.ReplaceAll(message, boundary, multipartFixedBoundary)
+
+	return base64.StdEncoding.EncodeToString([]byte(message)), true
+}
+
+// emailBoundaryPattern finds the boundary declared inside a MIME message. It
+// stops at the end of the header line, where the content type pattern used for
+// request headers would run on into the rest of the message.
+var emailBoundaryPattern = regexp.MustCompile(`boundary="?([^";\r\n]+)"?`)
 
 // multipartBoundaryPattern finds the boundary in a content type header.
 var multipartBoundaryPattern = regexp.MustCompile(`boundary=([^;]+)`)

@@ -1,7 +1,9 @@
 package notify
 
 import (
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/binary"
 	"fmt"
 	"mime"
 	"mime/quotedprintable"
@@ -125,7 +127,7 @@ func (s *SESTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 	if len(s.targets) == 0 {
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
-	payload := s.buildPayload(body, title, s.targets[0])
+	payload := s.buildPayload(body, title, s.targets[0], nil)
 	return RequestSpec{
 		Method:  "POST",
 		URL:     s.notifyURL(),
@@ -135,12 +137,16 @@ func (s *SESTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 }
 
 func (s *SESTarget) Send(body, title string, notifyType NotifyType) error {
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (s *SESTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	if len(s.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
 
 	for _, target := range s.targets {
-		payload := s.buildPayload(body, title, target)
+		payload := s.buildPayload(body, title, target, attachments)
 		spec := RequestSpec{
 			Method:  "POST",
 			URL:     s.notifyURL(),
@@ -171,8 +177,8 @@ func (s *SESTarget) signer() awsSigV4 {
 	}
 }
 
-func (s *SESTarget) buildPayload(body, title, target string) string {
-	raw := buildSESMIME(s.fromName, s.fromEmail, target, body, title, fixedTime())
+func (s *SESTarget) buildPayload(body, title, target string, attachments []Attachment) string {
+	raw := buildSESMIME(s.fromName, s.fromEmail, target, body, title, fixedTime(), attachments)
 	message := base64.StdEncoding.EncodeToString([]byte(raw))
 
 	pairs := []formPair{
@@ -185,7 +191,7 @@ func (s *SESTarget) buildPayload(body, title, target string) string {
 	return encodeFormPairs(pairs)
 }
 
-func buildSESMIME(fromName, fromEmail, toEmail, body, title string, now time.Time) string {
+func buildSESMIME(fromName, fromEmail, toEmail, body, title string, now time.Time, attachments []Attachment) string {
 	subject := ""
 	if strings.TrimSpace(title) != "" {
 		subject = encodeRFC2047(title)
@@ -194,10 +200,20 @@ func buildSESMIME(fromName, fromEmail, toEmail, body, title string, now time.Tim
 	to := formatMIMEAddress("", toEmail)
 	date := now.UTC().Format("Mon, 02 Jan 2006 15:04:05 +0000")
 
-	headers := []string{
+	encodedBody, err := encodeQuotedPrintable(body)
+	if err != nil {
+		encodedBody = body
+	}
+
+	// The text part's own headers, which stay with the text whether it is the
+	// whole message or the first part of a multipart one.
+	textHeaders := []string{
 		`Content-Type: text/html; charset="utf-8"`,
 		"MIME-Version: 1.0",
 		"Content-Transfer-Encoding: quoted-printable",
+	}
+
+	envelope := []string{
 		fmt.Sprintf("Subject: %s", subject),
 		fmt.Sprintf("From: %s", from),
 		fmt.Sprintf("To: %s", to),
@@ -206,12 +222,61 @@ func buildSESMIME(fromName, fromEmail, toEmail, body, title string, now time.Tim
 		"X-Application: Apprise",
 	}
 
-	encodedBody, err := encodeQuotedPrintable(body)
-	if err != nil {
-		encodedBody = body
+	if len(attachments) == 0 {
+		return strings.Join(append(textHeaders, envelope...), "\n") + "\n\n" + encodedBody
 	}
 
-	return strings.Join(headers, "\n") + "\n\n" + encodedBody
+	// With attachments the message becomes multipart/mixed: the text is
+	// demoted to the first part and each file follows it as its own.
+	boundary := sesMIMEBoundary()
+	headers := append([]string{
+		fmt.Sprintf(`Content-Type: multipart/mixed; boundary="%s"`, boundary),
+		"MIME-Version: 1.0",
+	}, envelope...)
+
+	var builder strings.Builder
+	builder.WriteString(strings.Join(headers, "\n"))
+	builder.WriteString("\n\n")
+
+	builder.WriteString("--" + boundary + "\n")
+	builder.WriteString(strings.Join(textHeaders, "\n"))
+	builder.WriteString("\n\n")
+	builder.WriteString(encodedBody)
+
+	for index, attachment := range attachments {
+		mimeType := attachment.MimeType
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+
+		builder.WriteString("\n--" + boundary + "\n")
+		builder.WriteString(strings.Join([]string{
+			"Content-Transfer-Encoding: base64",
+			"MIME-Version: 1.0",
+			fmt.Sprintf("Content-Type: %s", mimeType),
+			fmt.Sprintf(`Content-Disposition: attachment; filename="%s"`,
+				attachment.FileName(index, ".dat")),
+		}, "\n"))
+		builder.WriteString("\n\n")
+		builder.WriteString(wrapBase64(attachment.Base64(), 76))
+	}
+
+	builder.WriteString("\n--" + boundary + "--\n")
+
+	return builder.String()
+}
+
+// wrapBase64 breaks an encoded payload into the fixed-width lines a MIME part
+// carries.
+func wrapBase64(encoded string, width int) string {
+	var lines []string
+	for len(encoded) > width {
+		lines = append(lines, encoded[:width])
+		encoded = encoded[width:]
+	}
+	lines = append(lines, encoded)
+
+	return strings.Join(lines, "\n") + "\n"
 }
 
 func formatMIMEAddress(name, email string) string {
@@ -514,4 +579,16 @@ func init() {
 		"service_url":      "https://aws.amazon.com/ses/",
 		"setup_url":        "https://appriseit.com/services/ses/",
 	})
+}
+
+// sesMIMEBoundary mirrors the shape Python's email package generates: a run of
+// equals signs around a random number, which cannot appear in the encoded
+// parts it separates.
+func sesMIMEBoundary() string {
+	var buf [8]byte
+	if _, err := rand.Read(buf[:]); err != nil {
+		return "===============0=="
+	}
+
+	return fmt.Sprintf("===============%d==", binary.BigEndian.Uint64(buf[:])>>1)
 }
