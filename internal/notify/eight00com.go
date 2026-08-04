@@ -3,6 +3,7 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -62,7 +63,7 @@ func NewEight00comTarget(target *ParsedURL) (*Eight00comTarget, error) {
 }
 
 func (e *Eight00comTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	specs, err := e.buildRequests(body, title, notifyType)
+	specs, err := e.buildRequests(body, title, notifyType, nil)
 	if err != nil {
 		return RequestSpec{}, err
 	}
@@ -71,7 +72,11 @@ func (e *Eight00comTarget) BuildRequest(body, title string, notifyType NotifyTyp
 }
 
 func (e *Eight00comTarget) Send(body, title string, notifyType NotifyType) error {
-	specs, err := e.buildRequests(body, title, notifyType)
+	return e.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (e *Eight00comTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	specs, err := e.buildRequests(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -86,7 +91,7 @@ func (e *Eight00comTarget) Send(body, title string, notifyType NotifyType) error
 }
 
 // buildRequests sends one message per recipient.
-func (e *Eight00comTarget) buildRequests(body, title string, notifyType NotifyType) ([]RequestSpec, error) {
+func (e *Eight00comTarget) buildRequests(body, title string, notifyType NotifyType, attachments []Attachment) ([]RequestSpec, error) {
 	_ = notifyType
 
 	headers := map[string]string{
@@ -96,13 +101,46 @@ func (e *Eight00comTarget) buildRequests(body, title string, notifyType NotifyTy
 		"Authorization": "Bearer " + e.token,
 	}
 
+	message := mergeTitleBody(title, body)
+
 	specs := make([]RequestSpec, 0, len(e.targets))
 	for _, recipient := range e.targets {
+		// Both numbers travel in E.164 with the plus retained.
+		if len(attachments) > 0 {
+			// An MMS sends the same fields as form parts alongside the files,
+			// each named media[].
+			fields := url.Values{}
+			fields.Set("sender", "+"+e.source)
+			fields.Set("recipient", "+"+recipient)
+			fields.Set("message", message)
+
+			requestBody, contentType, err := indexedFileAttachmentBody(
+				fields,
+				func(int) string { return "media[]" },
+				attachments, true)
+			if err != nil {
+				return nil, err
+			}
+
+			mmsHeaders := map[string]string{}
+			for key, value := range headers {
+				mmsHeaders[key] = value
+			}
+			mmsHeaders["Content-Type"] = contentType
+
+			specs = append(specs, RequestSpec{
+				Method:  "POST",
+				URL:     eight00comURL,
+				Headers: mmsHeaders,
+				Body:    requestBody,
+			})
+			continue
+		}
+
 		data, err := json.Marshal(map[string]any{
-			"sender": "+" + e.source,
-			// Both numbers travel in E.164 with the plus retained.
+			"sender":    "+" + e.source,
 			"recipient": "+" + recipient,
-			"message":   mergeTitleBody(title, body),
+			"message":   message,
 		})
 		if err != nil {
 			return nil, err

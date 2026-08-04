@@ -41,5 +41,22 @@
         "url": "https://api.800.com/message"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"sender\"\r\n\r\n+15550000000\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"recipient\"\r\n\r\n+15551234567\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"message\"\r\n\r\ntitle\r\nbody\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"media[]\"; filename=\"pixel.png\"\r\nContent-Type: image/png\r\n\r\n\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "body_b64": "LS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJzZW5kZXIiDQoNCisxNTU1MDAwMDAwMA0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJyZWNpcGllbnQiDQoNCisxNTU1MTIzNDU2Nw0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJtZXNzYWdlIg0KDQp0aXRsZQ0KYm9keQ0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJtZWRpYVtdIjsgZmlsZW5hbWU9InBpeGVsLnBuZyINCkNvbnRlbnQtVHlwZTogaW1hZ2UvcG5nDQoNColQTkcNChoKAAAADUlIRFIAAAABAAAAAQgGAAAAHxXEiQAAAA1JREFUeNpj/M/AUA8ABIUBgISpjCEAAAAASUVORK5CYIINCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlktLQ0K",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token123",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.800.com/message"
+      }
+    ]
   }
 ]

@@ -19,5 +19,15 @@
     "body": "body",
     "title": "title",
     "type": "info"
+  },
+  {
+    "name": "attachment",
+    "url": "dot://apikey@device123/?refresh=no&signature=Sig&icon=ICON&link=https://example.com",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
   }
 ]

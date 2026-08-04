@@ -25,7 +25,7 @@ type DotTarget struct {
 	icon         string
 	imageData    string
 	link         string
-	border       int
+	border       *int
 	ditherType   string
 	ditherKernel string
 	taskKey      string
@@ -58,22 +58,18 @@ func NewDotTarget(target *ParsedURL) (*DotTarget, error) {
 	link := strings.TrimSpace(target.Query["link"])
 	taskKey := strings.TrimSpace(target.Query["task_key"])
 
-	border := 0
+	// These have no defaults upstream: unset means the field is left out of
+	// the payload entirely rather than sent with a value the caller never
+	// chose.
+	var border *int
 	if rawBorder := strings.TrimSpace(target.Query["border"]); rawBorder != "" {
 		if value, err := strconv.Atoi(rawBorder); err == nil {
-			border = value
+			border = &value
 		}
 	}
 
 	ditherType := strings.TrimSpace(target.Query["dither_type"])
-	if ditherType == "" {
-		ditherType = "DIFFUSION"
-	}
-
 	ditherKernel := strings.TrimSpace(target.Query["dither_kernel"])
-	if ditherKernel == "" {
-		ditherKernel = "FLOYD_STEINBERG"
-	}
 
 	if mode == dotModeText && imageData != "" {
 		imageData = ""
@@ -107,17 +103,63 @@ func (d *DotTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 }
 
 func (d *DotTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := d.buildRequest(body, title)
+	return d.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments treats the first attachment as the image. Dot takes one
+// image per device, so any others are ignored rather than sent separately.
+func (d *DotTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	_ = notifyType
+
+	// An image supplied by ?image= wins; an attachment fills in otherwise.
+	imageData := d.imageData
+	if imageData == "" && len(attachments) > 0 {
+		imageData = attachments[0].Base64()
+	}
+
+	// Image mode sends only the image; text mode sends the text and then,
+	// if there is an image, a second request to the image endpoint.
+	if d.mode == dotModeImage || imageData == "" {
+		spec, err := d.buildRequestWithImage(body, title, imageData)
+		if err != nil {
+			return err
+		}
+
+		return SendRequest(spec)
+	}
+
+	if body != "" || title != "" {
+		spec, err := d.buildRequestWithImage(body, title, "")
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	imageSpec, err := d.buildImageRequest(imageData)
 	if err != nil {
 		return err
 	}
 
-	_ = notifyType
+	return SendRequest(imageSpec)
+}
 
-	return SendRequest(spec)
+// buildImageRequest posts an image to the image endpoint, which text mode
+// uses alongside the text rather than instead of it.
+func (d *DotTarget) buildImageRequest(imageData string) (RequestSpec, error) {
+	image := *d
+	image.mode = dotModeImage
+
+	return image.buildRequestWithImage("", "", imageData)
 }
 
 func (d *DotTarget) buildRequest(body, title string) (RequestSpec, error) {
+	return d.buildRequestWithImage(body, title, d.imageData)
+}
+
+func (d *DotTarget) buildRequestWithImage(body, title, imageData string) (RequestSpec, error) {
 	// The v2 API identifies the device in the URL, not the payload.
 	payload := map[string]any{
 		"refreshNow": d.refreshNow,
@@ -125,17 +167,23 @@ func (d *DotTarget) buildRequest(body, title string) (RequestSpec, error) {
 
 	requestURL := fmt.Sprintf(dotTextURLTemplate, d.deviceID)
 	if d.mode == dotModeImage {
-		if d.imageData == "" {
+		if imageData == "" {
 			return RequestSpec{}, fmt.Errorf("missing image data")
 		}
 
-		payload["image"] = d.imageData
+		payload["image"] = imageData
 		if d.link != "" {
 			payload["link"] = d.link
 		}
-		payload["border"] = d.border
-		payload["ditherType"] = d.ditherType
-		payload["ditherKernel"] = d.ditherKernel
+		if d.border != nil {
+			payload["border"] = *d.border
+		}
+		if d.ditherType != "" {
+			payload["ditherType"] = d.ditherType
+		}
+		if d.ditherKernel != "" {
+			payload["ditherKernel"] = d.ditherKernel
+		}
 		if d.taskKey != "" {
 			payload["taskKey"] = d.taskKey
 		}

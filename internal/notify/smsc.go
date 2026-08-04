@@ -57,6 +57,10 @@ func NewSMSCTarget(target *ParsedURL) (*SMSCTarget, error) {
 }
 
 func (s *SMSCTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return s.buildRequest(body, title, notifyType, nil)
+}
+
+func (s *SMSCTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
 	_ = notifyType
 
 	// One request carries every recipient, comma separated.
@@ -73,6 +77,28 @@ func (s *SMSCTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 	}
 	values.Set("mes", mergeTitleBody(title, body))
 
+	requestBody := values.Encode()
+	contentType := "application/x-www-form-urlencoded"
+	if len(attachments) > 0 {
+		// Files are numbered mes1, mes2 and turn the body multipart.
+		var err error
+		// The mms flag is what tells SMSC this is a multimedia message, and
+		// the files are numbered from zero rather than one.
+		mmsValues := url.Values{}
+		for key, entries := range values {
+			mmsValues[key] = entries
+		}
+		mmsValues.Set("mms", "1")
+
+		requestBody, contentType, err = indexedFileAttachmentBody(
+			mmsValues,
+			func(index int) string { return fmt.Sprintf("mes%d", index) },
+			attachments, true)
+		if err != nil {
+			return RequestSpec{}, err
+		}
+	}
+
 	return RequestSpec{
 		Method: "POST",
 		URL:    smscURL,
@@ -80,14 +106,18 @@ func (s *SMSCTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 			// SMSC is one of the few endpoints upstream posts to without a
 			// User-Agent.
 			"Accept":       "*/*",
-			"Content-Type": "application/x-www-form-urlencoded",
+			"Content-Type": contentType,
 		},
-		Body: values.Encode(),
+		Body: requestBody,
 	}, nil
 }
 
 func (s *SMSCTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := s.BuildRequest(body, title, notifyType)
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (s *SMSCTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	spec, err := s.buildRequest(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}

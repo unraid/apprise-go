@@ -46,5 +46,32 @@
         "url": "https://dot.mindreset.tech/api/authV2/open/device/device123/text"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "{\"refreshNow\": false, \"title\": \"title\", \"message\": \"body\", \"signature\": \"Sig\", \"icon\": \"ICON\", \"link\": \"https://example.com\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://dot.mindreset.tech/api/authV2/open/device/device123/text"
+      },
+      {
+        "body": "{\"image\": \"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\", \"refreshNow\": false, \"link\": \"https://example.com\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://dot.mindreset.tech/api/authV2/open/device/device123/image"
+      }
+    ]
   }
 ]
