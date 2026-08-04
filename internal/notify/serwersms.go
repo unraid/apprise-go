@@ -3,11 +3,18 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 )
 
-const serwersmsURL = "https://api2.serwersms.pl/messages/send_sms"
+const (
+	serwersmsURL = "https://api2.serwersms.pl/messages/send_sms"
+
+	// Files switch the send to the MMS endpoint, which takes form fields
+	// rather than the JSON body an SMS carries.
+	serwersmsMMSURL = "https://api2.serwersms.pl/messages/send_mms"
+)
 
 // serwersmsGroup matches a group target, which carries a leading hash that may
 // arrive percent encoded.
@@ -69,7 +76,7 @@ func NewSerwerSMSTarget(target *ParsedURL) (*SerwerSMSTarget, error) {
 }
 
 func (s *SerwerSMSTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	specs, err := s.buildRequests(body, title, notifyType)
+	specs, err := s.buildRequests(body, title, notifyType, nil)
 	if err != nil {
 		return RequestSpec{}, err
 	}
@@ -78,7 +85,11 @@ func (s *SerwerSMSTarget) BuildRequest(body, title string, notifyType NotifyType
 }
 
 func (s *SerwerSMSTarget) Send(body, title string, notifyType NotifyType) error {
-	specs, err := s.buildRequests(body, title, notifyType)
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (s *SerwerSMSTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	specs, err := s.buildRequests(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -93,12 +104,14 @@ func (s *SerwerSMSTarget) Send(body, title string, notifyType NotifyType) error 
 }
 
 // buildRequests sends one message per phone number and one per group.
-func (s *SerwerSMSTarget) buildRequests(body, title string, notifyType NotifyType) ([]RequestSpec, error) {
+func (s *SerwerSMSTarget) buildRequests(body, title string, notifyType NotifyType, attachments []Attachment) ([]RequestSpec, error) {
 	_ = notifyType
 
 	headers := map[string]string{
-		"User-Agent":   "Apprise",
-		"Content-Type": "application/json",
+		"User-Agent": "Apprise",
+	}
+	if len(attachments) == 0 {
+		headers["Content-Type"] = "application/json"
 	}
 
 	build := func(extra map[string]any) (RequestSpec, error) {
@@ -110,6 +123,36 @@ func (s *SerwerSMSTarget) buildRequests(body, title string, notifyType NotifyTyp
 		}
 		for key, value := range extra {
 			fields[key] = value
+		}
+
+		if len(attachments) > 0 {
+			// The same fields travel as form parts, each file repeating the
+			// field name file.
+			values := url.Values{}
+			for key, value := range fields {
+				values.Set(key, fmt.Sprintf("%v", value))
+			}
+
+			requestBody, contentType, err := indexedFileAttachmentBody(
+				values,
+				func(int) string { return "file" },
+				attachments, true)
+			if err != nil {
+				return RequestSpec{}, err
+			}
+
+			mmsHeaders := map[string]string{}
+			for key, value := range headers {
+				mmsHeaders[key] = value
+			}
+			mmsHeaders["Content-Type"] = contentType
+
+			return RequestSpec{
+				Method:  "POST",
+				URL:     serwersmsMMSURL,
+				Headers: mmsHeaders,
+				Body:    requestBody,
+			}, nil
 		}
 
 		data, err := json.Marshal(fields)
