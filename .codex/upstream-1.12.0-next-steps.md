@@ -165,6 +165,37 @@ Three cases needed something beyond a golden, each documented in its own test:
 - The persistent store now exists, so `wechat` and `ringc` could cache their
   tokens instead of refetching on every send.
 
+## Framework arguments are the blind spot
+
+`internal/parity/framework_args.go` records what this port does with each of
+the twelve arguments every provider inherits from upstream's base class, and
+`framework_args_test.go` fails when upstream defines one the list does not
+classify, when the list names one upstream has dropped, or when something
+claimed as fixture-covered has no case setting it. The parity report prints the
+table every run.
+
+This exists because the gap was invisible to everything else. A plugin never
+mentions these arguments — the base class acts on them — so reading plugins,
+which is how every other gap in this port was found, does not reveal them.
+Every schema entry declares them, so `TestSchemaDetailsParity` compares the
+declarations and passes. "Schema parity is green" was then taken as evidence
+the behaviour existed. It is the same mistake as `attachment_support: true`
+matching upstream while mailto sent nothing: **metadata parity proves the
+labels agree and says nothing about what is behind them.**
+
+Two of the gaps are fixture-able today and worth closing next:
+
+- `?overflow=split` and `?overflow=truncate`. Split changes the request count
+  — a case with `?overflow=split` and a 400 character body fails right now
+  with `python=3 go=1`. The default mode is `upstream`, meaning leave the
+  content alone, and that the port already matches, so this only bites a
+  caller who asks for it.
+- `?emojis=yes`, which rewrites the body before it is sent.
+
+The rest are not expressible as a request diff: `retry` needs a mock that can
+fail on demand, `wait` is a sleep, `cto`/`rto` need a server that stalls, and
+`optional` changes the reported result rather than the request.
+
 ## Guardrails that now exist
 
 Do not remove these; each one exists because something got through.

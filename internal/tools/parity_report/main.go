@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/unraid/apprise-go/internal/notify"
+	"github.com/unraid/apprise-go/internal/parity"
 )
 
 type testEvent struct {
@@ -52,14 +53,20 @@ type report struct {
 	// reported separately rather than counted as drift — the Go suites all
 	// defer to the same declaration.
 	DeclaredGapSchemas []string
-	SchemaDiffErr      string
-	HTTPSchemas        []string
-	NonHTTPSchemas     []string
-	SchemaCoverage     string
-	GoldenCheck        string
-	ProviderParity     string
-	GoldenParity       string
-	ProviderCount      int
+
+	// FrameworkArgs is what this port does with the arguments every provider
+	// inherits from upstream's base class. They are reported because a
+	// declaration-only argument is invisible everywhere else: the schema
+	// entry carries it, so metadata parity passes either way.
+	FrameworkArgs  map[string]parity.FrameworkArg
+	SchemaDiffErr  string
+	HTTPSchemas    []string
+	NonHTTPSchemas []string
+	SchemaCoverage string
+	GoldenCheck    string
+	ProviderParity string
+	GoldenParity   string
+	ProviderCount  int
 }
 
 func main() {
@@ -134,10 +141,11 @@ func runParityTests(pkg string) (report, []byte, error) {
 
 	raw := &bytes.Buffer{}
 	rep := report{
-		GeneratedAt: time.Now(),
-		Package:     pkg,
-		Tests:       map[string]testResult{},
-		TopLevel:    map[string]testResult{},
+		FrameworkArgs: parity.FrameworkArgs,
+		GeneratedAt:   time.Now(),
+		Package:       pkg,
+		Tests:         map[string]testResult{},
+		TopLevel:      map[string]testResult{},
 	}
 
 	scanner := bufio.NewScanner(stdout)
@@ -473,6 +481,21 @@ func renderMarkdown(rep report, jsonPath string) string {
 	fmt.Fprintf(&b, "- Provider parity: %s\n", rep.ProviderParity)
 	fmt.Fprintf(&b, "- Golden parity: %s\n\n", rep.GoldenParity)
 
+	b.WriteString("## Framework Arguments\n\n")
+	b.WriteString("Arguments every provider inherits from upstream's base class. " +
+		"Each schema entry declares them, so schema parity passes whether or " +
+		"not the behavior behind them exists — which is why they are " +
+		"reported separately.\n\n")
+	b.WriteString("| Argument | Implemented | Fixture-covered | Notes |\n")
+	b.WriteString("| --- | --- | --- | --- |\n")
+	for _, name := range sortedFrameworkArgs(rep.FrameworkArgs) {
+		arg := rep.FrameworkArgs[name]
+		fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
+			name, yesNo(arg.Implemented), yesNo(arg.FixtureCovered),
+			strings.ReplaceAll(arg.Note, "\n", " "))
+	}
+	b.WriteString("\n")
+
 	b.WriteString("## Schema Coverage Details\n\n")
 	if rep.SchemaDiffErr != "" {
 		fmt.Fprintf(&b, "- Apprise schemas: ERROR (%s)\n\n", rep.SchemaDiffErr)
@@ -610,4 +633,22 @@ func failingSubtests(tests map[string]testResult) map[string][]string {
 		}
 	}
 	return failing
+}
+
+func sortedFrameworkArgs(args map[string]parity.FrameworkArg) []string {
+	names := make([]string, 0, len(args))
+	for name := range args {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	return names
+}
+
+func yesNo(value bool) string {
+	if value {
+		return "yes"
+	}
+
+	return "no"
 }
