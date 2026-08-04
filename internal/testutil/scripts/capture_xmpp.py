@@ -24,6 +24,13 @@ def main():
     )
     parser.add_argument("--body", default="")
     parser.add_argument("--title", default="")
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="send this many times through one notifier, which is what "
+        "keepalive changes the behaviour of",
+    )
     args = parser.parse_args()
 
     if args.check:
@@ -41,7 +48,9 @@ def main():
 
     apobj = apprise.Apprise()
     apobj.add(args.url)
-    success = apobj.notify(body=args.body, title=args.title)
+    success = True
+    for _ in range(max(1, args.repeat)):
+        success = apobj.notify(body=args.body, title=args.title) and success
     print(json.dumps({"success": bool(success)}, ensure_ascii=True))
 
 

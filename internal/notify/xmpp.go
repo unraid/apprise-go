@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"mellium.im/sasl"
@@ -65,9 +66,19 @@ type XMPPTarget struct {
 	// scramPlus offers the channel-binding SASL mechanisms. It is on by
 	// default, matching upstream, so turning it off is the deviation.
 	scramPlus bool
-	nickname  string
-	timeout   time.Duration
-	targets   []xmppRecipient
+
+	// keepalive holds one session open across sends rather than dialing per
+	// notification. The stanzas are identical either way; what changes is how
+	// many times the client connects.
+	keepalive bool
+
+	// held is the session keepalive is reusing, guarded because a target may
+	// be shared between goroutines.
+	mu       sync.Mutex
+	held     *xmpp.Session
+	nickname string
+	timeout  time.Duration
+	targets  []xmppRecipient
 }
 
 func NewXMPPTarget(target *ParsedURL) (*XMPPTarget, error) {
@@ -139,6 +150,7 @@ func NewXMPPTarget(target *ParsedURL) (*XMPPTarget, error) {
 		verify:     parseBoolWithDefault(target.Query["verify"], true),
 		useSubject: parseBoolWithDefault(target.Query["subject"], false),
 		roster:     parseBoolWithDefault(target.Query["roster"], false),
+		keepalive:  parseBoolWithDefault(target.Query["keepalive"], false),
 		scramPlus:  parseBoolWithDefault(target.Query["scramplus"], true),
 		nickname:   strings.TrimSpace(target.Query["name"]),
 		timeout:    15 * time.Second,
@@ -160,13 +172,11 @@ func (x *XMPPTarget) Send(body, title string, notifyType NotifyType) error {
 	ctx, cancel := context.WithTimeout(context.Background(), x.timeout)
 	defer cancel()
 
-	session, err := x.dial(ctx)
+	session, release, err := x.session(ctx)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		_ = session.Close()
-	}()
+	defer release()
 
 	if x.roster {
 		// Upstream asks for the roster before it sends anything, and ignores
@@ -222,6 +232,52 @@ func (x *XMPPTarget) Send(body, title string, notifyType NotifyType) error {
 
 // xmppMessage is a message stanza with the subject and body children; the
 // library models the envelope but leaves the payload to the caller.
+// session returns a session to send on, along with the function that ends the
+// caller's use of it. With keepalive the session is held for the next send and
+// release is a no-op; without it the session is closed on the way out, which
+// is what upstream's one-shot mode does.
+func (x *XMPPTarget) session(ctx context.Context) (*xmpp.Session, func(), error) {
+	if !x.keepalive {
+		session, err := x.dial(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return session, func() { _ = session.Close() }, nil
+	}
+
+	x.mu.Lock()
+	defer x.mu.Unlock()
+
+	if x.held != nil {
+		return x.held, func() {}, nil
+	}
+
+	session, err := x.dial(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	x.held = session
+
+	return session, func() {}, nil
+}
+
+// Close ends a session keepalive is holding. Without keepalive there is
+// nothing to close, since each send closes its own.
+func (x *XMPPTarget) Close() error {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+
+	if x.held == nil {
+		return nil
+	}
+
+	session := x.held
+	x.held = nil
+
+	return session.Close()
+}
+
 // xmppSASLMechanisms lists the authentication mechanisms to offer, strongest
 // first. The server chooses from what it advertises, so this is a preference
 // rather than a demand.

@@ -196,3 +196,98 @@ func requireUpstreamXMPP(t *testing.T) {
 		t.Skipf("upstream xmpp plugin unavailable: %s", strings.TrimSpace(stdout))
 	}
 }
+
+// TestXMPPKeepaliveParity covers the one option whose effect is invisible in
+// the stanzas: ?keepalive=yes holds a session open across sends where the
+// default dials per notification.
+//
+// Two sends produce identical stanzas either way, so this counts connections
+// instead. That is the whole of the difference, and it is why the capture
+// server had to grow a counter before the option could be checked rather than
+// asserted.
+//
+// The default is compared against upstream. Keepalive is not: upstream's
+// keepalive path does not complete STARTTLS against this server, closing the
+// stream as soon as it is offered, while its own one-shot path negotiates the
+// same exchange on the same socket without trouble. Both build the client the
+// same way and call connect the same way, so this looks like an upstream
+// defect rather than something the capture server is missing — but either way
+// there is nothing to compare against, so the keepalive case checks this
+// port's behavior alone and says so.
+func TestXMPPKeepaliveParity(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		query           string
+		want            int
+		compareToPython bool
+	}{
+		{name: "one shot dials per send", want: 2, compareToPython: true},
+		{name: "keepalive reuses the session", query: "&keepalive=yes", want: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			capture := testutil.StartXMPPCapture(t, "localhost")
+
+			_, port, err := net.SplitHostPort(capture.Addr())
+			if err != nil {
+				t.Fatalf("split capture address: %v", err)
+			}
+
+			url := fmt.Sprintf(
+				"xmpp://user:pass@localhost:%s/target@localhost?mode=starttls&verify=no%s",
+				port, tc.query)
+
+			if tc.compareToPython {
+				t.Setenv("PYTHONPATH", testutil.AppriseSourceRoot(t))
+				requireUpstreamXMPP(t)
+
+				script := filepath.Join(testutil.RepoRoot(t),
+					"internal", "testutil", "scripts", "capture_xmpp.py")
+				stdout, stderr, err := testutil.RunPythonScript(t, script,
+					"--url", url, "--body", "body", "--title", "title", "--repeat", "2")
+				if err != nil {
+					t.Fatalf("python xmpp send failed: %v (stderr: %s)",
+						err, strings.TrimSpace(stderr))
+				}
+
+				var result xmppSendResult
+				if err := json.Unmarshal([]byte(stdout), &result); err != nil {
+					t.Fatalf("parse python result: %v (stdout: %s)", err, stdout)
+				}
+				if !result.Success {
+					t.Fatalf("python xmpp send reported failure: %s\nstderr: %s",
+						strings.TrimSpace(stdout), strings.TrimSpace(stderr))
+				}
+
+				capture.WaitForMessages(t, 2, 20*time.Second)
+				if got := capture.Connections(); got != tc.want {
+					t.Fatalf("upstream made %d connections, expected %d", got, tc.want)
+				}
+				capture.Reset()
+			}
+
+			parsed, err := notify.ParseURL(url)
+			if err != nil {
+				t.Fatalf("parse xmpp url: %v", err)
+			}
+			target, err := notify.NewXMPPTarget(parsed)
+			if err != nil {
+				t.Fatalf("build xmpp target: %v", err)
+			}
+			t.Cleanup(func() {
+				_ = target.Close()
+			})
+
+			for i := range 2 {
+				if err := target.Send("body", "title", notify.NotifyInfo); err != nil {
+					t.Fatalf("go xmpp send %d failed: %v", i+1, err)
+				}
+			}
+
+			capture.WaitForMessages(t, 2, 20*time.Second)
+
+			if got := capture.Connections(); got != tc.want {
+				t.Fatalf("expected %d connections, got %d", tc.want, got)
+			}
+		})
+	}
+}

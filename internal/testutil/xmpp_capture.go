@@ -49,6 +49,7 @@ type XMPPCapture struct {
 	mu             sync.Mutex
 	messages       []XMPPMessage
 	rosterRequests int
+	connections    int
 	closed         bool
 }
 
@@ -95,6 +96,7 @@ func (c *XMPPCapture) Reset() {
 
 	c.messages = nil
 	c.rosterRequests = 0
+	c.connections = 0
 }
 
 func (c *XMPPCapture) Close() error {
@@ -116,8 +118,22 @@ func (c *XMPPCapture) serve() {
 		if err != nil {
 			return
 		}
+		c.mu.Lock()
+		c.connections++
+		c.mu.Unlock()
+
 		go c.handle(conn)
 	}
+}
+
+// Connections reports how many times a client has connected. It is what
+// separates a session held open across sends from one dialed per send —
+// the stanzas are identical either way.
+func (c *XMPPCapture) Connections() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.connections
 }
 
 // RosterRequests reports how many roster queries arrived.
