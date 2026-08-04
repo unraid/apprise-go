@@ -120,7 +120,7 @@ func (s *SMTP2GoTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		batchSize = smtp2goBatchSize
 	}
 
-	payload := s.buildPayload(body, title, s.targets[:minInt(len(s.targets), batchSize)])
+	payload := s.buildPayload(body, title, s.targets[:minInt(len(s.targets), batchSize)], nil)
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
@@ -141,6 +141,10 @@ func (s *SMTP2GoTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (s *SMTP2GoTarget) Send(body, title string, notifyType NotifyType) error {
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (s *SMTP2GoTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	if len(s.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -156,7 +160,7 @@ func (s *SMTP2GoTarget) Send(body, title string, notifyType NotifyType) error {
 			end = len(s.targets)
 		}
 
-		payload := s.buildPayload(body, title, s.targets[index:end])
+		payload := s.buildPayload(body, title, s.targets[index:end], attachments)
 		data, err := json.Marshal(payload)
 		if err != nil {
 			return err
@@ -182,7 +186,7 @@ func (s *SMTP2GoTarget) Send(body, title string, notifyType NotifyType) error {
 	return nil
 }
 
-func (s *SMTP2GoTarget) buildPayload(body, title string, recipients []emailEntry) map[string]any {
+func (s *SMTP2GoTarget) buildPayload(body, title string, recipients []emailEntry, attachments []Attachment) map[string]any {
 	payload := map[string]any{
 		"api_key":   s.apiKey,
 		"sender":    formatEmail(s.fromName, s.fromAddr),
@@ -218,6 +222,10 @@ func (s *SMTP2GoTarget) buildPayload(body, title string, recipients []emailEntry
 			})
 		}
 		payload["custom_headers"] = customHeaders
+	}
+
+	if len(attachments) > 0 {
+		payload["attachments"] = attachmentsSMTP2GoStyle(attachments)
 	}
 
 	return payload

@@ -62,7 +62,7 @@ func NewMailerSendTarget(target *ParsedURL) (*MailerSendTarget, error) {
 }
 
 func (m *MailerSendTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	specs, err := m.buildRequests(body, title, notifyType)
+	specs, err := m.buildRequests(body, title, notifyType, nil)
 	if err != nil {
 		return RequestSpec{}, err
 	}
@@ -71,7 +71,11 @@ func (m *MailerSendTarget) BuildRequest(body, title string, notifyType NotifyTyp
 }
 
 func (m *MailerSendTarget) Send(body, title string, notifyType NotifyType) error {
-	specs, err := m.buildRequests(body, title, notifyType)
+	return m.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (m *MailerSendTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	specs, err := m.buildRequests(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -87,7 +91,7 @@ func (m *MailerSendTarget) Send(body, title string, notifyType NotifyType) error
 
 // buildRequests sends one message per recipient, excluding that recipient from
 // the copy lists so nobody is addressed twice.
-func (m *MailerSendTarget) buildRequests(body, title string, notifyType NotifyType) ([]RequestSpec, error) {
+func (m *MailerSendTarget) buildRequests(body, title string, notifyType NotifyType, attachments []Attachment) ([]RequestSpec, error) {
 	_ = notifyType
 
 	subject := title
@@ -119,6 +123,10 @@ func (m *MailerSendTarget) buildRequests(body, title string, notifyType NotifyTy
 			"from":    map[string]any{"email": m.fromEmail},
 			"to":      []any{map[string]any{"email": recipient}},
 			"subject": subject,
+		}
+
+		if len(attachments) > 0 {
+			payload["attachments"] = attachmentsMailerSendStyle(attachments)
 		}
 
 		if m.format == "html" {

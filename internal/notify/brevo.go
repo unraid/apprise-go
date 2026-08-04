@@ -90,7 +90,7 @@ func (b *BrevoTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
 
-	payload := b.buildPayload(body, title, b.targets[0])
+	payload := b.buildPayload(body, title, b.targets[0], nil)
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
@@ -112,12 +112,16 @@ func (b *BrevoTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 }
 
 func (b *BrevoTarget) Send(body, title string, notifyType NotifyType) error {
+	return b.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (b *BrevoTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	if len(b.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
 
 	for _, target := range b.targets {
-		payload := b.buildPayload(body, title, target)
+		payload := b.buildPayload(body, title, target, attachments)
 		data, err := json.Marshal(payload)
 		if err != nil {
 			return err
@@ -144,7 +148,7 @@ func (b *BrevoTarget) Send(body, title string, notifyType NotifyType) error {
 	return nil
 }
 
-func (b *BrevoTarget) buildPayload(body, title, target string) map[string]any {
+func (b *BrevoTarget) buildPayload(body, title, target string, attachments []Attachment) map[string]any {
 	subject := title
 	if strings.TrimSpace(subject) == "" {
 		subject = brevoDefaultSubject
@@ -176,6 +180,10 @@ func (b *BrevoTarget) buildPayload(body, title, target string) map[string]any {
 		payload["replyTo"] = map[string]string{
 			"email": b.replyTo,
 		}
+	}
+
+	if len(attachments) > 0 {
+		payload["attachment"] = attachmentsBrevoStyle(attachments)
 	}
 
 	return payload

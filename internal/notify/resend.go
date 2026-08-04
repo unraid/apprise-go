@@ -121,7 +121,7 @@ func (r *ResendTarget) BuildRequest(body, title string, notifyType NotifyType) (
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
 
-	payload := r.buildPayload(body, title, r.targets[0])
+	payload := r.buildPayload(body, title, r.targets[0], nil)
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
@@ -146,12 +146,16 @@ func (r *ResendTarget) BuildRequest(body, title string, notifyType NotifyType) (
 }
 
 func (r *ResendTarget) Send(body, title string, notifyType NotifyType) error {
+	return r.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (r *ResendTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	if len(r.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
 
 	for _, target := range r.targets {
-		payload := r.buildPayload(body, title, target)
+		payload := r.buildPayload(body, title, target, attachments)
 		data, err := json.Marshal(payload)
 		if err != nil {
 			return err
@@ -181,7 +185,7 @@ func (r *ResendTarget) Send(body, title string, notifyType NotifyType) error {
 	return nil
 }
 
-func (r *ResendTarget) buildPayload(body, title, target string) map[string]any {
+func (r *ResendTarget) buildPayload(body, title, target string, attachments []Attachment) map[string]any {
 	subject := title
 	if strings.TrimSpace(subject) == "" {
 		subject = resendDefaultSubject
@@ -208,6 +212,10 @@ func (r *ResendTarget) buildPayload(body, title, target string) map[string]any {
 	replyTo := filterEmailSet(r.replyTo, nil, target)
 	if len(replyTo) > 0 {
 		payload["reply_to"] = formatEmailList(replyTo, r.names)
+	}
+
+	if len(attachments) > 0 {
+		payload["attachments"] = attachmentsSendGridStyle(attachments)
 	}
 
 	return payload

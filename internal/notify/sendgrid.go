@@ -99,7 +99,7 @@ func (s *SendGridTarget) BuildRequest(body, title string, notifyType NotifyType)
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
 
-	payload := s.buildPayload(body, title, s.targets[0])
+	payload := s.buildPayload(body, title, s.targets[0], nil)
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
@@ -124,12 +124,16 @@ func (s *SendGridTarget) BuildRequest(body, title string, notifyType NotifyType)
 }
 
 func (s *SendGridTarget) Send(body, title string, notifyType NotifyType) error {
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (s *SendGridTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	if len(s.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
 
 	for _, target := range s.targets {
-		payload := s.buildPayload(body, title, target)
+		payload := s.buildPayload(body, title, target, attachments)
 		data, err := json.Marshal(payload)
 		if err != nil {
 			return err
@@ -159,7 +163,7 @@ func (s *SendGridTarget) Send(body, title string, notifyType NotifyType) error {
 	return nil
 }
 
-func (s *SendGridTarget) buildPayload(body, title, target string) map[string]any {
+func (s *SendGridTarget) buildPayload(body, title, target string, attachments []Attachment) map[string]any {
 	subject := title
 	if strings.TrimSpace(subject) == "" {
 		subject = sendgridDefaultSubject
@@ -200,6 +204,10 @@ func (s *SendGridTarget) buildPayload(body, title, target string) map[string]any
 		if len(s.templateData) > 0 {
 			payload["personalizations"].([]any)[0].(map[string]any)["dynamic_template_data"] = s.templateData
 		}
+	}
+
+	if len(attachments) > 0 {
+		payload["attachments"] = attachmentsSendGridStyle(attachments)
 	}
 
 	return payload

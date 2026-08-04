@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"encoding/base64"
 	"fmt"
 	"mime"
 	"net/http"
@@ -102,4 +103,114 @@ func SendWithAttachments(target Sender, body, title string, notifyType NotifyTyp
 	}
 
 	return sender.SendWithAttachments(body, title, notifyType, attachments)
+}
+
+// Base64 returns the attachment encoded the way a JSON email API expects it.
+func (a Attachment) Base64() string {
+	return base64.StdEncoding.EncodeToString(a.Data)
+}
+
+// FileName returns the attachment's name, falling back to a generated one so
+// a nameless attachment still arrives with something usable.
+func (a Attachment) FileName(index int, extension string) string {
+	if name := strings.TrimSpace(a.Name); name != "" {
+		return name
+	}
+
+	return fmt.Sprintf("file%03d%s", index+1, extension)
+}
+
+// The JSON email APIs all base64 the file and differ only in what they call
+// the fields. Each encoder below matches one service exactly; the differences
+// are not cosmetic, since a wrong key means the attachment is dropped by the
+// receiver without complaint.
+
+// attachmentsSendGridStyle is used by SendGrid and Resend.
+func attachmentsSendGridStyle(attachments []Attachment) []any {
+	out := make([]any, 0, len(attachments))
+	for index, attachment := range attachments {
+		out = append(out, map[string]any{
+			"content":  attachment.Base64(),
+			"filename": attachment.FileName(index, ".dat"),
+			// Upstream sends a fixed type here rather than the detected one.
+			"type":        "application/octet-stream",
+			"disposition": "attachment",
+		})
+	}
+
+	return out
+}
+
+// attachmentsMailerSendStyle omits the type field SendGrid sends.
+func attachmentsMailerSendStyle(attachments []Attachment) []any {
+	out := make([]any, 0, len(attachments))
+	for index, attachment := range attachments {
+		out = append(out, map[string]any{
+			"content":     attachment.Base64(),
+			"filename":    attachment.FileName(index, ".dat"),
+			"disposition": "attachment",
+		})
+	}
+
+	return out
+}
+
+// brevoValidExtensions are the only extensions Brevo accepts. It ignores the
+// content type entirely and decides from the filename, so anything else has
+// to be renamed or it is rejected outright.
+var brevoValidExtensions = map[string]struct{}{}
+
+func init() {
+	for _, ext := range strings.Fields(
+		"aif aifc aiff avi bmp cgm css csv doc docm docx eps ez flac gif htm " +
+			"html ics jpeg jpg m4a m4v mkv mobi mov mp3 mp4 mpeg mpg msg ods " +
+			"odt ogg pdf pkpass png ppt pptx pub rtf shtml tar tif tiff txt " +
+			"wav wma wmv xls xlsx xml zip") {
+		brevoValidExtensions[ext] = struct{}{}
+	}
+}
+
+func attachmentsBrevoStyle(attachments []Attachment) []any {
+	out := make([]any, 0, len(attachments))
+	for index, attachment := range attachments {
+		// .txt rather than .dat, which Brevo rejects.
+		name := attachment.FileName(index, ".txt")
+		ext := strings.ToLower(strings.TrimPrefix(filepath.Ext(name), "."))
+		if _, ok := brevoValidExtensions[ext]; !ok {
+			name += ".txt"
+		}
+
+		out = append(out, map[string]any{
+			"content": attachment.Base64(),
+			"name":    name,
+		})
+	}
+
+	return out
+}
+
+func attachmentsSparkPostStyle(attachments []Attachment) []any {
+	out := make([]any, 0, len(attachments))
+	for index, attachment := range attachments {
+		out = append(out, map[string]any{
+			"name": attachment.FileName(index, ".dat"),
+			"type": attachment.MimeType,
+			"data": attachment.Base64(),
+		})
+	}
+
+	return out
+}
+
+func attachmentsSMTP2GoStyle(attachments []Attachment) []any {
+	out := make([]any, 0, len(attachments))
+	for index, attachment := range attachments {
+		out = append(out, map[string]any{
+			"filename": attachment.FileName(index, ".dat"),
+			"fileblob": attachment.Base64(),
+			"mimetype": attachment.MimeType,
+		})
+	}
+
+	return out
 }

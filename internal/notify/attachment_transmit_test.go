@@ -75,3 +75,83 @@ func TestDiscordWithoutAttachmentStaysJSON(t *testing.T) {
 		t.Fatalf("a plain notification changed content type: %q", got)
 	}
 }
+
+// TestEmailProvidersEncodeAttachments pins the field names each service
+// expects. They differ — content/filename/type, content/name, name/type/data,
+// filename/fileblob/mimetype — and a wrong key is dropped by the receiver
+// without complaint, so this cannot be checked by eye.
+func TestEmailProvidersEncodeAttachments(t *testing.T) {
+	attachment := notify.Attachment{
+		Name:     "report.pdf",
+		MimeType: "application/pdf",
+		Data:     []byte("PDFDATA"),
+	}
+	encoded := "UERGREFUQQ==" // base64 of PDFDATA
+
+	cases := []struct {
+		name string
+		url  string
+		want []string
+	}{
+		{
+			"sendgrid", "sendgrid://key:sender@example.com/user@example.com",
+			[]string{`"attachments"`, `"content":"` + encoded + `"`, `"filename":"report.pdf"`,
+				`"type":"application/octet-stream"`, `"disposition":"attachment"`},
+		},
+		{
+			"resend", "resend://key:sender@example.com/user@example.com",
+			[]string{`"attachments"`, `"content":"` + encoded + `"`, `"filename":"report.pdf"`},
+		},
+		{
+			"brevo", "brevo://key:sender@example.com/user@example.com",
+			// Singular key, and a name rather than a filename.
+			[]string{`"attachment"`, `"content":"` + encoded + `"`, `"name":"report.pdf"`},
+		},
+		{
+			"sparkpost", "sparkpost://sender@example.com/key/user@example.com",
+			[]string{`"attachments"`, `"data":"` + encoded + `"`, `"name":"report.pdf"`,
+				`"type":"application/pdf"`},
+		},
+		{
+			"smtp2go", "smtp2go://key:sender@example.com/user@example.com",
+			[]string{`"attachments"`, `"fileblob":"` + encoded + `"`, `"filename":"report.pdf"`,
+				`"mimetype":"application/pdf"`},
+		},
+		{
+			"mailersend", "mailersend://key@example.com/user@example.com",
+			[]string{`"attachments"`, `"content":"` + encoded + `"`, `"filename":"report.pdf"`},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			parsed, err := notify.ParseURL(tc.url)
+			if err != nil {
+				t.Fatalf("parse url: %v", err)
+			}
+			target, err := notify.NewTarget(parsed)
+			if err != nil {
+				t.Fatalf("build target: %v", err)
+			}
+			sender, ok := target.(notify.AttachmentSender)
+			if !ok {
+				t.Fatal("provider does not accept attachments")
+			}
+
+			specs := testutil.CaptureGoRequests(t, func() error {
+				return sender.SendWithAttachments("body", "title", notify.NotifyInfo,
+					[]notify.Attachment{attachment})
+			})
+			if len(specs) == 0 {
+				t.Fatal("no request was sent")
+			}
+
+			compact := strings.ReplaceAll(specs[0].Body, " ", "")
+			for _, want := range tc.want {
+				if !strings.Contains(compact, want) {
+					t.Fatalf("request body is missing %s\nbody: %s", want, specs[0].Body)
+				}
+			}
+		})
+	}
+}
