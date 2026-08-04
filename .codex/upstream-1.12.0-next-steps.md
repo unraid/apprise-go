@@ -79,10 +79,26 @@ all of which had been invisible:
   character reference, which survives normalization. The recipient got an
   extra carriage return.
 
-Still not covered: `?roster=`, `?keepalive=` and SCRAM-PLUS channel binding
-(`?scramplus=`). The arguments parse and round-trip; the behaviour behind them
-does not exist. Nor is the plaintext mode reachable — neither implementation
-will authenticate over it.
+`?roster=` and `?scramplus=` now do something. Roster sends the contact-list
+request upstream sends and the fixture compares the count both ways, so neither
+side skipping it can pass as agreement. scramplus was the more interesting of
+the two: it defaults to *on* upstream, so the default path offered channel
+binding and this port did not — a server advertising SCRAM-SHA-256-PLUS got a
+weaker mechanism here than upstream would have given it. The claim that
+mellium could not do this was wrong; `mellium.im/sasl` has had ScramSha256Plus
+and ScramSha1Plus all along.
+
+Which mechanism is negotiated is still not compared against upstream. The
+capture server advertises PLAIN only, and discriminating scramplus on the wire
+needs a server that implements SCRAM with channel binding.
+
+`?keepalive=` remains unimplemented. Upstream holds one session open across
+sends where this port dials per notification; it is a lifecycle change rather
+than a stanza change, and the capture server would need to count connections
+rather than compare bytes.
+
+The plaintext mode is unreachable in both implementations — neither will
+authenticate over a socket in the clear — so there is nothing to close there.
 
 ### Matrix e2ee has one harness gap
 

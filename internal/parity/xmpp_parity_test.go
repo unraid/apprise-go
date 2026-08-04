@@ -42,6 +42,9 @@ func TestXMPPParity(t *testing.T) {
 		target string
 		title  string
 		body   string
+
+		// roster is how many contact-list requests the send should make.
+		roster int
 	}{
 		{
 			name: "body and title",
@@ -59,6 +62,15 @@ func TestXMPPParity(t *testing.T) {
 		{
 			name: "body only",
 			body: "just a body",
+		},
+		{
+			// ?roster=yes asks the server for the contact list before it
+			// sends anything.
+			name:   "roster request",
+			query:  "&roster=yes",
+			body:   "roster body",
+			title:  "roster title",
+			roster: 1,
 		},
 		{
 			// A # marks a multi-user chat, which changes the stanza type and
@@ -111,6 +123,7 @@ func TestXMPPParity(t *testing.T) {
 			}
 
 			pythonMessages := capture.WaitForMessages(t, 1, 15*time.Second)
+			pythonRoster := capture.RosterRequests()
 			capture.Reset()
 
 			parsed, err := notify.ParseURL(url)
@@ -142,6 +155,17 @@ func TestXMPPParity(t *testing.T) {
 						python.To, python.Type, python.Subject, python.Body,
 						goMsg.To, goMsg.Type, goMsg.Subject, goMsg.Body)
 				}
+			}
+
+			goRoster := capture.RosterRequests()
+			if pythonRoster != goRoster {
+				t.Fatalf("roster request count mismatch: python=%d go=%d",
+					pythonRoster, goRoster)
+			}
+			// Pin the expected count too, so both sides skipping it silently
+			// cannot pass as agreement.
+			if goRoster != tc.roster {
+				t.Fatalf("expected %d roster requests, got %d", tc.roster, goRoster)
 			}
 
 			// A matching pair of empty stanzas would also compare equal.

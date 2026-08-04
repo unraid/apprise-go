@@ -46,9 +46,10 @@ type XMPPCapture struct {
 	domain      string
 	certificate tls.Certificate
 
-	mu       sync.Mutex
-	messages []XMPPMessage
-	closed   bool
+	mu             sync.Mutex
+	messages       []XMPPMessage
+	rosterRequests int
+	closed         bool
 }
 
 // StartXMPPCapture listens on a free port and serves until the test ends.
@@ -93,6 +94,7 @@ func (c *XMPPCapture) Reset() {
 	defer c.mu.Unlock()
 
 	c.messages = nil
+	c.rosterRequests = 0
 }
 
 func (c *XMPPCapture) Close() error {
@@ -116,6 +118,21 @@ func (c *XMPPCapture) serve() {
 		}
 		go c.handle(conn)
 	}
+}
+
+// RosterRequests reports how many roster queries arrived.
+func (c *XMPPCapture) RosterRequests() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	return c.rosterRequests
+}
+
+func (c *XMPPCapture) recordRoster() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.rosterRequests++
 }
 
 func (c *XMPPCapture) record(message XMPPMessage) {
@@ -279,6 +296,7 @@ type xmppIQ struct {
 		Resource string `xml:"resource"`
 	} `xml:"urn:ietf:params:xml:ns:xmpp-bind bind"`
 	Session *struct{} `xml:"urn:ietf:params:xml:ns:xmpp-session session"`
+	Roster  *struct{} `xml:"jabber:iq:roster query"`
 }
 
 type xmppPresence struct {
@@ -314,6 +332,15 @@ func (c *XMPPCapture) serveStanzas(conn net.Conn, decoder *xml.Decoder) {
 			}
 
 			switch {
+			case iq.Roster != nil:
+				// ?roster=yes asks for the contact list before sending. The
+				// request is what the two implementations are compared on,
+				// so it is recorded rather than only answered.
+				c.recordRoster()
+				_, err = fmt.Fprintf(conn,
+					`<iq type='result' id='%s'><query xmlns='jabber:iq:roster'/></iq>`,
+					iq.ID)
+
 			case iq.Bind != nil:
 				resource := iq.Bind.Resource
 				if resource == "" {

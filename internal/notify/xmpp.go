@@ -57,9 +57,17 @@ type XMPPTarget struct {
 	mode       string
 	verify     bool
 	useSubject bool
-	nickname   string
-	timeout    time.Duration
-	targets    []xmppRecipient
+
+	// roster asks the server for the contact list before sending, which some
+	// deployments want as a liveness check on the session.
+	roster bool
+
+	// scramPlus offers the channel-binding SASL mechanisms. It is on by
+	// default, matching upstream, so turning it off is the deviation.
+	scramPlus bool
+	nickname  string
+	timeout   time.Duration
+	targets   []xmppRecipient
 }
 
 func NewXMPPTarget(target *ParsedURL) (*XMPPTarget, error) {
@@ -130,6 +138,8 @@ func NewXMPPTarget(target *ParsedURL) (*XMPPTarget, error) {
 		mode:       mode,
 		verify:     parseBoolWithDefault(target.Query["verify"], true),
 		useSubject: parseBoolWithDefault(target.Query["subject"], false),
+		roster:     parseBoolWithDefault(target.Query["roster"], false),
+		scramPlus:  parseBoolWithDefault(target.Query["scramplus"], true),
 		nickname:   strings.TrimSpace(target.Query["name"]),
 		timeout:    15 * time.Second,
 		targets:    targets,
@@ -157,6 +167,16 @@ func (x *XMPPTarget) Send(body, title string, notifyType NotifyType) error {
 	defer func() {
 		_ = session.Close()
 	}()
+
+	if x.roster {
+		// Upstream asks for the roster before it sends anything, and ignores
+		// a failure; the request is the observable part, not the reply.
+		if err := session.Encode(ctx, xmppRosterQuery{
+			IQ: stanza.IQ{Type: stanza.GetIQ},
+		}); err != nil {
+			return fmt.Errorf("xmpp roster request failed: %w", err)
+		}
+	}
 
 	// A subject is only sent when asked for; otherwise the title is folded
 	// into the body, the way every other notifier here handles it.
@@ -202,6 +222,35 @@ func (x *XMPPTarget) Send(body, title string, notifyType NotifyType) error {
 
 // xmppMessage is a message stanza with the subject and body children; the
 // library models the envelope but leaves the payload to the caller.
+// xmppSASLMechanisms lists the authentication mechanisms to offer, strongest
+// first. The server chooses from what it advertises, so this is a preference
+// rather than a demand.
+//
+// Channel binding is included unless ?scramplus=no turns it off, which matches
+// upstream's default. A server that advertises a -PLUS mechanism but computes
+// the binding differently is the reason to be able to turn it off at all.
+func xmppSASLMechanisms(scramPlus bool) []sasl.Mechanism {
+	if !scramPlus {
+		return []sasl.Mechanism{sasl.ScramSha256, sasl.ScramSha1, sasl.Plain}
+	}
+
+	return []sasl.Mechanism{
+		sasl.ScramSha256Plus, sasl.ScramSha1Plus,
+		sasl.ScramSha256, sasl.ScramSha1, sasl.Plain,
+	}
+}
+
+// xmppRosterQuery is the contact-list request ?roster=yes makes before the
+// first message.
+type xmppRosterQuery struct {
+	stanza.IQ
+
+	XMLName xml.Name  `xml:"jabber:client iq"`
+	Query   xmppEmpty `xml:"jabber:iq:roster query"`
+}
+
+type xmppEmpty struct{}
+
 type xmppMessage struct {
 	stanza.Message
 
@@ -235,6 +284,8 @@ func (x *XMPPTarget) dial(ctx context.Context) (*xmpp.Session, error) {
 		return nil, fmt.Errorf("xmpp connect to %s failed: %w", address, err)
 	}
 
+	mechanisms := xmppSASLMechanisms(x.scramPlus)
+
 	features := []xmpp.StreamFeature{
 		xmpp.BindResource(),
 		// SCRAM before PLAIN so a password is never sent in the clear when
@@ -246,7 +297,7 @@ func (x *XMPPTarget) dial(ctx context.Context) (*xmpp.Session, error) {
 		// unencrypted_plain and unencrypted_scram to off and apprise does
 		// not turn them on — so both refuse to send credentials in the
 		// clear, and relaxing it here would be a divergence, not a fix.
-		xmpp.SASL("", x.password, sasl.ScramSha256, sasl.ScramSha1, sasl.Plain),
+		xmpp.SASL("", x.password, mechanisms...),
 	}
 	if x.mode == xmppModeStartTLS {
 		features = append([]xmpp.StreamFeature{xmpp.StartTLS(tlsConfig)}, features...)
@@ -550,4 +601,17 @@ func init() {
 // about the target tells them apart.
 func (x *XMPPTarget) SecureMode() string {
 	return x.mode
+}
+
+// XMPPSASLMechanismNames lists the mechanism names ?scramplus= selects between.
+// Exported for tests: the option changes what the client will accept, which is
+// otherwise invisible from outside the dial.
+func XMPPSASLMechanismNames(scramPlus bool) []string {
+	mechanisms := xmppSASLMechanisms(scramPlus)
+	names := make([]string, 0, len(mechanisms))
+	for _, mechanism := range mechanisms {
+		names = append(names, mechanism.Name)
+	}
+
+	return names
 }

@@ -66,3 +66,49 @@ func TestXMPPSecureModeMatchesUpstream(t *testing.T) {
 		t.Fatal("an unrecognized secure mode was accepted")
 	}
 }
+
+// TestXMPPScramPlusControlsChannelBinding covers the ?scramplus= option.
+//
+// Upstream defaults it to on, so this is not only an option nobody sets: the
+// default path offers channel-binding mechanisms and this port did not, which
+// meant a server advertising SCRAM-SHA-256-PLUS got a weaker mechanism than
+// upstream would have given it.
+//
+// The capture server advertises PLAIN only, so which mechanism is actually
+// negotiated is not compared against upstream — this checks what the client is
+// willing to offer, which is the part the option controls.
+func TestXMPPScramPlusControlsChannelBinding(t *testing.T) {
+	withPlus := notify.XMPPSASLMechanismNames(true)
+	withoutPlus := notify.XMPPSASLMechanismNames(false)
+
+	for _, name := range []string{"SCRAM-SHA-256-PLUS", "SCRAM-SHA-1-PLUS"} {
+		if !contains(withPlus, name) {
+			t.Errorf("%s is not offered by default, but upstream offers it", name)
+		}
+		if contains(withoutPlus, name) {
+			t.Errorf("%s is still offered with scramplus=no", name)
+		}
+	}
+
+	// Turning channel binding off must not remove ordinary authentication.
+	for _, name := range []string{"SCRAM-SHA-256", "SCRAM-SHA-1", "PLAIN"} {
+		if !contains(withoutPlus, name) {
+			t.Errorf("%s should still be offered with scramplus=no", name)
+		}
+	}
+
+	// Strongest first: a server offering both should get the bound variant.
+	if withPlus[0] != "SCRAM-SHA-256-PLUS" {
+		t.Errorf("channel binding is not preferred: %v", withPlus)
+	}
+}
+
+func contains(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+
+	return false
+}
