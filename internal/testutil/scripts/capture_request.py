@@ -556,10 +556,18 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
         )
         prepared = self.prepare_request(req)
         req_body = prepared.body
+        body_b64 = None
         if req_body is None:
             body_text = ""
         elif isinstance(req_body, bytes):
-            body_text = req_body.decode("utf-8", "replace")
+            try:
+                body_text = req_body.decode("utf-8")
+            except UnicodeDecodeError:
+                # A binary body — an image attachment, say — cannot survive a
+                # lossy decode, and a golden holding the mangled text would
+                # never match a live request. Keep the bytes alongside it.
+                body_text = req_body.decode("utf-8", "replace")
+                body_b64 = base64.b64encode(req_body).decode("ascii")
         else:
             body_text = str(req_body)
 
@@ -574,14 +582,15 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
             except (TypeError, ValueError):
                 pass
 
-        captured.append(
-            {
-                "method": prepared.method,
-                "url": prepared.url,
-                "headers": normalize_headers(prepared.headers, explicit_user_agent),
-                "body": body_text,
-            }
-        )
+        record = {
+            "method": prepared.method,
+            "url": prepared.url,
+            "headers": normalize_headers(prepared.headers, explicit_user_agent),
+            "body": body_text,
+        }
+        if body_b64 is not None:
+            record["body_b64"] = body_b64
+        captured.append(record)
 
         response = requests.Response()
         response.status_code = 200

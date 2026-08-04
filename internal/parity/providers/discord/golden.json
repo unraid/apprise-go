@@ -73,10 +73,10 @@
         "url": "https://discord.com/api/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
       },
       {
-        "body": "--25d764ef8ed05addff132e4e44be4e8c\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n\r\n{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\"}\r\n--25d764ef8ed05addff132e4e44be4e8c\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"report.pdf\"\r\nContent-Type: application/pdf\r\n\r\nPDFDATA\r\n--25d764ef8ed05addff132e4e44be4e8c--\r\n",
+        "body": "--a3c45d2beceb3e89e1931bd8baa6b2aa\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n\r\n{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\"}\r\n--a3c45d2beceb3e89e1931bd8baa6b2aa\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"report.pdf\"\r\nContent-Type: application/pdf\r\n\r\nPDFDATA\r\n--a3c45d2beceb3e89e1931bd8baa6b2aa--\r\n",
         "headers": {
           "accept": "*/*",
-          "content-type": "multipart/form-data; boundary=25d764ef8ed05addff132e4e44be4e8c",
+          "content-type": "multipart/form-data; boundary=a3c45d2beceb3e89e1931bd8baa6b2aa",
           "user-agent": "Apprise"
         },
         "method": "POST",
@@ -98,10 +98,10 @@
         "url": "https://discord.com/api/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
       },
       {
-        "body": "--d80ac129cb827dd477e3bf25ae9fdcf7\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n\r\n{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\"}\r\n--d80ac129cb827dd477e3bf25ae9fdcf7\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"report.pdf\"\r\nContent-Type: application/pdf\r\n\r\nPDFDATA\r\n--d80ac129cb827dd477e3bf25ae9fdcf7\r\nContent-Disposition: form-data; name=\"files[1]\"; filename=\"notes.txt\"\r\nContent-Type: text/plain\r\n\r\nplain text attachment\n\r\n--d80ac129cb827dd477e3bf25ae9fdcf7--\r\n",
+        "body": "--6196c7dfe903fde0f83e82935788e150\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n\r\n{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\"}\r\n--6196c7dfe903fde0f83e82935788e150\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"report.pdf\"\r\nContent-Type: application/pdf\r\n\r\nPDFDATA\r\n--6196c7dfe903fde0f83e82935788e150\r\nContent-Disposition: form-data; name=\"files[1]\"; filename=\"notes.txt\"\r\nContent-Type: text/plain\r\n\r\nplain text attachment\n\r\n--6196c7dfe903fde0f83e82935788e150--\r\n",
         "headers": {
           "accept": "*/*",
-          "content-type": "multipart/form-data; boundary=d80ac129cb827dd477e3bf25ae9fdcf7",
+          "content-type": "multipart/form-data; boundary=6196c7dfe903fde0f83e82935788e150",
           "user-agent": "Apprise"
         },
         "method": "POST",

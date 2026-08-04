@@ -177,3 +177,44 @@ func formAttachmentField(attachAs string, index int) string {
 
 	return name
 }
+
+// singleFileAttachmentBody builds a multipart body carrying form fields plus
+// one file under the given field name. Pushover and the services shaped like
+// it send exactly one attachment per request.
+func singleFileAttachmentBody(
+	values url.Values,
+	field string,
+	attachment Attachment,
+	withType bool,
+) (body string, contentType string, err error) {
+	var buffer bytes.Buffer
+	writer := multipart.NewWriter(&buffer)
+
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		for _, value := range values[key] {
+			if err := writer.WriteField(key, value); err != nil {
+				return "", "", err
+			}
+		}
+	}
+
+	part, err := writer.CreatePart(attachmentPartHeader(field, attachment, withType))
+	if err != nil {
+		return "", "", err
+	}
+	if _, err := part.Write(attachment.Data); err != nil {
+		return "", "", err
+	}
+
+	if err := writer.Close(); err != nil {
+		return "", "", err
+	}
+
+	return buffer.String(), writer.FormDataContentType(), nil
+}

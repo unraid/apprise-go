@@ -152,7 +152,7 @@ func NewPushoverTarget(target *ParsedURL) (*PushoverTarget, error) {
 }
 
 func (p *PushoverTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	specs, err := p.buildRequests(body, title, notifyType)
+	specs, err := p.buildRequests(body, title, notifyType, nil)
 	if err != nil {
 		return RequestSpec{}, err
 	}
@@ -161,7 +161,11 @@ func (p *PushoverTarget) BuildRequest(body, title string, notifyType NotifyType)
 }
 
 func (p *PushoverTarget) Send(body, title string, notifyType NotifyType) error {
-	specs, err := p.buildRequests(body, title, notifyType)
+	return p.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (p *PushoverTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	specs, err := p.buildRequests(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -177,7 +181,7 @@ func (p *PushoverTarget) Send(body, title string, notifyType NotifyType) error {
 
 // buildRequests returns one request carrying every device and one request per
 // group, since a group key is supplied in place of the user key.
-func (p *PushoverTarget) buildRequests(body, title string, notifyType NotifyType) ([]RequestSpec, error) {
+func (p *PushoverTarget) buildRequests(body, title string, notifyType NotifyType, attachments []Attachment) ([]RequestSpec, error) {
 	_ = notifyType
 
 	resolvedTitle := title
@@ -251,12 +255,43 @@ func (p *PushoverTarget) buildRequests(body, title string, notifyType NotifyType
 	}
 
 	build := func(values url.Values) RequestSpec {
-		return RequestSpec{
+		requestBody := values.Encode()
+		spec := RequestSpec{
 			Method:  "POST",
 			URL:     pushoverURL,
 			Headers: headers,
-			Body:    values.Encode(),
+			Body:    requestBody,
 		}
+
+		// Pushover accepts images only, and quietly ignores anything else
+		// rather than failing, so a PDF simply never arrives.
+		usable := []Attachment{}
+		for _, attachment := range attachments {
+			if strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+				usable = append(usable, attachment)
+			}
+		}
+		if len(usable) == 0 {
+			return spec
+		}
+
+		// Pushover takes one file per request, under a fixed field name and
+		// with no content type on the part.
+		multipartBody, contentType, err := singleFileAttachmentBody(
+			values, "attachment", usable[0], false)
+		if err != nil {
+			return spec
+		}
+
+		partHeaders := map[string]string{}
+		for key, value := range headers {
+			partHeaders[key] = value
+		}
+		partHeaders["Content-Type"] = contentType
+		spec.Headers = partHeaders
+		spec.Body = multipartBody
+
+		return spec
 	}
 
 	var specs []RequestSpec

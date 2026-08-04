@@ -35,11 +35,11 @@
     "name": "attachment",
     "requests": [
       {
-        "body": "--af42df83c7c1557408ee268c4ba55bc5\r\nContent-Disposition: form-data; name=\"o:skip-verification\"\r\n\r\nFalse\r\n--af42df83c7c1557408ee268c4ba55bc5\r\nContent-Disposition: form-data; name=\"from\"\r\n\r\nApprise <sender@example.com>\r\n--af42df83c7c1557408ee268c4ba55bc5\r\nContent-Disposition: form-data; name=\"subject\"\r\n\r\ntitle\r\n--af42df83c7c1557408ee268c4ba55bc5\r\nContent-Disposition: form-data; name=\"html\"\r\n\r\nbody\r\n--af42df83c7c1557408ee268c4ba55bc5\r\nContent-Disposition: form-data; name=\"to\"\r\n\r\nuser@example.com\r\n--af42df83c7c1557408ee268c4ba55bc5\r\nContent-Disposition: form-data; name=\"attachment[0]\"; filename=\"report.pdf\"\r\n\r\nPDFDATA\r\n--af42df83c7c1557408ee268c4ba55bc5--\r\n",
+        "body": "--7761b083bed4738615c4917ff7b4f591\r\nContent-Disposition: form-data; name=\"o:skip-verification\"\r\n\r\nFalse\r\n--7761b083bed4738615c4917ff7b4f591\r\nContent-Disposition: form-data; name=\"from\"\r\n\r\nApprise <sender@example.com>\r\n--7761b083bed4738615c4917ff7b4f591\r\nContent-Disposition: form-data; name=\"subject\"\r\n\r\ntitle\r\n--7761b083bed4738615c4917ff7b4f591\r\nContent-Disposition: form-data; name=\"html\"\r\n\r\nbody\r\n--7761b083bed4738615c4917ff7b4f591\r\nContent-Disposition: form-data; name=\"to\"\r\n\r\nuser@example.com\r\n--7761b083bed4738615c4917ff7b4f591\r\nContent-Disposition: form-data; name=\"attachment[0]\"; filename=\"report.pdf\"\r\n\r\nPDFDATA\r\n--7761b083bed4738615c4917ff7b4f591--\r\n",
         "headers": {
           "accept": "application/json",
           "authorization": "Basic YXBpOmFwaWtleQ==",
-          "content-type": "multipart/form-data; boundary=af42df83c7c1557408ee268c4ba55bc5",
+          "content-type": "multipart/form-data; boundary=7761b083bed4738615c4917ff7b4f591",
           "user-agent": "Apprise"
         },
         "method": "POST",

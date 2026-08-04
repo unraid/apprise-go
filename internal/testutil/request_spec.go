@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"path/filepath"
 	"strings"
@@ -10,8 +11,33 @@ import (
 )
 
 type pythonCapturePayload struct {
-	Requests []notify.RequestSpec `json:"requests"`
-	Success  *bool                `json:"success"`
+	Requests []capturedRequest `json:"requests"`
+	Success  *bool             `json:"success"`
+}
+
+// capturedRequest is a RequestSpec that may also carry its body as base64.
+// A binary body cannot be represented as JSON text without being mangled, so
+// the capture records both and the base64 is authoritative.
+type capturedRequest struct {
+	notify.RequestSpec
+
+	BodyBase64 string `json:"body_b64"`
+}
+
+// specs returns the requests with any base64 body decoded back to bytes.
+func (p pythonCapturePayload) specs() []notify.RequestSpec {
+	out := make([]notify.RequestSpec, 0, len(p.Requests))
+	for _, request := range p.Requests {
+		spec := request.RequestSpec
+		if request.BodyBase64 != "" {
+			if decoded, err := base64.StdEncoding.DecodeString(request.BodyBase64); err == nil {
+				spec.Body = string(decoded)
+			}
+		}
+		out = append(out, spec)
+	}
+
+	return out
 }
 
 func CapturePythonRequests(t *testing.T, url, body, title string) []notify.RequestSpec {
@@ -53,7 +79,8 @@ func CapturePythonRequestsWithFormatAndTypeResult(t *testing.T, url, body, title
 	}
 
 	payload := parsePythonCapturePayload(t, stdout)
-	return payload.Requests, payload.Success
+
+	return payload.specs(), payload.Success
 }
 
 func CapturePythonRequestsResult(t *testing.T, url, body, title string) ([]notify.RequestSpec, *bool) {
@@ -66,7 +93,8 @@ func CapturePythonRequestsResult(t *testing.T, url, body, title string) ([]notif
 	}
 
 	payload := parsePythonCapturePayload(t, stdout)
-	return payload.Requests, payload.Success
+
+	return payload.specs(), payload.Success
 }
 
 func CapturePythonRequestsWithTypeResult(t *testing.T, url, body, title string, notifyType notify.NotifyType, attachments ...string) ([]notify.RequestSpec, *bool) {
@@ -89,7 +117,8 @@ func CapturePythonRequestsWithTypeResult(t *testing.T, url, body, title string, 
 	}
 
 	payload := parsePythonCapturePayload(t, stdout)
-	return payload.Requests, payload.Success
+
+	return payload.specs(), payload.Success
 }
 
 func parsePythonCapturePayload(t *testing.T, stdout string) pythonCapturePayload {
@@ -100,12 +129,13 @@ func parsePythonCapturePayload(t *testing.T, stdout string) pythonCapturePayload
 		return payload
 	}
 
-	var specs []notify.RequestSpec
+	var specs []capturedRequest
 	if err := json.Unmarshal([]byte(stdout), &specs); err != nil {
 		t.Fatalf("parse request specs: %v (output: %s)", err, strings.TrimSpace(stdout))
 	}
 
 	payload.Requests = specs
+
 	return payload
 }
 
@@ -136,5 +166,5 @@ func CapturePythonRequestsWithAttachments(
 		t.Fatalf("capture request with attachments failed: %v (stderr: %s)", err, strings.TrimSpace(stderr))
 	}
 
-	return parsePythonCapturePayload(t, stdout).Requests
+	return parsePythonCapturePayload(t, stdout).specs()
 }

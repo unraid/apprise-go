@@ -40,7 +40,7 @@ func TestProviderRequestParity(t *testing.T) {
 				pythonSpecs, pythonSuccess := testutil.CapturePythonRequestsWithTypeResult(
 					t, c.URL, c.Body, c.Title, notifyType, c.Attachments...)
 				if expected, ok := goldenByName[c.Name]; ok {
-					assertRequestSpecSequenceMatchesExcept(t, pythonSpecs, expected.Requests, def.VolatileHeaders)
+					assertRequestSpecSequenceMatchesExcept(t, pythonSpecs, expected.specs(t), def.VolatileHeaders)
 				} else {
 					t.Fatalf("missing golden case for %s/%s", name, c.Name)
 				}

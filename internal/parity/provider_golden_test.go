@@ -1,6 +1,7 @@
 package parity
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -12,8 +13,37 @@ import (
 )
 
 type goldenCase struct {
-	Name     string               `json:"name"`
-	Requests []notify.RequestSpec `json:"requests"`
+	Name     string          `json:"name"`
+	Requests []goldenRequest `json:"requests"`
+}
+
+// goldenRequest is a RequestSpec that may also carry the body as base64.
+// A binary body — an image attachment — cannot be stored as JSON text without
+// being mangled, so the capture records both and the base64 wins.
+type goldenRequest struct {
+	notify.RequestSpec
+
+	BodyBase64 string `json:"body_b64"`
+}
+
+// specs returns the requests with any base64 body decoded back into bytes.
+func (g goldenCase) specs(t *testing.T) []notify.RequestSpec {
+	t.Helper()
+
+	out := make([]notify.RequestSpec, 0, len(g.Requests))
+	for _, request := range g.Requests {
+		spec := request.RequestSpec
+		if request.BodyBase64 != "" {
+			decoded, err := base64.StdEncoding.DecodeString(request.BodyBase64)
+			if err != nil {
+				t.Fatalf("golden %s has an undecodable body_b64: %v", g.Name, err)
+			}
+			spec.Body = string(decoded)
+		}
+		out = append(out, spec)
+	}
+
+	return out
 }
 
 func TestProviderGoldenRequests(t *testing.T) {
@@ -64,7 +94,7 @@ func TestProviderGoldenRequests(t *testing.T) {
 					return notify.SendWithAttachments(target, c.Body, c.Title, notifyType, attachments)
 				})
 
-				assertRequestSpecSequenceMatchesExcept(t, expected.Requests, goSpecs, def.VolatileHeaders)
+				assertRequestSpecSequenceMatchesExcept(t, expected.specs(t), goSpecs, def.VolatileHeaders)
 			})
 		}
 	}

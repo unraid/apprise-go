@@ -33,5 +33,25 @@
     "body": "body",
     "title": "apprise parity",
     "type": "info"
+  },
+  {
+    "name": "attachment",
+    "url": "pover://userkey123@token123",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
+  },
+  {
+    "name": "attachment-unsupported-type",
+    "url": "pover://userkey123@token123",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf"
+    ]
   }
 ]
