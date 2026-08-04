@@ -60,6 +60,9 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	} else if strings.HasSuffix(req.URL.Path, "/api/v4/files") {
 		responseBody = `{"file_infos":[{"id":"fileid123"}]}`
 		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/xrpc/com.atproto.repo.uploadBlob") {
+		responseBody = `{"blob":{"$type":"blob","ref":{"$link":"bafyblob123"},"mimeType":"image/png","size":70}}`
+		contentType = "application/json"
 	} else if req.URL.Path == "/api/v1/media" {
 		responseBody = `{"id":"110001"}`
 		contentType = "application/json"

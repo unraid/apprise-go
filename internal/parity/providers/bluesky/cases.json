@@ -10,5 +10,15 @@
     "url": "bluesky://handle@token",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "attachment",
+    "url": "bsky://handle@token",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
   }
 ]

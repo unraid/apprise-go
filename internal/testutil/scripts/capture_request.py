@@ -843,6 +843,11 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
         elif parsed.path.endswith("/api/v4/files"):
             # Mattermost answers an upload with the file ids a post uses.
             response._content = b'{"file_infos":[{"id":"fileid123"}]}'
+        elif parsed.path.endswith("/xrpc/com.atproto.repo.uploadBlob"):
+            response._content = (
+                b'{"blob":{"$type":"blob","ref":{"$link":"bafyblob123"},'
+                b'"mimeType":"image/png","size":70}}'
+            )
         elif parsed.path == "/api/v1/media":
             # Mastodon answers a media upload with the id a status references.
             response._content = b'{"id":"110001"}'
