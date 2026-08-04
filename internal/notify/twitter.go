@@ -10,6 +10,13 @@ import (
 
 // X API v2 endpoints; v1.1 was retired upstream in 1.12.0.
 const twitterTweetURL = "https://api.twitter.com/2/tweets"
+
+// Media is uploaded first and the tweet references the ids it gets back.
+const twitterMediaURL = "https://api.x.com/2/media/upload"
+
+// Twitter batches up to four still images into one tweet; a gif has to stand
+// alone, which breaks a run of images into separate tweets around it.
+const twitterImageBatchSize = 4
 const twitterWhoamiURL = "https://api.twitter.com/2/users/me"
 const twitterLookupURL = "https://api.twitter.com/2/users/by"
 const twitterDMURLTemplate = "https://api.twitter.com/2/dm_conversations/with/%s/messages"
@@ -21,6 +28,7 @@ type TwitterTarget struct {
 	accessSecret   string
 	mode           string
 	targets        []string
+	batch          bool
 }
 
 func NewTwitterTarget(target *ParsedURL) (*TwitterTarget, error) {
@@ -74,6 +82,7 @@ func NewTwitterTarget(target *ParsedURL) (*TwitterTarget, error) {
 		accessSecret:   accessSecret,
 		mode:           strings.ToLower(mode),
 		targets:        targets,
+		batch:          parseBoolWithDefault(target.Query["batch"], true),
 	}, nil
 }
 
@@ -85,22 +94,172 @@ func (t *TwitterTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (t *TwitterTarget) Send(body, title string, notifyType NotifyType) error {
-	if t.mode == "tweet" {
+	return t.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (t *TwitterTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	_ = notifyType
+
+	if t.mode == "dm" {
+		return t.sendDM(body, title)
+	}
+	if t.mode != "tweet" {
+		return fmt.Errorf("unsupported mode")
+	}
+
+	batches, err := t.uploadMedia(attachments)
+	if err != nil {
+		return err
+	}
+
+	if len(batches) == 0 {
 		spec, err := t.tweetRequest(body, title)
 		if err != nil {
 			return err
 		}
+
 		return SendRequest(spec)
 	}
-	if t.mode == "dm" {
-		return t.sendDM(body, title)
+
+	message := mergeTitleBody(title, body)
+	for index, mediaIDs := range batches {
+		text := message
+		// Only the first tweet carries the message; the rest are numbered so
+		// a reader can tell they belong together.
+		if index > 0 || message == "" {
+			text = fmt.Sprintf("%02d/%02d", index+1, len(batches))
+		}
+
+		spec, err := t.tweetRequestWithMedia(text, mediaIDs)
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
 	}
-	return fmt.Errorf("unsupported mode")
+
+	return nil
+}
+
+// uploadMedia uploads each image and groups the ids into the tweets they will
+// be posted in.
+func (t *TwitterTarget) uploadMedia(attachments []Attachment) ([][]string, error) {
+	batchSize := 1
+	if t.batch {
+		batchSize = twitterImageBatchSize
+	}
+
+	batches := [][]string{}
+	current := []string{}
+
+	for index, attachment := range attachments {
+		// Images only; anything else is ignored rather than refused.
+		if !strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+			continue
+		}
+
+		mediaID, err := t.uploadOne(attachment, index)
+		if err != nil {
+			return nil, err
+		}
+
+		// Only PNG and JPEG batch; a gif stands alone and splits the run.
+		if !twitterBatchablePattern.MatchString(attachment.MimeType) {
+			if len(current) > 0 {
+				batches = append(batches, current)
+				current = nil
+			}
+			batches = append(batches, []string{mediaID})
+			continue
+		}
+
+		current = append(current, mediaID)
+		if len(current) >= batchSize {
+			batches = append(batches, current)
+			current = nil
+		}
+	}
+
+	if len(current) > 0 {
+		batches = append(batches, current)
+	}
+
+	return batches, nil
+}
+
+var twitterBatchablePattern = regexp.MustCompile(`(?i)^image/(png|jpe?g)`)
+
+// uploadOne posts a single image and returns the id a tweet references.
+func (t *TwitterTarget) uploadOne(attachment Attachment, index int) (string, error) {
+	category := "tweet_image"
+	if t.mode == "dm" {
+		category = "dm_image"
+	}
+
+	fields := url.Values{}
+	fields.Set("media_category", category)
+
+	// Twitter is handed a filename and a handle with no type, so the part
+	// carries no content type of its own.
+	requestBody, contentType, err := singleFileAttachmentBody(
+		fields, "media",
+		Attachment{
+			Name: attachment.FileName(index, ".dat"),
+			Data: attachment.Data,
+		}, false)
+	if err != nil {
+		return "", err
+	}
+
+	auth, err := buildOAuth1Header(
+		"POST",
+		twitterMediaURL,
+		nil,
+		t.consumerKey, t.consumerSecret, t.accessKey, t.accessSecret,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	var response struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := doJSONRequest(RequestSpec{
+		Method: "POST",
+		URL:    twitterMediaURL,
+		Headers: map[string]string{
+			"User-Agent":    "Apprise",
+			"Content-Type":  contentType,
+			"Authorization": auth,
+		},
+		Body: requestBody,
+	}, &response); err != nil {
+		return "", err
+	}
+	if response.Data.ID == "" {
+		return "", fmt.Errorf("twitter media upload returned no id")
+	}
+
+	return response.Data.ID, nil
 }
 
 func (t *TwitterTarget) tweetRequest(body, title string) (RequestSpec, error) {
-	message := mergeTitleBody(title, body)
-	data, err := json.Marshal(map[string]string{"text": message})
+	return t.tweetRequestWithMedia(mergeTitleBody(title, body), nil)
+}
+
+// tweetRequestWithMedia posts already prepared text, optionally referencing
+// media that has been uploaded.
+func (t *TwitterTarget) tweetRequestWithMedia(message string, mediaIDs []string) (RequestSpec, error) {
+	payload := map[string]any{"text": message}
+	if len(mediaIDs) > 0 {
+		// The ids are nested rather than sitting at the top level.
+		payload["media"] = map[string]any{"media_ids": mediaIDs}
+	}
+
+	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
 	}

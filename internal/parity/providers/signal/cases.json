@@ -12,5 +12,15 @@
     "body": "hello",
     "title": "",
     "type": "warning"
+  },
+  {
+    "name": "attachment",
+    "url": "signal://user:pass@signal.local:8080/15551231234/15557654321",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
   }
 ]

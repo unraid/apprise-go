@@ -843,6 +843,8 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
         elif parsed.path.endswith("/api/v4/files"):
             # Mattermost answers an upload with the file ids a post uses.
             response._content = b'{"file_infos":[{"id":"fileid123"}]}'
+        elif parsed.netloc == "api.x.com" and parsed.path == "/2/media/upload":
+            response._content = b'{"data":{"id":"1234567890","media_key":"3_1234567890"}}'
         elif parsed.path.endswith("/xrpc/com.atproto.repo.uploadBlob"):
             response._content = (
                 b'{"blob":{"$type":"blob","ref":{"$link":"bafyblob123"},'

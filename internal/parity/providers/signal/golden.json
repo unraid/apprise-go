@@ -29,5 +29,21 @@
         "url": "https://signal.local/v2/send"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "{\"message\": \"title\\r\\nbody\", \"number\": \"+15551231234\", \"text_mode\": \"normal\", \"recipients\": [\"+15557654321\"], \"base64_attachments\": [\"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\"]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://signal.local:8080/v2/send"
+      }
+    ]
   }
 ]
