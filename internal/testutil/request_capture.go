@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/unraid/apprise-go/internal/notify"
@@ -39,6 +40,19 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		Headers: headers,
 		Body:    body,
 	})
+
+	// A test may ask for the first N requests to fail, which is the only way
+	// to reach a retry path: every mock here answers 200, so neither
+	// implementation ever re-sends without it.
+	if failBudget.Add(-1) >= 0 {
+		return &http.Response{
+			StatusCode: http.StatusInternalServerError,
+			Status:     "500 Internal Server Error",
+			Body:       io.NopCloser(strings.NewReader(`{"error":"parity forced failure"}`)),
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Request:    req,
+		}, nil
+	}
 
 	responseBody := "ok"
 	contentType := "text/plain"
@@ -336,4 +350,17 @@ func CaptureGoRequestsResult(t *testing.T, send func() error) ([]notify.RequestS
 
 	err := send()
 	return capture.requests, err
+}
+
+// failBudget counts down the requests that must fail before the mocks answer
+// normally. It is a counter rather than a flag so a retry can be observed
+// succeeding on the attempt after its budget runs out.
+var failBudget atomic.Int64
+
+// FailNextRequests makes the next count requests answer 500. The returned
+// function clears the budget, so a test cannot leak one into the next.
+func FailNextRequests(count int) func() {
+	failBudget.Store(int64(count))
+
+	return func() { failBudget.Store(0) }
 }

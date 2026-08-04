@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -164,4 +165,32 @@ func parsePythonCapturePayload(t *testing.T, stdout string) pythonCapturePayload
 	payload.Requests = specs
 
 	return payload
+}
+
+// CapturePythonRequestsWithFailures captures what upstream sends when the
+// first failures requests are answered with a 500, so a retry path can be
+// compared. Without it every mock answers 200 and nothing re-sends.
+func CapturePythonRequestsWithFailures(
+	t *testing.T,
+	url, body, title string,
+	failures int,
+) []notify.RequestSpec {
+	t.Helper()
+
+	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
+	args := []string{
+		"--url", url,
+		"--body", body,
+		"--title", title,
+		"--type", string(notify.NotifyInfo),
+		"--fail-first", strconv.Itoa(failures),
+	}
+
+	stdout, stderr, err := RunPythonScript(t, script, args...)
+	if err != nil {
+		t.Fatalf("capture request with failures failed: %v (stderr: %s)",
+			err, strings.TrimSpace(stderr))
+	}
+
+	return parsePythonCapturePayload(t, stdout).specs()
 }

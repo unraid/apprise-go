@@ -3,7 +3,9 @@ package notify
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Sender interface {
@@ -81,14 +83,37 @@ func DispatchSendWithOverflow(
 ) error {
 	mode := ""
 	format := ""
+	emojis := false
 	if parsed != nil {
 		mode = parsed.Query["overflow"]
 		format = parsed.Query["format"]
+		emojis = parseBoolWithDefault(parsed.Query["emojis"], false)
+	}
+
+	// Codes are swapped before anything is measured, so a body that only
+	// overflows once its emoji are expanded splits the same way upstream's
+	// does.
+	if emojis {
+		body = ApplyEmojis(body)
+		title = ApplyEmojis(title)
 	}
 
 	schema := ""
 	if parsed != nil {
 		schema = parsed.Scheme
+	}
+
+	// ?retry= re-sends after a failure and ?wait= is how long to pause first.
+	// Both live in the orchestration layer upstream too, not in a plugin.
+	retries := 0
+	wait := time.Duration(0)
+	if parsed != nil {
+		if value, err := strconv.Atoi(strings.TrimSpace(parsed.Query["retry"])); err == nil && value > 0 {
+			retries = value
+		}
+		if seconds, err := strconv.ParseFloat(strings.TrimSpace(parsed.Query["wait"]), 64); err == nil && seconds > 0 {
+			wait = time.Duration(seconds * float64(time.Second))
+		}
 	}
 
 	parts := ApplyOverflow(schema, mode, format, title, body)
@@ -100,7 +125,18 @@ func DispatchSendWithOverflow(
 			carried = nil
 		}
 
-		if err := DispatchSend(target, part.Body, part.Title, notifyType, carried); err != nil {
+		var err error
+		for attempt := 0; attempt <= retries; attempt++ {
+			if attempt > 0 && wait > 0 {
+				time.Sleep(wait)
+			}
+
+			err = DispatchSend(target, part.Body, part.Title, notifyType, carried)
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
 			return err
 		}
 	}

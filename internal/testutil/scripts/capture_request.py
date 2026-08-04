@@ -103,7 +103,12 @@ KEEP_HEADERS = {
 }
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
-CACHE_VERSION = 13
+CACHE_VERSION = 14
+
+# How many requests still have to fail before the mocks answer normally. Set
+# from --fail-first, and the only way to reach a retry path: every mock here
+# answers 200, so neither implementation ever re-sends without it.
+_FAIL_BUDGET = 0
 # A recipient device for Matrix end-to-end encryption. Upstream verifies the
 # signatures on device keys and one-time keys before it will encrypt to a
 # device, so the mock signs them with upstream's own account implementation
@@ -657,6 +662,15 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
 
         response = requests.Response()
         response.status_code = 200
+
+        # A fixture may ask for the first N requests to fail, which is the
+        # only way to reach a retry path: everything here answers 200, so
+        # neither implementation ever re-sends without it.
+        global _FAIL_BUDGET
+        if _FAIL_BUDGET > 0:
+            _FAIL_BUDGET -= 1
+            response.status_code = 500
+            response._content = b'{"error":"parity forced failure"}'
         hostname = parsed.hostname or ""
         if hostname in ("sendpulse.com", "api.sendpulse.com") and parsed.path == "/oauth/access_token":
             response._content = b'{"access_token":"token","expires_in":3600}'
@@ -1015,6 +1029,13 @@ def main():
     parser.add_argument("--type", default="info")
     parser.add_argument("--body-format", default="")
     parser.add_argument("--attach", action="append", default=[])
+    parser.add_argument(
+        "--fail-first",
+        type=int,
+        default=0,
+        help="answer this many requests with a 500 before succeeding, so a "
+        "retry path is reachable",
+    )
     args = parser.parse_args()
 
     notify_type = NotifyType.INFO
@@ -1026,6 +1047,9 @@ def main():
         notify_type = NotifyType.FAILURE
 
     body_format = args.body_format.strip().lower() or None
+    global _FAIL_BUDGET
+    _FAIL_BUDGET = max(0, args.fail_first)
+
     payload = capture_request(
         args.url, args.body, args.title, notify_type, body_format, args.attach
     )

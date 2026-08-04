@@ -122,5 +122,37 @@
         "url": "https://api.46elks.com/a1/sms"
       }
     ]
+  },
+  {
+    "name": "emojis",
+    "requests": [
+      {
+        "body": "to=14051231234&from=14051231234&message=done+%F0%9F%8E%89%0D%0Aship+it+%F0%9F%9A%80+and+%F0%9F%91%8D+with+%F0%9F%98%86+plus+%3Anotacode%3A",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.46elks.com/a1/sms"
+      }
+    ]
+  },
+  {
+    "name": "emojis-off",
+    "requests": [
+      {
+        "body": "to=14051231234&from=14051231234&message=done+%3Atada%3A%0D%0Aship+it+%3Arocket%3A",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.46elks.com/a1/sms"
+      }
+    ]
   }
 ]

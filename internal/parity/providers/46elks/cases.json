@@ -33,5 +33,19 @@
     "body": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word",
     "title": "over",
     "type": "info"
+  },
+  {
+    "name": "emojis",
+    "url": "46elks://user:pass@14051231234?emojis=yes",
+    "body": "ship it :rocket: and :+1: with :laughing: plus :notacode:",
+    "title": "done :tada:",
+    "type": "info"
+  },
+  {
+    "name": "emojis-off",
+    "url": "46elks://user:pass@14051231234",
+    "body": "ship it :rocket:",
+    "title": "done :tada:",
+    "type": "info"
   }
 ]

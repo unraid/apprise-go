@@ -65,14 +65,22 @@ var FrameworkArgs = map[string]FrameworkArg{
 			"request count mismatch.",
 	},
 	"retry": {
-		Note: "?retry= asks upstream to re-send after a failure response. " +
-			"Not fixture-able as things stand: the capture mocks answer 200, " +
-			"so no retry path is ever entered on either side. Catching it " +
-			"needs a mock that can fail on demand.",
+		Implemented: true,
+		Note: "Re-sends after a failure, up to retry extra attempts, in the " +
+			"dispatch layer rather than in a provider — which is where " +
+			"upstream keeps it too. It needed instrumentation before it " +
+			"could be checked at all: every mock in the harness answers 200, " +
+			"so neither side ever re-sent anything. Both capture mocks now " +
+			"take a failure budget (--fail-first, FailNextRequests), and " +
+			"retry_parity_test.go compares the attempt count against " +
+			"upstream. Not marked fixture-covered because it needs that " +
+			"budget rather than an ordinary provider case.",
 	},
 	"wait": {
-		Note: "?wait= is how long upstream sleeps between retries. Invisible " +
-			"to a request diff, and only reachable once retry exists.",
+		Implemented: true,
+		Note: "How long to pause before a retry. Implemented alongside retry; " +
+			"the pause itself is a sleep, so a request diff cannot see it and " +
+			"only its presence in the retry loop is covered.",
 	},
 	"cto": {
 		Note: "Socket connect timeout. A captured request cannot show it; " +
@@ -89,9 +97,14 @@ var FrameworkArgs = map[string]FrameworkArg{
 			"target the way upstream does.",
 	},
 	"emojis": {
-		Note: "?emojis=yes has upstream translate :smile: style codes in the " +
-			"body before sending. The port passes the body through, so the " +
-			"request differs whenever a body contains one. Fixture-able.",
+		Implemented:    true,
+		FixtureCovered: true,
+		Note: "Swaps :code: shortcuts for the character they name, in the " +
+			"body and the title, before anything is measured. Upstream keys " +
+			"its map by regex and compiles one alternation over 1812 " +
+			"entries; the table here is those patterns expanded into 1855 " +
+			"literal codes by emoji_map.py, which runs every code it " +
+			"generates back through upstream before emitting it.",
 	},
 	"tz": {
 		Note: "?tz= sets the timezone upstream renders timestamps in. Only " +
