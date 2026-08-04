@@ -369,7 +369,10 @@ func encodeQuotedPrintable(value string) (string, error) {
 	if err := writer.Close(); err != nil {
 		return "", err
 	}
-	return b.String(), nil
+	// Go's encoder ends a soft line break with CRLF; the Python one this is
+	// compared against uses a bare newline, and the difference changes the
+	// bytes a signature is computed over.
+	return strings.ReplaceAll(b.String(), "=\r\n", "=\n"), nil
 }
 
 func isASCII(value string) bool {
