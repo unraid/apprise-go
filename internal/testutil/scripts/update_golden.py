@@ -1,4 +1,5 @@
 import argparse
+import base64
 import json
 import os
 import sys
@@ -46,6 +47,49 @@ LOCAL_ASSET_BASE = (
 )
 UPSTREAM_APP_URL = "https://github.com/caronc/apprise"
 LOCAL_APP_URL = "https://github.com/unraid/apprise-go"
+
+
+# The Go comparison rewrites every multipart boundary to this before diffing,
+# so writing it into the golden keeps the file stable across captures. A
+# generated boundary would differ on every run and --check could never pass.
+PARITY_BOUNDARY = "APPRISE-PARITY-BOUNDARY"
+
+
+def normalize_multipart(specs):
+    """Rewrite generated multipart boundaries to a fixed one."""
+    import re
+
+    for spec in specs:
+        headers = spec.get("headers") or {}
+        key = next(
+            (k for k in headers if k.lower() == "content-type"),
+            None,
+        )
+        if key is None or "multipart/" not in headers[key].lower():
+            continue
+
+        match = re.search(r"boundary=([^;]+)", headers[key])
+        if not match:
+            continue
+
+        boundary = match.group(1).strip('"')
+        if not boundary:
+            continue
+
+        headers[key] = re.sub(
+            r"boundary=[^;]+", f"boundary={PARITY_BOUNDARY}", headers[key]
+        )
+        for field in ("body", "body_b64"):
+            if field == "body_b64" and spec.get(field):
+                # Decode, swap, re-encode so the bytes stay faithful.
+                raw = base64.b64decode(spec[field])
+                spec[field] = base64.b64encode(
+                    raw.replace(boundary.encode(), PARITY_BOUNDARY.encode())
+                ).decode("ascii")
+            elif spec.get(field):
+                spec[field] = spec[field].replace(boundary, PARITY_BOUNDARY)
+
+    return specs
 
 
 def apply_default_env():
@@ -153,7 +197,7 @@ def main():
                 None,
                 case_attach or None,
             )
-            specs = rewrite_values(payload.get("requests", []))
+            specs = normalize_multipart(rewrite_values(payload.get("requests", [])))
             if volatile_headers:
                 for spec in specs:
                     headers = spec.get("headers") or {}

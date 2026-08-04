@@ -824,6 +824,14 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
                 )
             else:
                 response._content = b'{"id":"message-id"}'
+        elif parsed.path == "/v2/upload-request":
+            # Pushbullet answers with where to put the file and where it will
+            # then be readable.
+            response._content = (
+                b'{"file_name":"pixel.png","file_type":"image/png",'
+                b'"file_url":"https://dl.pushb.com/abc/pixel.png",'
+                b'"upload_url":"https://upload.pushbullet.com/upload-legacy/abc"}'
+            )
         elif parsed.netloc == "qyapi.weixin.qq.com":
             # WeCom reports application errors in the body with a 200 status,
             # so both the token hop and the send need errcode 0.

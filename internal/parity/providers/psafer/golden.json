@@ -48,5 +48,55 @@
         "url": "https://www.pushsafer.com/api"
       }
     ]
+  },
+  {
+    "name": "attachment-image",
+    "requests": [
+      {
+        "body": "t=title&m=body&i=25&c=%233AA3E3&d=device1&s=5&v=2&p=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg%3D%3D&k=privatekey",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://www.pushsafer.com/api"
+      },
+      {
+        "body": "t=title&m=body&i=25&c=%233AA3E3&d=device2&s=5&v=2&p=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg%3D%3D&k=privatekey",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://www.pushsafer.com/api"
+      }
+    ]
+  },
+  {
+    "name": "attachment-unsupported-type",
+    "requests": [
+      {
+        "body": "t=title&m=body&i=25&c=%233AA3E3&d=device1&s=5&v=2&k=privatekey",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://www.pushsafer.com/api"
+      },
+      {
+        "body": "t=title&m=body&i=25&c=%233AA3E3&d=device2&s=5&v=2&k=privatekey",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://www.pushsafer.com/api"
+      }
+    ]
   }
 ]

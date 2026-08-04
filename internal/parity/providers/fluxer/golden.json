@@ -133,10 +133,10 @@
         "url": "https://api.fluxer.app/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
       },
       {
-        "body": "--720cae33658b75a3e2590a33fbc64ed2\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n\r\n{\"tts\": false, \"wait\": false, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"content\": \"report.pdf\", \"attachments\": [{\"id\": 0, \"filename\": \"report.pdf\"}]}\r\n--720cae33658b75a3e2590a33fbc64ed2\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"report.pdf\"\r\nContent-Type: application/pdf\r\n\r\nPDFDATA\r\n--720cae33658b75a3e2590a33fbc64ed2--\r\n",
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n\r\n{\"tts\": false, \"wait\": false, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"content\": \"report.pdf\", \"attachments\": [{\"id\": 0, \"filename\": \"report.pdf\"}]}\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"report.pdf\"\r\nContent-Type: application/pdf\r\n\r\nPDFDATA\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
         "headers": {
           "accept": "*/*",
-          "content-type": "multipart/form-data; boundary=720cae33658b75a3e2590a33fbc64ed2",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
           "user-agent": "Apprise"
         },
         "method": "POST",

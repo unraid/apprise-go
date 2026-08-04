@@ -73,10 +73,10 @@
         "url": "https://media.guilded.gg/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
       },
       {
-        "body": "--b263f743511fb50d258675e680d4519e\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n\r\n{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\"}\r\n--b263f743511fb50d258675e680d4519e\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"report.pdf\"\r\nContent-Type: application/pdf\r\n\r\nPDFDATA\r\n--b263f743511fb50d258675e680d4519e--\r\n",
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n\r\n{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\"}\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"report.pdf\"\r\nContent-Type: application/pdf\r\n\r\nPDFDATA\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
         "headers": {
           "accept": "*/*",
-          "content-type": "multipart/form-data; boundary=b263f743511fb50d258675e680d4519e",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
           "user-agent": "Apprise"
         },
         "method": "POST",
