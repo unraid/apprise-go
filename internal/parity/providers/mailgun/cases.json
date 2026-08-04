@@ -12,5 +12,15 @@
     "body": "hello",
     "title": "subject",
     "type": "warning"
+  },
+  {
+    "name": "attachment",
+    "url": "mailgun://sender@example.com/apikey/user@example.com",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf"
+    ]
   }
 ]

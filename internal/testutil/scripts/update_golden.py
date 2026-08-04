@@ -138,13 +138,20 @@ def main():
             # {repo} keeps a template path in a fixture portable; apprise
             # resolves a relative path against the home directory, so the URL
             # has to carry an absolute one by the time it is parsed.
-            case_url = case["url"].replace("%7Brepo%7D", str(repo_root))
-            case_url = case_url.replace("{repo}", str(repo_root))
+            def expand(value):
+                return value.replace("%7Brepo%7D", str(repo_root)).replace(
+                    "{repo}", str(repo_root)
+                )
+
+            case_url = expand(case["url"])
+            case_attach = [expand(a) for a in case.get("attachments", [])]
             payload = capture_request(
                 case_url,
                 case.get("body", ""),
                 case.get("title", ""),
                 parse_notify_type(case.get("type")),
+                None,
+                case_attach or None,
             )
             specs = rewrite_values(payload.get("requests", []))
             if volatile_headers:

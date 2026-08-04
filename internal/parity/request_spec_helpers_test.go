@@ -360,36 +360,64 @@ func isMultipartBody(headers map[string]string) bool {
 	return strings.Contains(strings.ToLower(headers["content-type"]), "multipart/")
 }
 
-// assertMultipartBodyEqual compares two multipart bodies part by part. A part
-// carrying JSON is compared structurally, since key order and whitespace
-// differ between the two encoders and neither is meaningful.
+// assertMultipartBodyEqual compares two multipart bodies field by field.
+//
+// Parts are matched by name rather than by position: upstream emits them in
+// dictionary insertion order and this port sorts them, and for form-data
+// neither ordering carries meaning. A part carrying JSON is compared
+// structurally, since key order and whitespace differ between the encoders
+// and neither is meaningful either.
 func assertMultipartBodyEqual(t *testing.T, pythonBody, goBody string) {
 	t.Helper()
 
-	pythonParts := splitMultipartParts(pythonBody)
-	goParts := splitMultipartParts(goBody)
+	pythonParts := indexMultipartParts(t, "python", pythonBody)
+	goParts := indexMultipartParts(t, "go", goBody)
 
-	if len(pythonParts) != len(goParts) {
-		t.Fatalf("multipart part count mismatch: python=%d go=%d\npython=%s\ngo=%s",
-			len(pythonParts), len(goParts), pythonBody, goBody)
-	}
-
-	for i := range pythonParts {
-		pythonHeader, pythonContent := pythonParts[i].header, pythonParts[i].content
-		goHeader, goContent := goParts[i].header, goParts[i].content
-
-		if pythonHeader != goHeader {
-			t.Fatalf("multipart part %d header mismatch:\npython=%s\ngo=%s", i, pythonHeader, goHeader)
+	for name, pythonPart := range pythonParts {
+		goPart, ok := goParts[name]
+		if !ok {
+			t.Fatalf("multipart part %q is missing from the go request", name)
 		}
 
-		if shouldCompareBodyAsJSON(pythonContent, goContent) {
-			assertJSONBodyEqual(t, pythonContent, goContent)
+		if pythonPart.header != goPart.header {
+			t.Fatalf("multipart part %q header mismatch:\npython=%s\ngo=%s",
+				name, pythonPart.header, goPart.header)
+		}
+
+		if shouldCompareBodyAsJSON(pythonPart.content, goPart.content) {
+			assertJSONBodyEqual(t, pythonPart.content, goPart.content)
 			continue
 		}
-		if pythonContent != goContent {
-			t.Fatalf("multipart part %d content mismatch:\npython=%s\ngo=%s", i, pythonContent, goContent)
+		if pythonPart.content != goPart.content {
+			t.Fatalf("multipart part %q content mismatch:\npython=%s\ngo=%s",
+				name, pythonPart.content, goPart.content)
 		}
 	}
+
+	for name := range goParts {
+		if _, ok := pythonParts[name]; !ok {
+			t.Fatalf("multipart part %q is in the go request but not upstream's", name)
+		}
+	}
+}
+
+// multipartPartName reads the field name out of a part's headers, which is
+// what identifies it independently of position.
+var multipartPartName = regexp.MustCompile(`name="([^"]*)"`)
+
+func indexMultipartParts(t *testing.T, side, body string) map[string]multipartPart {
+	t.Helper()
+
+	indexed := map[string]multipartPart{}
+	for _, part := range splitMultipartParts(body) {
+		matches := multipartPartName.FindStringSubmatch(part.header)
+		if len(matches) < 2 {
+			t.Fatalf("%s multipart part has no field name: %s", side, part.header)
+		}
+		indexed[matches[1]] = part
+	}
+
+	return indexed
 }
 
 type multipartPart struct {

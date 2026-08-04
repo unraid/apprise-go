@@ -69,18 +69,21 @@ func CapturePythonRequestsResult(t *testing.T, url, body, title string) ([]notif
 	return payload.Requests, payload.Success
 }
 
-func CapturePythonRequestsWithTypeResult(t *testing.T, url, body, title string, notifyType notify.NotifyType) ([]notify.RequestSpec, *bool) {
+func CapturePythonRequestsWithTypeResult(t *testing.T, url, body, title string, notifyType notify.NotifyType, attachments ...string) ([]notify.RequestSpec, *bool) {
 	t.Helper()
 
-	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
-	stdout, stderr, err := RunPythonScript(
-		t,
-		script,
+	args := []string{
 		"--url", url,
 		"--body", body,
 		"--title", title,
 		"--type", string(notifyType),
-	)
+	}
+	for _, attachment := range attachments {
+		args = append(args, "--attach", attachment)
+	}
+
+	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
+	stdout, stderr, err := RunPythonScript(t, script, args...)
 	if err != nil {
 		t.Fatalf("capture request failed: %v (stderr: %s)", err, strings.TrimSpace(stderr))
 	}

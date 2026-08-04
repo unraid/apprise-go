@@ -29,5 +29,20 @@
         "url": "https://example.com:8443/notify?version=1.0&title=title&body=hello&extra=note&ref=xyz"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "--cd695ce82b3b8510d84b05d54b583382\r\nContent-Disposition: form-data; name=\"version\"\r\n\r\n1.0\r\n--cd695ce82b3b8510d84b05d54b583382\r\nContent-Disposition: form-data; name=\"title\"\r\n\r\ntitle\r\n--cd695ce82b3b8510d84b05d54b583382\r\nContent-Disposition: form-data; name=\"message\"\r\n\r\nbody\r\n--cd695ce82b3b8510d84b05d54b583382\r\nContent-Disposition: form-data; name=\"type\"\r\n\r\ninfo\r\n--cd695ce82b3b8510d84b05d54b583382\r\nContent-Disposition: form-data; name=\"file01\"; filename=\"report.pdf\"\r\nContent-Type: application/pdf\r\n\r\nPDFDATA\r\n--cd695ce82b3b8510d84b05d54b583382--\r\n",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "multipart/form-data; boundary=cd695ce82b3b8510d84b05d54b583382",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://localhost/"
+      }
+    ]
   }
 ]

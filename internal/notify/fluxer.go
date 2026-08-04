@@ -254,8 +254,9 @@ func (f *FluxerTarget) Send(body, title string, notifyType NotifyType) error {
 
 // SendWithAttachments posts the message, then one further request per file.
 // Fluxer does not carry files alongside the text the way Discord does: each
-// attachment is its own post, with the embed dropped and text-to-speech off
-// so the filename is not read aloud.
+// attachment is its own post. It also insists on a content field, so the
+// filename is used as the message text, and expects the file described in an
+// attachments array beside it.
 func (f *FluxerTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	spec, err := f.BuildRequest(body, title, notifyType)
 	if err != nil {
@@ -269,16 +270,23 @@ func (f *FluxerTarget) SendWithAttachments(body, title string, notifyType Notify
 		return nil
 	}
 
-	payload, err := f.buildPayload(body, title, notifyType)
-	if err != nil {
-		return err
-	}
-	payload["tts"] = false
-	payload["wait"] = false
-	delete(payload, "embeds")
-	delete(payload, "allow_mentions")
+	for index, attachment := range attachments {
+		payload, err := f.buildPayload(body, title, notifyType)
+		if err != nil {
+			return err
+		}
+		payload["tts"] = false
+		payload["wait"] = false
+		delete(payload, "embeds")
+		delete(payload, "allow_mentions")
 
-	for _, attachment := range attachments {
+		name := attachment.FileName(index, ".dat")
+		// Fluxer requires content, and uses the filename for it.
+		payload["content"] = name
+		payload["attachments"] = []any{
+			map[string]any{"id": 0, "filename": name},
+		}
+
 		requestBody, contentType, err := discordStyleAttachmentBody(payload, []Attachment{attachment})
 		if err != nil {
 			return err
@@ -295,8 +303,6 @@ func (f *FluxerTarget) SendWithAttachments(body, title string, notifyType Notify
 	return nil
 }
 
-// prefix is the scheme and authority the webhook path hangs off: the cloud API
-// unless a private server was configured.
 func (f *FluxerTarget) prefix() string {
 	if f.mode == "cloud" {
 		return fluxerCloudHost

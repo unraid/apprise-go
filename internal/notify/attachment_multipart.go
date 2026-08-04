@@ -33,7 +33,7 @@ func discordStyleAttachmentBody(payload map[string]any, attachments []Attachment
 
 	for index, attachment := range attachments {
 		part, err := writer.CreatePart(attachmentPartHeader(
-			fmt.Sprintf("files[%d]", index), attachment))
+			fmt.Sprintf("files[%d]", index), attachment, true))
 		if err != nil {
 			return "", "", err
 		}
@@ -51,11 +51,19 @@ func discordStyleAttachmentBody(payload map[string]any, attachments []Attachment
 
 // attachmentPartHeader writes the part header by hand so the file's own
 // content type survives; CreateFormFile hardcodes application/octet-stream.
-func attachmentPartHeader(field string, attachment Attachment) textproto.MIMEHeader {
+//
+// withType is false for services that hand requests a filename and a handle
+// without a type. Those parts carry no Content-Type at all, and adding one
+// would not match what the service receives.
+func attachmentPartHeader(field string, attachment Attachment, withType bool) textproto.MIMEHeader {
 	header := textproto.MIMEHeader{}
 	header.Set("Content-Disposition", fmt.Sprintf(
 		`form-data; name="%s"; filename="%s"`,
 		escapeMultipartValue(field), escapeMultipartValue(attachment.Name)))
+
+	if !withType {
+		return header
+	}
 
 	mimeType := attachment.MimeType
 	if mimeType == "" {
@@ -93,8 +101,10 @@ func mailgunAttachmentBody(values url.Values, attachments []Attachment) (body st
 	}
 
 	for index, attachment := range attachments {
+		// Mailgun is handed a filename and a handle with no type, so its
+		// parts carry no Content-Type.
 		part, err := writer.CreatePart(attachmentPartHeader(
-			fmt.Sprintf("attachment[%d]", index), attachment))
+			fmt.Sprintf("attachment[%d]", index), attachment, false))
 		if err != nil {
 			return "", "", err
 		}
@@ -134,7 +144,7 @@ func formAttachmentBody(values url.Values, attachAs string, attachments []Attach
 
 	for index, attachment := range attachments {
 		part, err := writer.CreatePart(attachmentPartHeader(
-			formAttachmentField(attachAs, index), attachment))
+			formAttachmentField(attachAs, index), attachment, true))
 		if err != nil {
 			return "", "", err
 		}

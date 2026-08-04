@@ -54,5 +54,15 @@
     "body": "body",
     "title": "t",
     "type": "success"
+  },
+  {
+    "name": "attachment",
+    "url": "fluxer://1234567890/abcdefghijklmnopqrstuvwxyz",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf"
+    ]
   }
 ]

@@ -30,5 +30,21 @@
         "url": "https://api.postmarkapp.com/email"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "{\"From\": \"sender@example.com\", \"Subject\": \"title\", \"HtmlBody\": \"body\", \"Attachments\": [{\"Name\": \"report.pdf\", \"Content\": \"UERGREFUQQ==\", \"ContentType\": \"application/pdf\"}], \"To\": \"user@example.com\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-postmark-server-token": "token"
+        },
+        "method": "POST",
+        "url": "https://api.postmarkapp.com/email"
+      }
+    ]
   }
 ]

@@ -59,8 +59,9 @@ func TestProviderGoldenRequests(t *testing.T) {
 					t.Fatalf("build target: %v", err)
 				}
 
+				attachments := loadCaseAttachments(t, c)
 				goSpecs := testutil.CaptureGoRequests(t, func() error {
-					return target.Send(c.Body, c.Title, notifyType)
+					return notify.SendWithAttachments(target, c.Body, c.Title, notifyType, attachments)
 				})
 
 				assertRequestSpecSequenceMatchesExcept(t, expected.Requests, goSpecs, def.VolatileHeaders)
@@ -112,4 +113,21 @@ func loadProviderGolden(t *testing.T, providerDir string, defined []providerCase
 	}
 
 	return cases
+}
+
+// loadCaseAttachments reads the files a case names, so a golden can pin an
+// attachment request rather than only the plain notification.
+func loadCaseAttachments(t *testing.T, c providerCase) []notify.Attachment {
+	t.Helper()
+
+	if len(c.Attachments) == 0 {
+		return nil
+	}
+
+	attachments, err := notify.LoadAttachments(c.Attachments)
+	if err != nil {
+		t.Fatalf("load attachments for %s: %v", c.Name, err)
+	}
+
+	return attachments
 }

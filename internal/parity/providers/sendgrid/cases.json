@@ -12,5 +12,15 @@
     "body": "hello",
     "title": "",
     "type": "warning"
+  },
+  {
+    "name": "attachment",
+    "url": "sendgrid://key:sender@example.com/user@example.com",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf"
+    ]
   }
 ]

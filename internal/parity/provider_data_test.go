@@ -40,6 +40,11 @@ type providerCase struct {
 	// empty golden otherwise means the capture silently failed, so the case
 	// has to say which one it is.
 	SendsNothing bool `json:"sends_nothing"`
+
+	// Attachments name files to send with the notification. They are paths
+	// relative to the repository, written with a {repo} prefix so the fixture
+	// stays portable.
+	Attachments []string `json:"attachments"`
 }
 
 type providerDefinition struct {
@@ -150,9 +155,16 @@ func loadProviderCases(t *testing.T, providerDir, providerName string) []provide
 	// the home directory rather than the working directory. {repo} keeps the
 	// fixture portable and is expanded before either side sees the URL.
 	repoRoot := testutil.RepoRoot(t)
+	expand := func(value string) string {
+		value = strings.ReplaceAll(value, "%7Brepo%7D", repoRoot)
+
+		return strings.ReplaceAll(value, "{repo}", repoRoot)
+	}
 	for i := range cases {
-		cases[i].URL = strings.ReplaceAll(cases[i].URL, "%7Brepo%7D", repoRoot)
-		cases[i].URL = strings.ReplaceAll(cases[i].URL, "{repo}", repoRoot)
+		cases[i].URL = expand(cases[i].URL)
+		for j := range cases[i].Attachments {
+			cases[i].Attachments[j] = expand(cases[i].Attachments[j])
+		}
 	}
 
 	seen := map[string]struct{}{}

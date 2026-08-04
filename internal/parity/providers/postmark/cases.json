@@ -12,5 +12,15 @@
     "body": "body",
     "title": "",
     "type": "info"
+  },
+  {
+    "name": "attachment",
+    "url": "postmark://token:sender@example.com/user@example.com",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf"
+    ]
   }
 ]

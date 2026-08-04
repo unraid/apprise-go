@@ -118,5 +118,30 @@
         "url": "https://api.fluxer.app/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"content\": \"title\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.fluxer.app/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      },
+      {
+        "body": "--0767c8d48d21cce0c19fdb888a191ad8\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n\r\n{\"tts\": false, \"wait\": false, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"content\": \"report.pdf\", \"attachments\": [{\"id\": 0, \"filename\": \"report.pdf\"}]}\r\n--0767c8d48d21cce0c19fdb888a191ad8\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"report.pdf\"\r\nContent-Type: application/pdf\r\n\r\nPDFDATA\r\n--0767c8d48d21cce0c19fdb888a191ad8--\r\n",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "multipart/form-data; boundary=0767c8d48d21cce0c19fdb888a191ad8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.fluxer.app/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      }
+    ]
   }
 ]

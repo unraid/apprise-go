@@ -45,5 +45,20 @@
         "url": "https://example.com/notify"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "{\"version\": \"1.0\", \"title\": \"title\", \"message\": \"body\", \"attachments\": [{\"filename\": \"report.pdf\", \"base64\": \"UERGREFUQQ==\", \"mimetype\": \"application/pdf\"}], \"type\": \"info\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://localhost/"
+      }
+    ]
   }
 ]

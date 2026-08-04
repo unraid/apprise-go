@@ -36,7 +36,9 @@ func TestProviderRequestParity(t *testing.T) {
 					notifyType = parsed
 				}
 
-				pythonSpecs, pythonSuccess := testutil.CapturePythonRequestsWithTypeResult(t, c.URL, c.Body, c.Title, notifyType)
+				attachments := loadCaseAttachments(t, c)
+				pythonSpecs, pythonSuccess := testutil.CapturePythonRequestsWithTypeResult(
+					t, c.URL, c.Body, c.Title, notifyType, c.Attachments...)
 				if expected, ok := goldenByName[c.Name]; ok {
 					assertRequestSpecSequenceMatchesExcept(t, pythonSpecs, expected.Requests, def.VolatileHeaders)
 				} else {
@@ -53,7 +55,7 @@ func TestProviderRequestParity(t *testing.T) {
 				}
 
 				goSpecs, err := testutil.CaptureGoRequestsResult(t, func() error {
-					return target.Send(c.Body, c.Title, notifyType)
+					return notify.SendWithAttachments(target, c.Body, c.Title, notifyType, attachments)
 				})
 				if shouldSkip := assertNotifySuccessMatches(t, pythonSuccess, err); shouldSkip {
 					return

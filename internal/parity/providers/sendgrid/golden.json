@@ -30,5 +30,21 @@
         "url": "https://api.sendgrid.com/v3/mail/send"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "{\"personalizations\": [{\"to\": [{\"email\": \"user@example.com\"}]}], \"from\": {\"email\": \"sender@example.com\"}, \"subject\": \"title\", \"content\": [{\"type\": \"text/html\", \"value\": \"body\"}], \"attachments\": [{\"content\": \"UERGREFUQQ==\", \"filename\": \"report.pdf\", \"type\": \"application/octet-stream\", \"disposition\": \"attachment\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer key",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.sendgrid.com/v3/mail/send"
+      }
+    ]
   }
 ]

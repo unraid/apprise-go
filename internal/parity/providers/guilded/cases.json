@@ -26,5 +26,15 @@
     "body": "body",
     "title": "t",
     "type": "info"
+  },
+  {
+    "name": "attachment",
+    "url": "guilded://1234567890/abcdefghijklmnopqrstuvwxyz",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf"
+    ]
   }
 ]

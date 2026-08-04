@@ -26,5 +26,26 @@
     "body": "body",
     "title": "t",
     "type": "info"
+  },
+  {
+    "name": "attachment",
+    "url": "discord://1234567890/abcdefghijklmnopqrstuvwxyz",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf"
+    ]
+  },
+  {
+    "name": "attachment-multiple",
+    "url": "discord://1234567890/abcdefghijklmnopqrstuvwxyz",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf",
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ]
   }
 ]
