@@ -1,9 +1,15 @@
 package notify
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/unraid/apprise-go/internal/matrixolm"
@@ -374,6 +380,149 @@ func (m *MatrixTarget) sendEncrypted(roomID, body, title string) error {
 	m.advanceTransaction()
 
 	return nil
+}
+
+// sendEncryptedAttachment encrypts the file itself before uploading it, so
+// the media server only ever holds ciphertext, then sends an ordinary
+// encrypted event whose file field carries the key needed to read it back.
+func (m *MatrixTarget) sendEncryptedAttachment(roomID string, attachment Attachment) error {
+	account, err := m.e2eeAccount()
+	if err != nil {
+		return err
+	}
+
+	session, _, err := m.megolmSession(roomID)
+	if err != nil {
+		return err
+	}
+
+	ciphertext, fileInfo, err := encryptMatrixAttachment(attachment.Data)
+	if err != nil {
+		return err
+	}
+
+	uploadURL, err := m.buildURL("/upload", url.Values{"filename": {attachmentNameOrDefault(attachment)}}, "")
+	if err != nil {
+		return err
+	}
+
+	status, response, err := matrixSend(RequestSpec{
+		Method: http.MethodPost,
+		URL:    uploadURL,
+		Headers: map[string]string{
+			"User-Agent":    matrixDefaultUserAgent,
+			"Content-Type":  "application/octet-stream",
+			"Accept":        "application/json",
+			"Authorization": "Bearer " + m.accessToken,
+		},
+		Body: string(ciphertext),
+	})
+	if err != nil {
+		return err
+	}
+
+	contentURI, _ := response["content_uri"].(string)
+	if status < http.StatusOK || status >= http.StatusMultipleChoices || contentURI == "" {
+		return fmt.Errorf("matrix e2ee: media upload failed")
+	}
+	fileInfo["url"] = contentURI
+
+	name := attachmentNameOrDefault(attachment)
+	isImage := strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/")
+
+	content := map[string]any{
+		"msgtype": "m.image",
+		"body":    name,
+		"file":    fileInfo,
+		"info": map[string]any{
+			"mimetype": attachment.MimeType,
+			"size":     len(attachment.Data),
+		},
+	}
+	if !isImage {
+		content["msgtype"] = "m.file"
+		content["filename"] = name
+	}
+
+	inner, err := matrixolm.MarshalEvent(matrixEncryptedEvent{
+		Type:    "m.room.message",
+		Content: content,
+		RoomID:  roomID,
+	})
+	if err != nil {
+		return err
+	}
+
+	encrypted, err := session.Encrypt(inner)
+	if err != nil {
+		return err
+	}
+	if err := m.saveMegolmSession(roomID, session); err != nil {
+		return err
+	}
+
+	path := fmt.Sprintf("/rooms/%s/send/m.room.encrypted/%s",
+		url.PathEscape(roomID), url.PathEscape(m.transactionValue()))
+	ok, _, _ := m.fetch(path, map[string]any{
+		"algorithm":  "m.megolm.v1.aes-sha2",
+		"ciphertext": encrypted,
+		"sender_key": account.IdentityKey(),
+		"session_id": session.SessionID(),
+		"device_id":  m.deviceID,
+	}, nil, http.MethodPut, "")
+	if !ok {
+		return fmt.Errorf("matrix e2ee: encrypted attachment send failed")
+	}
+	m.advanceTransaction()
+
+	return nil
+}
+
+func attachmentNameOrDefault(attachment Attachment) string {
+	if attachment.Name == "" {
+		return "file"
+	}
+
+	return attachment.Name
+}
+
+// encryptMatrixAttachment encrypts a file with AES-256-CTR under a one-time
+// key, returning the ciphertext and the EncryptedFile object describing how to
+// undo it. The IV is eight random bytes followed by eight zero bytes so the
+// counter cannot wrap into another block's keystream.
+func encryptMatrixAttachment(data []byte) ([]byte, map[string]any, error) {
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		return nil, nil, err
+	}
+
+	iv := make([]byte, 16)
+	if _, err := rand.Read(iv[:8]); err != nil {
+		return nil, nil, err
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ciphertext := make([]byte, len(data))
+	cipher.NewCTR(block, iv).XORKeyStream(ciphertext, data)
+
+	digest := sha256.Sum256(ciphertext)
+
+	return ciphertext, map[string]any{
+		"v": "v2",
+		"key": map[string]any{
+			"kty":     "oct",
+			"key_ops": []string{"encrypt", "decrypt"},
+			"alg":     "A256CTR",
+			"k":       base64.RawURLEncoding.EncodeToString(key),
+			"ext":     true,
+		},
+		"iv":     base64.RawURLEncoding.EncodeToString(iv),
+		"hashes": map[string]any{"sha256": base64.RawStdEncoding.EncodeToString(digest[:])},
+	}, nil
 }
 
 type matrixEncryptedEvent struct {

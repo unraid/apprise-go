@@ -104,3 +104,81 @@ func TestMatrixE2EEDisabledSendsPlaintext(t *testing.T) {
 		}
 	}
 }
+
+// TestMatrixE2EEAttachmentIsEncryptedBeforeUpload checks the thing that
+// matters about an encrypted attachment: the media server never sees the file.
+//
+// This is not covered by a golden. Upstream's encrypted path cannot be
+// captured under the frozen clock, so the plaintext path is what the fixtures
+// pin and this stands in for the rest.
+//
+// Encrypting the event but uploading the file in the clear would still produce
+// a correct-looking request sequence, an m.room.encrypted event, and a
+// readable message for the recipient. The only visible difference is in the
+// upload body, so that is what this reads.
+func TestMatrixE2EEAttachmentIsEncryptedBeforeUpload(t *testing.T) {
+	notify.ConfigureStorage("", 8, nil)
+	t.Cleanup(func() { notify.ConfigureStorage("", 8, nil) })
+
+	const secret = "attachment contents that must not travel in the clear"
+
+	specs := testutil.CaptureGoRequests(t, func() error {
+		target, err := notify.ParseURL(
+			"matrixs://user:pass@matrix.example.com/%23room:example.com?e2ee=yes")
+		if err != nil {
+			return err
+		}
+		sender, err := notify.NewTarget(target)
+		if err != nil {
+			return err
+		}
+
+		return notify.SendWithAttachments(sender, "body", "title", notify.NotifyInfo,
+			[]notify.Attachment{{
+				Name:     "notes.txt",
+				MimeType: "text/plain",
+				Data:     []byte(secret),
+			}})
+	})
+
+	uploads := 0
+	for _, spec := range specs {
+		if !strings.Contains(spec.URL, "/_matrix/media/") {
+			continue
+		}
+		uploads++
+
+		if strings.Contains(spec.Body, secret) {
+			t.Fatal("attachment was uploaded in the clear to the media server")
+		}
+		if len(spec.Body) != len(secret) {
+			t.Fatalf("ciphertext is %d bytes for a %d byte file; this is not the file",
+				len(spec.Body), len(secret))
+		}
+		if got := spec.Headers["Content-Type"]; got != "application/octet-stream" {
+			t.Fatalf("encrypted upload declared %q rather than opaque bytes", got)
+		}
+	}
+
+	if uploads != 1 {
+		t.Fatalf("expected one media upload, got %d", uploads)
+	}
+
+	// The event referencing it has to carry the key, or the ciphertext is
+	// unreadable to everyone including the intended recipient.
+	events := 0
+	for _, spec := range specs {
+		if !strings.Contains(spec.URL, "/send/m.room.encrypted") {
+			continue
+		}
+		events++
+		if strings.Contains(spec.Body, secret) {
+			t.Fatal("plaintext leaked into the encrypted event")
+		}
+	}
+
+	// One for the message, one for the attachment.
+	if events != 2 {
+		t.Fatalf("expected two encrypted events, got %d", events)
+	}
+}

@@ -374,7 +374,12 @@ def normalize_headers(headers, keep_user_agent):
 def apply_fixed_mime_boundary():
     import email.generator
 
-    email.generator._make_boundary = lambda text=None: "APPRISE-PARITY-BOUNDARY"
+    # The generator asks its own class for a boundary, so the classmethod is
+    # what has to be replaced; rebinding the module-level function of the same
+    # name looks right and changes nothing.
+    email.generator.Generator._make_boundary = classmethod(
+        lambda cls, text=None: "APPRISE-PARITY-BOUNDARY"
+    )
 
 
 def apply_fixed_time():

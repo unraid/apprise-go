@@ -12,12 +12,18 @@ import (
 // attachment support can actually transmit one.
 //
 // The attachment_support flag mirrors what upstream declares about the
-// service. Until recently nothing in this port could send a file at all:
+// service. For most of this port's life nothing could send a file at all:
 // Sender had no parameter for one, and the CLI parsed --attach and discarded
-// it, so a notification reported success having delivered nothing.
+// it, so a notification reported success having delivered nothing. This test
+// was written failing, naming every provider still in that state, and stayed
+// failing until the list emptied.
 //
-// This test keeps that gap counted rather than assumed. It fails while any
-// advertising provider cannot carry an attachment, and names the ones left.
+// It is now a guard against the gap reopening. Adding a provider that
+// advertises attachment support without implementing AttachmentSender fails
+// here, which is better than the alternative: silently accepting a file and
+// dropping it. Note it only proves a provider can be handed an attachment —
+// that what it sends matches upstream is the golden fixtures' job, and that
+// the file's bytes really travel is TestAttachmentGoldensCarryTheirFiles'.
 func TestAttachmentSupportIsImplemented(t *testing.T) {
 	defs := loadProviderDefinitions(t)
 

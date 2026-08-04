@@ -78,14 +78,43 @@ golden harness pins, so an encrypting capture hangs. See
 `internal/parity/providers/matrix/README.md`. A per-provider opt-out from the
 frozen clock would let that case come back.
 
+### Attachments are done
+
+All 41 providers that advertise attachment support now transmit one, verified
+against upstream. `TestAttachmentSupportIsImplemented` was written failing,
+naming the providers still short, and is now a guard against the gap
+reopening.
+
+Adding a file to a provider is the same recipe as adding a provider, plus:
+
+1. Implement `SendWithAttachments` — it is a separate interface from `Sender`
+   on purpose, so a provider that cannot carry a file fails the type assertion
+   rather than silently dropping it.
+2. Add a case with `attachments` to `cases.json` and capture the golden.
+3. Check the golden really carries the bytes. `TestAttachmentGoldensCarryTheirFiles`
+   does this automatically and is the check that matters most: twice a mocked
+   response was missing a field upstream needed, upstream quietly skipped the
+   upload, and a Go implementation that also skipped it looked like agreement.
+
+Three cases needed something beyond a golden, each documented in its own test:
+
+- `ses` — signs its own body, which contains a per-message MIME boundary, so
+  the signature cannot match by construction. The case marks `authorization`
+  volatile and `ses_signature_test.go` checks the signature follows the body.
+- `office365` — the large-attachment path only opens past 3MB, so pinning it
+  would mean committing an oversized fixture and a golden holding its bytes.
+  `office365_large_attachment_test.go` compares against upstream live instead.
+- `matrix` — the encrypted path cannot be captured (see below), so
+  `TestMatrixE2EEAttachmentIsEncryptedBeforeUpload` stands in, checking the
+  media server never receives the plaintext.
+
 ### Worth doing next
 
-- Attachment sending. No provider actually transmits attachments, though 42
-  entries declare the service supports them. That is the largest single piece
-  of upstream behaviour still missing, and it is invisible to every current
-  test because nothing exercises an attachment.
 - The persistent store now exists, so `wechat` and `ringc` could cache their
   tokens instead of refetching on every send.
+- Multipart part *order* is not compared. Upstream emits dict insertion order
+  and this port sorts, so parts are matched by field name instead. A service
+  that cares about order would not be caught.
 
 ## Guardrails that now exist
 
@@ -101,6 +130,15 @@ Do not remove these; each one exists because something got through.
   ways. Before this, an empty golden was always treated as a broken capture,
   which made "upstream deliberately sends no request" untestable — and that is
   exactly where the Opsgenie action-mapping bug was hiding.
+- A case may declare `volatile_headers` of its own, merged with the
+  manifest's. Only `ses/attachment` uses this, and only because it signs a
+  body containing a random boundary.
+- The capture pins the MIME boundary the same way it pins the clock, by
+  replacing `Generator._make_boundary`. Note it is a classmethod: rebinding
+  the module-level function of the same name looks right and does nothing,
+  which is how the first attempt silently failed.
+- `content-range` is kept when comparing headers. It was being dropped, which
+  left the whole protocol of a chunked upload uncompared.
 - A manifest may declare `volatile_headers` for values that cannot be
   reproduced across runs, such as SOGS signing a random nonce and the current
   time. They are asserted present, never equal. Anything listed there owes a

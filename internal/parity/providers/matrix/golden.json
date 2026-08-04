@@ -115,5 +115,107 @@
         "url": "https://matrix.example.com/custom/hook/token"
       }
     ]
+  },
+  {
+    "name": "attachment-image-and-file",
+    "requests": [
+      {
+        "body": "null",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "GET",
+        "url": "https://matrix.example.com/.well-known/matrix/client"
+      },
+      {
+        "body": "null",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "GET",
+        "url": "https://matrix.example.com/_matrix/client/versions"
+      },
+      {
+        "body": "{\"type\": \"m.login.password\", \"identifier\": {\"type\": \"m.id.user\", \"user\": \"user\"}, \"password\": \"pass\", \"initial_device_display_name\": \"Apprise\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://matrix.example.com/_matrix/client/v3/login"
+      },
+      {
+        "body": "{}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://matrix.example.com/_matrix/client/v3/join/%23room%3Aexample.com"
+      },
+      {
+        "body": "\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd",
+        "body_b64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "image/png",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://matrix.example.com/_matrix/media/v3/upload?filename=pixel.png"
+      },
+      {
+        "body": "plain text attachment\n",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "text/plain",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://matrix.example.com/_matrix/media/v3/upload?filename=notes.txt"
+      },
+      {
+        "body": "{\"body\": \"pixel.png\", \"info\": {\"mimetype\": \"image/png\", \"size\": 70}, \"msgtype\": \"m.image\", \"url\": \"mxc://matrix.example.com/abc\", \"room_id\": \"!room:matrix.example.com\", \"type\": \"m.room.message\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "PUT",
+        "url": "https://matrix.example.com/_matrix/client/v3/rooms/%21room%3Amatrix.example.com/send/m.room.message/0"
+      },
+      {
+        "body": "{\"body\": \"notes.txt\", \"info\": {\"mimetype\": \"text/plain\", \"size\": 22}, \"msgtype\": \"m.file\", \"url\": \"mxc://matrix.example.com/abc\", \"filename\": \"notes.txt\", \"room_id\": \"!room:matrix.example.com\", \"type\": \"m.room.message\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "PUT",
+        "url": "https://matrix.example.com/_matrix/client/v3/rooms/%21room%3Amatrix.example.com/send/m.room.message/1"
+      },
+      {
+        "body": "{\"msgtype\": \"m.text\", \"body\": \"# t\\r\\nbody\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "PUT",
+        "url": "https://matrix.example.com/_matrix/client/v3/rooms/%21room%3Amatrix.example.com/send/m.room.message/2"
+      }
+    ]
   }
 ]
