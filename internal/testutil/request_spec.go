@@ -200,3 +200,27 @@ func CapturePythonRequestsWithFailures(
 
 	return parsePythonCapturePayload(t, stdout).specs()
 }
+
+// CapturePythonRequestsWithFailuresResult is CapturePythonRequestsWithFailures
+// but also reports whether upstream considered the notification a success,
+// which is the point when every request is being rejected.
+func CapturePythonRequestsWithFailuresResult(
+	t *testing.T,
+	url, body, title string,
+	failures int,
+) ([]notify.RequestSpec, *bool) {
+	t.Helper()
+
+	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
+	stdout, stderr, err := RunPythonScript(t, script,
+		"--url", url, "--body", body, "--title", title,
+		"--type", string(notify.NotifyInfo),
+		"--fail-first", strconv.Itoa(failures))
+	if err != nil {
+		t.Fatalf("capture with failures: %v (stderr: %s)", err, strings.TrimSpace(stderr))
+	}
+
+	payload := parsePythonCapturePayload(t, stdout)
+
+	return payload.specs(), payload.Success
+}

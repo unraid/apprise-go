@@ -103,7 +103,7 @@ KEEP_HEADERS = {
 }
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
-CACHE_VERSION = 14
+CACHE_VERSION = 15
 
 # How many requests still have to fail before the mocks answer normally. Set
 # from --fail-first, and the only way to reach a retry path: every mock here
@@ -319,6 +319,9 @@ def cache_key(url, body, title, notify_type, body_format, attach=None):
         "title": title,
         "notify_type": notify_name,
         "body_format": body_format,
+        # The forced-failure budget changes what upstream does, so a capture
+        # taken with one must not be served for a request without it.
+        "fail_first": _FAIL_BUDGET,
         # An attachment shapes the request, so it belongs in the key.
         "attach": sorted(attach or []),
         "attach_shas": referenced_file_shas_for(attach or []),
