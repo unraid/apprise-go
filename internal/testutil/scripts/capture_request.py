@@ -245,7 +245,22 @@ def referenced_file_shas(url):
     return shas
 
 
-def cache_key(url, body, title, notify_type, body_format):
+def referenced_file_shas_for(paths):
+    """Return a sha for each readable path, so editing an attachment
+    invalidates the capture that used it."""
+    shas = {}
+    for raw in paths:
+        candidate = Path(str(raw).strip())
+        try:
+            if candidate.is_file():
+                shas[str(candidate)] = hashlib.sha256(candidate.read_bytes()).hexdigest()
+        except OSError:
+            continue
+
+    return shas
+
+
+def cache_key(url, body, title, notify_type, body_format, attach=None):
     notify_name = notify_type.name if hasattr(notify_type, "name") else str(notify_type)
     try:
         import apprise as apprise_module
@@ -260,6 +275,9 @@ def cache_key(url, body, title, notify_type, body_format):
         "title": title,
         "notify_type": notify_name,
         "body_format": body_format,
+        # An attachment shapes the request, so it belongs in the key.
+        "attach": sorted(attach or []),
+        "attach_shas": referenced_file_shas_for(attach or []),
         "apprise_version": apprise_version,
         "apprise_sha": apprise_git_sha(),
         # The mocked responses live in this script, so a change to it must
@@ -293,10 +311,10 @@ def cache_key(url, body, title, notify_type, body_format):
     return digest
 
 
-def load_cache(url, body, title, notify_type, body_format):
+def load_cache(url, body, title, notify_type, body_format, attach=None):
     if not cache_enabled():
         return None, None
-    digest = cache_key(url, body, title, notify_type, body_format)
+    digest = cache_key(url, body, title, notify_type, body_format, attach)
     root = cache_dir()
     path = root / f"{digest}.json"
     if not path.exists():
@@ -503,8 +521,8 @@ def apply_simplepush_fixes():
         pass
 
 
-def capture_request(url, body, title, notify_type, body_format=None):
-    cached, cache_path = load_cache(url, body, title, notify_type, body_format)
+def capture_request(url, body, title, notify_type, body_format=None, attach=None):
+    cached, cache_path = load_cache(url, body, title, notify_type, body_format, attach)
     if cached is not None:
         return cached
 
@@ -532,6 +550,9 @@ def capture_request(url, body, title, notify_type, body_format=None):
             params=kwargs.get("params"),
             json=kwargs.get("json"),
             auth=kwargs.get("auth"),
+            # Without this an attachment never reaches the prepared body and
+            # the capture silently shows a request with no file in it.
+            files=kwargs.get("files"),
         )
         prepared = self.prepare_request(req)
         req_body = prepared.body
@@ -828,11 +849,14 @@ def capture_request(url, body, title, notify_type, body_format=None):
         asset = AppriseAsset(**asset_kwargs)
         service = apprise.Apprise(asset=asset)
         service.add(url)
-        success = service.notify(
-            body=body,
-            title=title,
-            notify_type=notify_type,
-        )
+        notify_kwargs = {
+            "body": body,
+            "title": title,
+            "notify_type": notify_type,
+        }
+        if attach:
+            notify_kwargs["attach"] = list(attach)
+        success = service.notify(**notify_kwargs)
     finally:
         requests.sessions.Session.request = original_request
 
@@ -848,6 +872,7 @@ def main():
     parser.add_argument("--title", default="")
     parser.add_argument("--type", default="info")
     parser.add_argument("--body-format", default="")
+    parser.add_argument("--attach", action="append", default=[])
     args = parser.parse_args()
 
     notify_type = NotifyType.INFO
@@ -859,7 +884,9 @@ def main():
         notify_type = NotifyType.FAILURE
 
     body_format = args.body_format.strip().lower() or None
-    payload = capture_request(args.url, args.body, args.title, notify_type, body_format)
+    payload = capture_request(
+        args.url, args.body, args.title, notify_type, body_format, args.attach
+    )
     print(json.dumps(payload))
 
 

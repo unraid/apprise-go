@@ -105,3 +105,33 @@ func parsePythonCapturePayload(t *testing.T, stdout string) pythonCapturePayload
 	payload.Requests = specs
 	return payload
 }
+
+// CapturePythonRequestsWithAttachments captures what upstream sends for a
+// notification carrying attachments, so the Go side can be diffed against it
+// rather than checked against a hand-written expectation.
+func CapturePythonRequestsWithAttachments(
+	t *testing.T,
+	url, body, title string,
+	notifyType notify.NotifyType,
+	attachments []string,
+) []notify.RequestSpec {
+	t.Helper()
+
+	args := []string{
+		"--url", url,
+		"--body", body,
+		"--title", title,
+		"--type", string(notifyType),
+	}
+	for _, attachment := range attachments {
+		args = append(args, "--attach", attachment)
+	}
+
+	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
+	stdout, stderr, err := RunPythonScript(t, script, args...)
+	if err != nil {
+		t.Fatalf("capture request with attachments failed: %v (stderr: %s)", err, strings.TrimSpace(stderr))
+	}
+
+	return parsePythonCapturePayload(t, stdout).Requests
+}

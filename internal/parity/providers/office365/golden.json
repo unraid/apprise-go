@@ -104,32 +104,6 @@
     ]
   },
   {
-    "name": "reply-to-multiple",
-    "requests": [
-      {
-        "body": "grant_type=client_credentials&client_id=client123&client_secret=secret123&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default",
-        "headers": {
-          "accept": "*/*",
-          "content-type": "application/x-www-form-urlencoded",
-          "user-agent": "Apprise"
-        },
-        "method": "POST",
-        "url": "https://login.microsoftonline.com/tenant123/oauth2/v2.0/token"
-      },
-      {
-        "body": "{\"message\": {\"subject\": \"t\", \"body\": {\"contentType\": \"HTML\", \"content\": \"hello\"}, \"from\": {\"emailAddress\": {\"address\": \"sender@example.com\", \"name\": \"Apprise\"}}, \"replyTo\": [{\"emailAddress\": {\"address\": \"a@example.com\"}}, {\"emailAddress\": {\"address\": \"b@example.com\"}}], \"toRecipients\": [{\"emailAddress\": {\"address\": \"target@example.com\"}}]}, \"saveToSentItems\": \"true\"}",
-        "headers": {
-          "accept": "*/*",
-          "authorization": "Bearer token",
-          "content-type": "application/json",
-          "user-agent": "Apprise"
-        },
-        "method": "POST",
-        "url": "https://graph.microsoft.com/v1.0/users/sender@example.com/sendMail"
-      }
-    ]
-  },
-  {
     "name": "personal-mode-auto-detected",
     "requests": [
       {

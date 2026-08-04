@@ -243,3 +243,37 @@ func attachmentsSMSEagleStyle(attachments []Attachment) []any {
 
 	return out
 }
+
+// attachmentsCustomJSONStyle is the shape the generic json:// webhook sends.
+func attachmentsCustomJSONStyle(attachments []Attachment) []any {
+	out := make([]any, 0, len(attachments))
+	for index, attachment := range attachments {
+		out = append(out, map[string]any{
+			"filename": attachment.FileName(index, ".dat"),
+			"base64":   attachment.Base64(),
+			"mimetype": attachment.MimeType,
+		})
+	}
+
+	return out
+}
+
+// attachmentsCustomXMLStyle renders the Attachments element the generic
+// xml:// webhook sends.
+func attachmentsCustomXMLStyle(attachments []Attachment) string {
+	if len(attachments) == 0 {
+		return ""
+	}
+
+	var builder strings.Builder
+	builder.WriteString(`<Attachments format="base64">`)
+	for index, attachment := range attachments {
+		builder.WriteString(fmt.Sprintf(`<Attachment filename="%s" mimetype="%s">`,
+			escapeXML(attachment.FileName(index, ".dat")), escapeXML(attachment.MimeType)))
+		builder.WriteString(attachment.Base64())
+		builder.WriteString("</Attachment>")
+	}
+	builder.WriteString("</Attachments>")
+
+	return builder.String()
+}

@@ -45,7 +45,11 @@ func NewJSONTarget(target *ParsedURL) (*JSONTarget, error) {
 }
 
 func (j *JSONTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := j.BuildRequest(body, title, notifyType)
+	return j.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (j *JSONTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	spec, err := j.buildRequest(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -54,11 +58,21 @@ func (j *JSONTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (j *JSONTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return j.buildRequest(body, title, notifyType, nil)
+}
+
+func (j *JSONTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
+	// The key is always present, empty when there is nothing attached.
+	encoded := []any{}
+	if len(attachments) > 0 {
+		encoded = attachmentsCustomJSONStyle(attachments)
+	}
+
 	payload := map[string]any{
 		"version":     "1.0",
 		"title":       title,
 		"message":     body,
-		"attachments": []any{},
+		"attachments": encoded,
 		"type":        string(notifyType),
 	}
 

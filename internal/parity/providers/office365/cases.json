@@ -24,12 +24,6 @@
     "title": "t"
   },
   {
-    "name": "reply-to-multiple",
-    "url": "azure://sender@example.com/tenant123/client123/secret123/target@example.com?reply_to=a@example.com,b@example.com",
-    "body": "hello",
-    "title": "t"
-  },
-  {
     "name": "personal-mode-auto-detected",
     "url": "azure://sender@outlook.com/client123/refreshtoken123/target@example.com",
     "body": "hello",

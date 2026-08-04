@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/url"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -66,6 +67,12 @@ func assertRequestSpecMatchesExcept(t *testing.T, pythonSpec, goSpec notify.Requ
 		t.Fatalf("url query mismatch: python=%s go=%s", pythonQuery, goQuery)
 	}
 
+	// A multipart boundary is generated per request and never matches across
+	// two runs, so both sides are rewritten to a fixed one. Everything the
+	// boundary separates is still compared.
+	pythonBody, pythonSpec.Headers = normalizeMultipart(pythonBody, pythonSpec.Headers)
+	goBody, goSpec.Headers = normalizeMultipart(goBody, goSpec.Headers)
+
 	pythonHeaders := normalizeHeaders(pythonSpec.Headers)
 	goHeaders := normalizeHeaders(goSpec.Headers)
 	for _, name := range volatile {
@@ -91,6 +98,12 @@ func assertRequestSpecMatchesExcept(t *testing.T, pythonSpec, goSpec notify.Requ
 	}
 	if shouldCompareForm(pythonHeaders, pythonBody) {
 		assertQueryEqual(t, pythonBody, goBody)
+		return
+	}
+
+	if isMultipartBody(pythonHeaders) {
+		assertMultipartBodyEqual(t, pythonBody, goBody)
+
 		return
 	}
 
@@ -300,4 +313,113 @@ func normalizeAppriseURL(value string) string {
 		return appriseGoRepoURL
 	}
 	return value
+}
+
+// multipartBoundaryPattern finds the boundary in a content type header.
+var multipartBoundaryPattern = regexp.MustCompile(`boundary=([^;]+)`)
+
+const multipartFixedBoundary = "APPRISE-PARITY-BOUNDARY"
+
+// normalizeMultipart replaces a generated multipart boundary with a fixed one
+// in both the header and the body, so two runs of the same request compare
+// equal. The parts themselves are untouched.
+func normalizeMultipart(body string, headers map[string]string) (string, map[string]string) {
+	contentType := ""
+	contentTypeKey := ""
+	for key, value := range headers {
+		if strings.EqualFold(key, "content-type") {
+			contentType, contentTypeKey = value, key
+			break
+		}
+	}
+
+	if !strings.Contains(strings.ToLower(contentType), "multipart/") {
+		return body, headers
+	}
+
+	matches := multipartBoundaryPattern.FindStringSubmatch(contentType)
+	if len(matches) < 2 {
+		return body, headers
+	}
+	boundary := strings.Trim(matches[1], `"`)
+	if boundary == "" {
+		return body, headers
+	}
+
+	rewritten := map[string]string{}
+	for key, value := range headers {
+		rewritten[key] = value
+	}
+	rewritten[contentTypeKey] = multipartBoundaryPattern.ReplaceAllString(
+		contentType, "boundary="+multipartFixedBoundary)
+
+	return strings.ReplaceAll(body, boundary, multipartFixedBoundary), rewritten
+}
+
+func isMultipartBody(headers map[string]string) bool {
+	return strings.Contains(strings.ToLower(headers["content-type"]), "multipart/")
+}
+
+// assertMultipartBodyEqual compares two multipart bodies part by part. A part
+// carrying JSON is compared structurally, since key order and whitespace
+// differ between the two encoders and neither is meaningful.
+func assertMultipartBodyEqual(t *testing.T, pythonBody, goBody string) {
+	t.Helper()
+
+	pythonParts := splitMultipartParts(pythonBody)
+	goParts := splitMultipartParts(goBody)
+
+	if len(pythonParts) != len(goParts) {
+		t.Fatalf("multipart part count mismatch: python=%d go=%d\npython=%s\ngo=%s",
+			len(pythonParts), len(goParts), pythonBody, goBody)
+	}
+
+	for i := range pythonParts {
+		pythonHeader, pythonContent := pythonParts[i].header, pythonParts[i].content
+		goHeader, goContent := goParts[i].header, goParts[i].content
+
+		if pythonHeader != goHeader {
+			t.Fatalf("multipart part %d header mismatch:\npython=%s\ngo=%s", i, pythonHeader, goHeader)
+		}
+
+		if shouldCompareBodyAsJSON(pythonContent, goContent) {
+			assertJSONBodyEqual(t, pythonContent, goContent)
+			continue
+		}
+		if pythonContent != goContent {
+			t.Fatalf("multipart part %d content mismatch:\npython=%s\ngo=%s", i, pythonContent, goContent)
+		}
+	}
+}
+
+type multipartPart struct {
+	header  string
+	content string
+}
+
+// splitMultipartParts breaks a body on the normalized boundary and separates
+// each part's headers from its content.
+func splitMultipartParts(body string) []multipartPart {
+	parts := []multipartPart{}
+	for _, chunk := range strings.Split(body, "--"+multipartFixedBoundary) {
+		trimmed := strings.Trim(chunk, "-\r\n")
+		if trimmed == "" {
+			continue
+		}
+
+		header, content, found := strings.Cut(strings.TrimLeft(chunk, "\r\n"), "\r\n\r\n")
+		if !found {
+			header, content, found = strings.Cut(strings.TrimLeft(chunk, "\n"), "\n\n")
+		}
+		if !found {
+			continue
+		}
+
+		parts = append(parts, multipartPart{
+			header:  strings.TrimSpace(header),
+			content: strings.Trim(content, "-\r\n"),
+		})
+	}
+
+	return parts
 }

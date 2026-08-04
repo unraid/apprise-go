@@ -95,7 +95,11 @@ func NewXMLTarget(target *ParsedURL) (*XMLTarget, error) {
 }
 
 func (x *XMLTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := x.BuildRequest(body, title, notifyType)
+	return x.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (x *XMLTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	spec, err := x.buildRequest(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -104,6 +108,10 @@ func (x *XMLTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (x *XMLTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return x.buildRequest(body, title, notifyType, nil)
+}
+
+func (x *XMLTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
 	payloadBase := []struct {
 		key   string
 		value string
@@ -134,7 +142,7 @@ func (x *XMLTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 
 	payload := strings.ReplaceAll(xmlTemplate, "{{XSD_URL}}", xsdAttr)
 	payload = strings.ReplaceAll(payload, "{{CORE}}", strings.Join(entries, ""))
-	payload = strings.ReplaceAll(payload, "{{ATTACHMENTS}}", "")
+	payload = strings.ReplaceAll(payload, "{{ATTACHMENTS}}", attachmentsCustomXMLStyle(attachments))
 
 	scheme := "http"
 	if strings.ToLower(x.target.Scheme) == "xmls" {

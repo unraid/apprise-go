@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/textproto"
 	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -107,4 +108,62 @@ func mailgunAttachmentBody(values url.Values, attachments []Attachment) (body st
 	}
 
 	return buffer.String(), writer.FormDataContentType(), nil
+}
+
+// formAttachmentBody builds the multipart body the generic form:// webhook
+// sends. The field name comes from ?attach_as=; a wildcard in it is replaced
+// by a two-digit counter so several files get distinct names, and without one
+// every file reuses the same field.
+func formAttachmentBody(values url.Values, attachAs string, attachments []Attachment) (body string, contentType string, err error) {
+	var buffer bytes.Buffer
+	writer := multipart.NewWriter(&buffer)
+
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		for _, value := range values[key] {
+			if err := writer.WriteField(key, value); err != nil {
+				return "", "", err
+			}
+		}
+	}
+
+	for index, attachment := range attachments {
+		part, err := writer.CreatePart(attachmentPartHeader(
+			formAttachmentField(attachAs, index), attachment))
+		if err != nil {
+			return "", "", err
+		}
+		if _, err := part.Write(attachment.Data); err != nil {
+			return "", "", err
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return "", "", err
+	}
+
+	return buffer.String(), writer.FormDataContentType(), nil
+}
+
+// formAttachmentWildcard matches the placeholder characters upstream accepts
+// in an attach_as value.
+var formAttachmentWildcard = regexp.MustCompile(`[*?+$:.%]+`)
+
+func formAttachmentField(attachAs string, index int) string {
+	name := strings.TrimSpace(attachAs)
+	if name == "" {
+		name = "file*"
+	}
+
+	counter := fmt.Sprintf("%02d", index+1)
+	if formAttachmentWildcard.MatchString(name) {
+		return formAttachmentWildcard.ReplaceAllString(name, counter)
+	}
+
+	return name
 }

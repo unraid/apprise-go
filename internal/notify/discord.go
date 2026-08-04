@@ -10,6 +10,9 @@ import (
 
 const discordWebhookBase = "https://discord.com/api/webhooks"
 
+// Discord accepts at most this many files in one message.
+const discordMaxAttachments = 10
+
 type DiscordTarget struct {
 	webhookID      string
 	webhookToken   string
@@ -167,6 +170,10 @@ func (d *DiscordTarget) buildRequest(body, title string, notifyType NotifyType, 
 		requestBody = string(data)
 	}
 
+	return d.specFor(requestBody, contentType)
+}
+
+func (d *DiscordTarget) specFor(requestBody, contentType string) (RequestSpec, error) {
 	headers := map[string]string{
 		"User-Agent":   "Apprise",
 		"Accept":       "*/*",
@@ -197,13 +204,57 @@ func (d *DiscordTarget) Send(body, title string, notifyType NotifyType) error {
 	return d.SendWithAttachments(body, title, notifyType, nil)
 }
 
+// SendWithAttachments posts the message, then the files in a second request.
+// Discord does not carry them alongside the text: the attachment post reuses
+// the payload with the message content stripped out, so the body is not
+// repeated under each file.
 func (d *DiscordTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
-	spec, err := d.buildRequest(body, title, notifyType, attachments)
+	spec, err := d.buildRequest(body, title, notifyType, nil)
 	if err != nil {
 		return err
 	}
+	if err := SendRequest(spec); err != nil {
+		return err
+	}
 
-	return SendRequest(spec)
+	if len(attachments) == 0 {
+		return nil
+	}
+
+	payload, err := d.buildPayload(body, title, notifyType)
+	if err != nil {
+		return err
+	}
+	payload["tts"] = false
+	// Wait for the upload to post before continuing.
+	payload["wait"] = true
+	delete(payload, "content")
+	delete(payload, "embeds")
+	delete(payload, "allow_mentions")
+
+	// With batching off each file is its own message, which is the legacy
+	// one-per-message behaviour.
+	perRequest := discordMaxAttachments
+	if !d.batch {
+		perRequest = 1
+	}
+
+	for start := 0; start < len(attachments); start += perRequest {
+		end := min(start+perRequest, len(attachments))
+		requestBody, contentType, err := discordStyleAttachmentBody(payload, attachments[start:end])
+		if err != nil {
+			return err
+		}
+		spec, err := d.specFor(requestBody, contentType)
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func defaultImageURL(notifyType NotifyType) string {

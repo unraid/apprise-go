@@ -167,6 +167,10 @@ func (g *GuildedTarget) buildRequest(body, title string, notifyType NotifyType, 
 		requestBody = string(data)
 	}
 
+	return g.specFor(requestBody, contentType)
+}
+
+func (g *GuildedTarget) specFor(requestBody, contentType string) (RequestSpec, error) {
 	headers := map[string]string{
 		"User-Agent":   "Apprise",
 		"Accept":       "*/*",
@@ -197,13 +201,52 @@ func (g *GuildedTarget) Send(body, title string, notifyType NotifyType) error {
 	return g.SendWithAttachments(body, title, notifyType, nil)
 }
 
+// SendWithAttachments posts the message, then the files separately, the way
+// Discord does — Guilded is modelled on it.
 func (g *GuildedTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
-	spec, err := g.buildRequest(body, title, notifyType, attachments)
+	spec, err := g.buildRequest(body, title, notifyType, nil)
 	if err != nil {
 		return err
 	}
+	if err := SendRequest(spec); err != nil {
+		return err
+	}
 
-	return SendRequest(spec)
+	if len(attachments) == 0 {
+		return nil
+	}
+
+	payload, err := g.buildPayload(body, title, notifyType)
+	if err != nil {
+		return err
+	}
+	payload["tts"] = false
+	payload["wait"] = true
+	delete(payload, "content")
+	delete(payload, "embeds")
+	delete(payload, "allow_mentions")
+
+	perRequest := discordMaxAttachments
+	if !g.batch {
+		perRequest = 1
+	}
+
+	for start := 0; start < len(attachments); start += perRequest {
+		end := min(start+perRequest, len(attachments))
+		requestBody, contentType, err := discordStyleAttachmentBody(payload, attachments[start:end])
+		if err != nil {
+			return err
+		}
+		spec, err := g.specFor(requestBody, contentType)
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func init() {

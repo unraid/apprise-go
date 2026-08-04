@@ -31,14 +31,27 @@ func TestDiscordTransmitsAttachment(t *testing.T) {
 		return target.SendWithAttachments("body", "title", notify.NotifyInfo,
 			[]notify.Attachment{attachment})
 	})
-	if len(specs) != 1 {
-		t.Fatalf("want one request, got %d", len(specs))
+	// Discord posts the message first and the file in a second request; a
+	// capture of upstream confirms both.
+	if len(specs) != 2 {
+		t.Fatalf("want the message and the attachment as two requests, got %d", len(specs))
 	}
-	spec := specs[0]
 
+	if got := specs[0].Headers["Content-Type"]; got != "application/json; charset=utf-8" {
+		t.Fatalf("the message request should stay JSON, got %q", got)
+	}
+	if !strings.Contains(specs[0].Body, "body") {
+		t.Fatalf("the message request lost its content: %s", specs[0].Body)
+	}
+
+	spec := specs[1]
 	if !strings.HasPrefix(spec.Headers["Content-Type"], "multipart/form-data; boundary=") {
 		t.Fatalf("attachment did not switch the request to multipart: %q",
 			spec.Headers["Content-Type"])
+	}
+	// The attachment post drops the message text rather than repeating it.
+	if strings.Contains(spec.Body, `"content"`) {
+		t.Fatalf("attachment request repeated the message content: %s", spec.Body)
 	}
 	for _, want := range []string{
 		`name="payload_json"`,
@@ -183,5 +196,36 @@ func TestEmailProvidersEncodeAttachments(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestOffice365ReplyToCarriesEveryAddress covers what the parity fixture
+// cannot: upstream keeps these in a set, so their order is undefined and a
+// fixture comparing two of them is a coin flip. What matters is that none is
+// lost.
+func TestOffice365ReplyToCarriesEveryAddress(t *testing.T) {
+	parsed, err := notify.ParseURL(
+		"azure://sender@example.com/tenant123/client123/secret123/target@example.com" +
+			"?reply_to=a@example.com,b@example.com")
+	if err != nil {
+		t.Fatalf("parse url: %v", err)
+	}
+	target, err := notify.NewOffice365Target(parsed)
+	if err != nil {
+		t.Fatalf("build target: %v", err)
+	}
+
+	specs := testutil.CaptureGoRequests(t, func() error {
+		return target.Send("hello", "t", notify.NotifyInfo)
+	})
+	if len(specs) == 0 {
+		t.Fatal("no request was sent")
+	}
+
+	body := specs[len(specs)-1].Body
+	for _, address := range []string{"a@example.com", "b@example.com"} {
+		if !strings.Contains(body, address) {
+			t.Fatalf("reply-to lost %s: %s", address, body)
+		}
 	}
 }

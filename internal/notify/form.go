@@ -24,6 +24,7 @@ type FormTarget struct {
 	params        map[string]string
 	payloadExtras map[string]string
 	payloadMap    map[string]string
+	attachAs      string
 }
 
 func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
@@ -59,11 +60,16 @@ func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
 		params:        cloneMap(target.QueryDel),
 		payloadExtras: payloadExtras,
 		payloadMap:    payloadMap,
+		attachAs:      strings.TrimSpace(target.Query["attach_as"]),
 	}, nil
 }
 
 func (f *FormTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := f.BuildRequest(body, title, notifyType)
+	return f.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (f *FormTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	spec, err := f.buildRequest(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -72,6 +78,10 @@ func (f *FormTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (f *FormTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return f.buildRequest(body, title, notifyType, nil)
+}
+
+func (f *FormTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
 	payload := map[string]string{}
 
 	base := map[string]string{
@@ -124,12 +134,24 @@ func (f *FormTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 	}
 
 	bodyPayload := ""
+	contentType := ""
 	if f.method != "GET" {
 		values := url.Values{}
 		for key, value := range payload {
 			values.Set(key, value)
 		}
-		bodyPayload = values.Encode()
+
+		if len(attachments) > 0 {
+			// Files turn the form-encoded body multipart; the field name
+			// comes from ?attach_as=, numbered when it carries a wildcard.
+			var err error
+			bodyPayload, contentType, err = formAttachmentBody(values, f.attachAs, attachments)
+			if err != nil {
+				return RequestSpec{}, err
+			}
+		} else {
+			bodyPayload = values.Encode()
+		}
 	}
 
 	if f.method != "GET" && len(f.params) > 0 {
@@ -145,7 +167,11 @@ func (f *FormTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 		"Accept":     "*/*",
 	}
 	if f.method != "GET" {
-		headers["Content-Type"] = "application/x-www-form-urlencoded"
+		// A multipart body carries its own boundary in the content type.
+		if contentType == "" {
+			contentType = "application/x-www-form-urlencoded"
+		}
+		headers["Content-Type"] = contentType
 	}
 	for key, value := range f.headers {
 		headers[key] = value
