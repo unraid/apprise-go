@@ -542,11 +542,18 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
             header.lower() == "user-agent" for header in provided_headers.keys()
         )
 
+        # A raw file handle passed as data= is not read while the request is
+        # prepared, so the capture would record its repr rather than the
+        # bytes actually sent.
+        raw_data = kwargs.get("data")
+        if hasattr(raw_data, "read"):
+            raw_data = raw_data.read()
+
         req = requests.Request(
             method=method,
             url=url,
             headers=provided_headers,
-            data=kwargs.get("data"),
+            data=raw_data,
             params=kwargs.get("params"),
             json=kwargs.get("json"),
             auth=kwargs.get("auth"),
@@ -824,6 +831,14 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
                 )
             else:
                 response._content = b'{"id":"message-id"}'
+        elif parsed.netloc == "image.groupme.com":
+            # GroupMe answers an image upload with the URL to reference.
+            response._content = (
+                b'{"payload":{"url":"https://i.groupme.com/pixel.png"}}'
+            )
+        elif "/api/v1/post/container/" in parsed.path:
+            # HumHub returns the new post's id so files can be attached to it.
+            response._content = b'{"id":4242}'
         elif parsed.path == "/v2/upload-request":
             # Pushbullet answers with where to put the file and where it will
             # then be readable.

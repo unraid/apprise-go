@@ -3,6 +3,7 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -54,18 +55,78 @@ func (h *HumHubTarget) BuildRequest(body, title string, notifyType NotifyType) (
 }
 
 func (h *HumHubTarget) Send(body, title string, notifyType NotifyType) error {
+	return h.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments creates the post first, then uploads each file to it.
+// The upload URL names the post, so the id has to come back from the create
+// before anything can be attached.
+func (h *HumHubTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	specs, err := h.buildRequests(body, title, notifyType)
 	if err != nil {
 		return err
 	}
 
 	for _, spec := range specs {
-		if err := SendRequest(spec); err != nil {
+		if len(attachments) == 0 {
+			if err := SendRequest(spec); err != nil {
+				return err
+			}
+			continue
+		}
+
+		var created struct {
+			ID json.Number `json:"id"`
+		}
+		if err := doJSONRequest(spec, &created); err != nil {
 			return err
+		}
+		postID := created.ID.String()
+		if postID == "" {
+			return fmt.Errorf("humhub post creation returned no id")
+		}
+
+		uploadURL := fmt.Sprintf("%s/api/v1/post/%s/upload-files", h.baseURL(), postID)
+		for _, attachment := range attachments {
+			// HumHub is handed a filename and a handle with no type, so the
+			// part carries no content type.
+			requestBody, contentType, err := singleFileAttachmentBody(
+				url.Values{}, "files[]", attachment, false)
+			if err != nil {
+				return err
+			}
+
+			uploadHeaders := map[string]string{}
+			for key, value := range spec.Headers {
+				uploadHeaders[key] = value
+			}
+			uploadHeaders["Content-Type"] = contentType
+
+			if err := SendRequest(RequestSpec{
+				Method:  "POST",
+				URL:     uploadURL,
+				Headers: uploadHeaders,
+				Body:    requestBody,
+			}); err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
+}
+
+func (h *HumHubTarget) baseURL() string {
+	scheme := "http"
+	if h.secure {
+		scheme = "https"
+	}
+	base := fmt.Sprintf("%s://%s", scheme, h.host)
+	if h.port > 0 {
+		base += fmt.Sprintf(":%d", h.port)
+	}
+
+	return base
 }
 
 // buildRequests posts once per container, since HumHub addresses a single

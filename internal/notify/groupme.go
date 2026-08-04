@@ -34,12 +34,23 @@ func NewGroupMeTarget(target *ParsedURL) (*GroupMeTarget, error) {
 	return &GroupMeTarget{botID: botID, token: token}, nil
 }
 
+// GroupMe's image service takes the raw bytes and answers with a URL the
+// message then references.
+const groupmeImageURL = "https://image.groupme.com/pictures"
+
 func (g *GroupMeTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return g.buildRequest(body, title, notifyType, nil)
+}
+
+func (g *GroupMeTarget) buildRequest(body, title string, notifyType NotifyType, images []any) (RequestSpec, error) {
 	_ = notifyType
 
 	payload := map[string]any{
 		"bot_id": g.botID,
 		"text":   mergeTitleBody(title, body),
+	}
+	if len(images) > 0 {
+		payload["attachments"] = images
 	}
 
 	data, err := json.Marshal(payload)
@@ -60,12 +71,65 @@ func (g *GroupMeTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (g *GroupMeTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := g.BuildRequest(body, title, notifyType)
+	return g.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments uploads each image first and references the returned
+// URLs in the message. Only images are accepted; anything else is skipped, so
+// a PDF would otherwise be silently lost.
+func (g *GroupMeTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	images := []any{}
+	// Uploading needs an access token. Without one the text still goes out,
+	// which is what upstream does rather than failing the notification.
+	for _, attachment := range attachments {
+		if g.token == "" {
+			break
+		}
+		if !strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+			continue
+		}
+
+		imageURL, err := g.uploadImage(attachment)
+		if err != nil {
+			return err
+		}
+		images = append(images, map[string]any{"type": "image", "url": imageURL})
+	}
+
+	spec, err := g.buildRequest(body, title, notifyType, images)
 	if err != nil {
 		return err
 	}
 
 	return SendRequest(spec)
+}
+
+// uploadImage posts the raw bytes and returns the URL GroupMe answers with,
+// which it nests under payload.url.
+func (g *GroupMeTarget) uploadImage(attachment Attachment) (string, error) {
+	var response struct {
+		Payload struct {
+			URL string `json:"url"`
+		} `json:"payload"`
+	}
+
+	if err := doJSONRequest(RequestSpec{
+		Method: "POST",
+		URL:    groupmeImageURL,
+		Headers: map[string]string{
+			"User-Agent":     "Apprise",
+			"Content-Type":   attachment.MimeType,
+			"X-Access-Token": g.token,
+		},
+		Body: string(attachment.Data),
+	}, &response); err != nil {
+		return "", err
+	}
+	if response.Payload.URL == "" {
+		return "", fmt.Errorf("groupme image service returned no url")
+	}
+
+	return response.Payload.URL, nil
 }
 
 func init() {

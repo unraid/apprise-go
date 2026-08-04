@@ -3,6 +3,7 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -152,14 +153,65 @@ func (w *WebexTeamsTarget) buildRequests(body, title string, notifyType NotifyTy
 }
 
 func (w *WebexTeamsTarget) Send(body, title string, notifyType NotifyType) error {
-	specs, err := w.buildRequests(body, title, notifyType)
-	if err != nil {
-		return err
+	return w.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments posts one request per file in bot mode. Only the first
+// carries the message text, so a notification with three files does not
+// arrive as three copies of the message.
+func (w *WebexTeamsTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	if len(attachments) == 0 || w.mode != "bot" {
+		specs, err := w.buildRequests(body, title, notifyType)
+		if err != nil {
+			return err
+		}
+
+		for _, spec := range specs {
+			if err := SendRequest(spec); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	}
 
-	for _, spec := range specs {
-		if err := SendRequest(spec); err != nil {
-			return err
+	message := body
+	if title != "" {
+		message = title + "\r\n" + body
+	}
+
+	messageKey := "text"
+	if w.format == "markdown" {
+		messageKey = "markdown"
+	}
+
+	for _, room := range w.rooms {
+		for index, attachment := range attachments {
+			values := url.Values{}
+			values.Set("roomId", room)
+			if index == 0 {
+				values.Set(messageKey, message)
+			}
+
+			requestBody, contentType, err := singleFileAttachmentBody(
+				values, "files", attachment, true)
+			if err != nil {
+				return err
+			}
+
+			if err := SendRequest(RequestSpec{
+				Method: "POST",
+				URL:    webexBotURL,
+				Headers: map[string]string{
+					"User-Agent":    "Apprise",
+					"Accept":        "*/*",
+					"Authorization": "Bearer " + w.accessToken,
+					"Content-Type":  contentType,
+				},
+				Body: requestBody,
+			}); err != nil {
+				return err
+			}
 		}
 	}
 

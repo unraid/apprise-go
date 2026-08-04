@@ -54,5 +54,15 @@
     "body": "body",
     "title": "t",
     "type": "info"
+  },
+  {
+    "name": "attachment",
+    "url": "wxteams://botaccesstoken123/Y2lzY29zcGFyazovL3VzL1JPT00vYWJj",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
   }
 ]

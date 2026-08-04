@@ -12,5 +12,15 @@
     "body": "body",
     "title": "",
     "type": "info"
+  },
+  {
+    "name": "attachment",
+    "url": "humhubs://token123@humhub.example.com/1",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
   }
 ]
