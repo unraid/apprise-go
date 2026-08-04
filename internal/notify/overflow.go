@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // Overflow decides what happens to a body longer than the service accepts.
@@ -547,4 +548,21 @@ func OverflowLimitsFor(schema string) OverflowLimits {
 		AmalgamateTitle: limits.amalgamateTitle,
 		Buffer:          limits.buffer,
 	}
+}
+
+// parseTimezone resolves a ?tz= value to a location, ignoring one the system
+// does not know rather than failing the send — which is what upstream does
+// with an unrecognized zone.
+func parseTimezone(raw string) *time.Location {
+	name := strings.TrimSpace(raw)
+	if name == "" {
+		return nil
+	}
+
+	location, err := time.LoadLocation(name)
+	if err != nil {
+		return nil
+	}
+
+	return location
 }

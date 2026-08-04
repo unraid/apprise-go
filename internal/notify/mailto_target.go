@@ -40,6 +40,11 @@ type MailtoTarget struct {
 	notifyFormat string
 	verifyTLS    bool
 
+	// location renders the Date header, which is the only place ?tz= is
+	// observable: upstream passes its timezone through to the message and
+	// falls back to the machine's when none is given.
+	location *time.Location
+
 	// inline embeds image attachments in the body rather than leaving them
 	// as downloads, which turns the message into multipart/related.
 	inline bool
@@ -169,6 +174,7 @@ func NewMailtoTarget(target *ParsedURL) (*MailtoTarget, error) {
 		notifyFormat: format,
 		verifyTLS:    verifyTLS,
 		inline:       parseBoolWithDefault(target.Query["inline"], false),
+		location:     parseTimezone(target.Query["tz"]),
 	}, nil
 }
 
@@ -360,7 +366,7 @@ func (m *MailtoTarget) buildMessages(body, title string, attachments []Attachmen
 			fmt.Sprintf("Subject: %s", subject),
 			fmt.Sprintf("From: %s", fromHeader),
 			fmt.Sprintf("To: %s", formatMIMEAddress("", target)),
-			fmt.Sprintf("Date: %s", time.Now().Format(time.RFC1123Z)),
+			fmt.Sprintf("Date: %s", m.now().Format(time.RFC1123Z)),
 			fmt.Sprintf("Message-ID: %s", mailtoMessageID(m.smtpHost)),
 			"MIME-Version: 1.0",
 			fmt.Sprintf("Content-Type: %s", contentTypeHeader),
@@ -644,4 +650,14 @@ func sendSMTPMessage(client *smtp.Client, from string, to []string, body string)
 		return err
 	}
 	return writer.Close()
+}
+
+// now is the current time in the target's timezone, which is what the Date
+// header carries.
+func (m *MailtoTarget) now() time.Time {
+	if m.location == nil {
+		return time.Now()
+	}
+
+	return time.Now().In(m.location)
 }

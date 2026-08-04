@@ -236,6 +236,13 @@ func ConfigureStorage(root string, uidLength int, salt []byte) {
 // StoreFor returns the store for a URL. The same URL always gets the same
 // store, so two notifiers built from one URL share what they remember.
 func StoreFor(target *ParsedURL) Store {
+	// ?store=no keeps this target in memory even when a storage path is
+	// configured, which is how upstream lets one URL opt out of persistence
+	// without turning it off for everything.
+	if target != nil && !parseBoolWithDefault(target.Query["store"], true) {
+		return newMemoryStore()
+	}
+
 	storeMu.Lock()
 	defer storeMu.Unlock()
 

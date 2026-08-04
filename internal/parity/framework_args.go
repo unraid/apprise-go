@@ -101,9 +101,11 @@ var FrameworkArgs = map[string]FrameworkArg{
 			"this.",
 	},
 	"store": {
-		Note: "Persistent storage is configured process-wide by the CLI " +
-			"rather than per URL, so ?store=no does not turn it off for one " +
-			"target the way upstream does.",
+		Implemented: true,
+		Note: "?store=no keeps one target in memory even when a storage path " +
+			"is configured, which is how upstream lets a URL opt out without " +
+			"turning persistence off for everything else. Not fixture-" +
+			"covered: whether a value survives is not visible in a request.",
 	},
 	"emojis": {
 		Implemented:    true,
@@ -116,8 +118,12 @@ var FrameworkArgs = map[string]FrameworkArg{
 			"generates back through upstream before emitting it.",
 	},
 	"tz": {
-		Note: "?tz= sets the timezone upstream renders timestamps in. Only " +
-			"visible for providers that put a local time in the payload.",
+		Implemented: true,
+		Note: "Renders timestamps in the given zone. mailto's Date header is " +
+			"the only place upstream consumes it, and the fixture compares " +
+			"the UTC offset both sides produce for Asia/Tokyo and " +
+			"America/Denver — comparing the instant would pass without the " +
+			"zone being applied at all.",
 	},
 	"redirect": {
 		Implemented: true,
@@ -128,8 +134,12 @@ var FrameworkArgs = map[string]FrameworkArg{
 			"fixture cannot reach it.",
 	},
 	"optional": {
-		Note: "?optional=yes marks a service whose failure should not fail " +
-			"the notification overall. It changes the reported result rather " +
-			"than the request.",
+		Implemented: true,
+		Note: "?optional=yes absorbs a failure once every attempt has been " +
+			"made, so a service the caller does not depend on cannot fail " +
+			"the notification. It does not skip retries — upstream runs them " +
+			"all and only reinterprets the final result, which the fixture " +
+			"checks. Not fixture-covered: it changes the reported result " +
+			"rather than the request, so it needs the failure budget.",
 	},
 }

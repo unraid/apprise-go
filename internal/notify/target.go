@@ -117,6 +117,11 @@ func DispatchSendWithOverflow(
 	}
 	defer withHTTPOptions(options)()
 
+	optional := false
+	if parsed != nil {
+		optional = parseBoolWithDefault(parsed.Query["optional"], false)
+	}
+
 	// ?retry= re-sends after a failure and ?wait= is how long to pause first.
 	// Both live in the orchestration layer upstream too, not in a plugin.
 	retries := 0
@@ -151,6 +156,14 @@ func DispatchSendWithOverflow(
 			}
 		}
 		if err != nil {
+			// ?optional=yes absorbs a failure once every attempt has been
+			// made, so a service the caller does not depend on cannot fail
+			// the notification. It does not skip retries — upstream runs
+			// them all and only reinterprets the final result.
+			if optional {
+				continue
+			}
+
 			return err
 		}
 	}
