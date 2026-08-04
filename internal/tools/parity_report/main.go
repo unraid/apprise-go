@@ -46,14 +46,20 @@ type report struct {
 	GoSchemas      []string
 	MissingSchemas []string
 	ExtraSchemas   []string
-	SchemaDiffErr  string
-	HTTPSchemas    []string
-	NonHTTPSchemas []string
-	SchemaCoverage string
-	GoldenCheck    string
-	ProviderParity string
-	GoldenParity   string
-	ProviderCount  int
+
+	// DeclaredGapSchemas are the schemas internal/notify/unsupported.go says
+	// this port does not implement. They are absent on purpose, so they are
+	// reported separately rather than counted as drift — the Go suites all
+	// defer to the same declaration.
+	DeclaredGapSchemas []string
+	SchemaDiffErr      string
+	HTTPSchemas        []string
+	NonHTTPSchemas     []string
+	SchemaCoverage     string
+	GoldenCheck        string
+	ProviderParity     string
+	GoldenParity       string
+	ProviderCount      int
 }
 
 func main() {
@@ -185,7 +191,8 @@ func runParityTests(pkg string) (report, []byte, error) {
 		} else {
 			rep.PythonSchemas = pythonSchemas
 			rep.GoSchemas = notify.SupportedSchemas()
-			rep.MissingSchemas, rep.ExtraSchemas = diffSchemas(rep.PythonSchemas, rep.GoSchemas)
+			rep.MissingSchemas, rep.DeclaredGapSchemas, rep.ExtraSchemas =
+				diffSchemas(rep.PythonSchemas, rep.GoSchemas)
 		}
 	}
 
@@ -312,7 +319,9 @@ func loadPythonSchemas(repoRoot string) ([]string, string, error) {
 	return schemas, appriseRoot, nil
 }
 
-func diffSchemas(pythonSchemas, goSchemas []string) ([]string, []string) {
+// diffSchemas splits the schemas upstream has and this port does not into the
+// ones that are absent on purpose and the ones that are drift.
+func diffSchemas(pythonSchemas, goSchemas []string) (missing, declared, extra []string) {
 	pythonSet := map[string]struct{}{}
 	for _, schema := range pythonSchemas {
 		normalized := strings.ToLower(strings.TrimSpace(schema))
@@ -331,21 +340,29 @@ func diffSchemas(pythonSchemas, goSchemas []string) ([]string, []string) {
 		goSet[normalized] = struct{}{}
 	}
 
-	missing := []string{}
+	missing = []string{}
+	declared = []string{}
 	for schema := range pythonSet {
-		if _, ok := goSet[schema]; !ok {
-			missing = append(missing, schema)
+		if _, ok := goSet[schema]; ok {
+			continue
 		}
+		if notify.IsKnownGapSchema(schema) {
+			declared = append(declared, schema)
+			continue
+		}
+		missing = append(missing, schema)
 	}
-	extra := []string{}
+	extra = []string{}
 	for schema := range goSet {
 		if _, ok := pythonSet[schema]; !ok {
 			extra = append(extra, schema)
 		}
 	}
 	sort.Strings(missing)
+	sort.Strings(declared)
 	sort.Strings(extra)
-	return missing, extra
+
+	return missing, declared, extra
 }
 
 func countProviders() int {
@@ -466,10 +483,12 @@ func renderMarkdown(rep report, jsonPath string) string {
 		fmt.Fprintf(&b, "- Python schemas: %d\n", len(rep.PythonSchemas))
 		fmt.Fprintf(&b, "- Go schemas: %d\n", len(rep.GoSchemas))
 		fmt.Fprintf(&b, "- Missing in Go: %d\n", len(rep.MissingSchemas))
+		fmt.Fprintf(&b, "- Declared unsupported: %d\n", len(rep.DeclaredGapSchemas))
 		fmt.Fprintf(&b, "- Extra in Go: %d\n\n", len(rep.ExtraSchemas))
 		b.WriteString("| Type | Schemas |\n")
 		b.WriteString("| --- | --- |\n")
 		fmt.Fprintf(&b, "| Missing in Go | %s |\n", strings.Join(rep.MissingSchemas, ", "))
+		fmt.Fprintf(&b, "| Declared unsupported | %s |\n", strings.Join(rep.DeclaredGapSchemas, ", "))
 		fmt.Fprintf(&b, "| Extra in Go | %s |\n\n", strings.Join(rep.ExtraSchemas, ", "))
 	}
 
