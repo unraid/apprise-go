@@ -203,6 +203,9 @@ func (t *TelegramTarget) buildSpec(body string, recipient telegramRecipient) (Re
 	}
 	if parseMode := t.parseMode(); parseMode != "" {
 		payload["parse_mode"] = parseMode
+		if parseMode == "HTML" {
+			payload["text"] = rewriteTelegramHTML(body)
+		}
 	}
 
 	if recipient.isNumeric {

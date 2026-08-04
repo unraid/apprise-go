@@ -58,7 +58,15 @@ var FrameworkArgs = map[string]FrameworkArg{
 			"plugins that take over splitting entirely (telegram, " +
 			"evolution, google_chat, slack), which convert or repair markup " +
 			"around the split; TestOverflowOverridesAreKnown fails when " +
-			"upstream adds another. Old note: ?overflow=split makes upstream send one request per chunk and " +
+			"upstream adds another; all four share one guard and only " +
+			"diverge for HTML converted to markdown, so ordinary sends take " +
+			"the framework path this port implements. One further limit: " +
+			"the fold used for measuring is also what the provider " +
+			"receives. That surfaced as telegram sending <br /> where " +
+			"upstream sends a newline, and the cause was not the fold: the " +
+			"port had none of telegram's HTML rewrite, so any body carrying " +
+			"a tag Telegram does not accept went out unconverted. That is " +
+			"ported now and covered. Old note: ?overflow=split makes upstream send one request per chunk and " +
 			"?overflow=truncate shortens the body to the provider's " +
 			"body_maxlen. The port does neither, so a split sends one " +
 			"request where upstream sends several. The default mode is " +

@@ -43,12 +43,23 @@ type SlackTarget struct {
 	workflowPath     []string
 	templatePath     string
 	templateTokens   map[string]string
+
+	// notifyFormat decides whether the payload claims markdown. Slack
+	// renders the text differently depending on it, so ?format=text is not
+	// cosmetic.
+	notifyFormat string
 }
 
 func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 	token := strings.TrimSpace(target.Host)
 	if token == "" {
 		return nil, fmt.Errorf("missing token")
+	}
+
+	notifyFormat := strings.ToLower(strings.TrimSpace(target.Query["format"]))
+	if notifyFormat == "" {
+		// Slack is markdown-native upstream.
+		notifyFormat = "markdown"
 	}
 
 	mode := strings.ToLower(strings.TrimSpace(target.Query["mode"]))
@@ -83,6 +94,7 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 		}
 
 		return &SlackTarget{
+			notifyFormat:   notifyFormat,
 			mode:           mode,
 			username:       strings.TrimSpace(target.User),
 			workflowPath:   workflowPath,
@@ -161,6 +173,7 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 	}
 
 	return &SlackTarget{
+		notifyFormat:     notifyFormat,
 		tokenA:           tokenA,
 		tokenB:           tokenB,
 		tokenC:           tokenC,
@@ -509,7 +522,10 @@ func (s *SlackTarget) buildPayload(body, title string, notifyType NotifyType) (m
 			},
 		}
 	} else {
-		payload["mrkdwn"] = true
+		// Upstream reports whether the body is markdown rather than always
+		// claiming it is; ?format=html or text turns this off, and Slack
+		// renders the text differently as a result.
+		payload["mrkdwn"] = s.notifyFormat == "markdown"
 		attachment := map[string]any{
 			"title": title,
 			"text":  body,

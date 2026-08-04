@@ -28,5 +28,20 @@
         "url": "https://chat.googleapis.com/v1/spaces/workspace123/messages?token=token789&key=key456&messageReplyOption=REPLY_MESSAGE_FALLBACK_TO_NEW_THREAD"
       }
     ]
+  },
+  {
+    "name": "overflow-split-html",
+    "requests": [
+      {
+        "body": "{\"text\": \"<b>over</b><br />\\r\\n<b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>.\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://chat.googleapis.com/v1/spaces/workspace123/messages?token=token789&key=key456"
+      }
+    ]
   }
 ]

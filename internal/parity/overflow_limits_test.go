@@ -108,8 +108,16 @@ func loadUpstreamOverflowLimits(t *testing.T) map[string]upstreamLimits {
 // telegram merges the title itself and repairs markdown across chunks, and
 // evolution, google_chat and slack convert CommonMark before splitting — so
 // the limits table cannot describe them and ApplyOverflow does not try.
+// All four share one guard: they only diverge when the plugin's own format is
+// markdown AND the incoming body format is HTML. Every other combination falls
+// through to the framework, which this port implements — so the override path
+// is reached by ?input-format=html into a markdown-native service, not by
+// ordinary use.
 var overflowOverrides = map[string]string{
-	"telegram":    "merges the title itself and repairs markdown across chunks",
+	"telegram": "merges the title itself and repairs markdown across chunks",
+	// Telegram's HTML rewrite is ported (telegram_html.go) and covered by
+	// tgram/overflow-split-html; what remains uncovered is the markdown
+	// repair across split chunks.
 	"evolution":   "converts HTML-derived CommonMark before splitting",
 	"google_chat": "converts HTML-derived CommonMark before splitting",
 	"slack":       "markdown-aware splitting that protects links",

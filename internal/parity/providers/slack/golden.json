@@ -123,5 +123,20 @@
         "url": "https://slack.com/api/files.completeUploadExternal"
       }
     ]
+  },
+  {
+    "name": "overflow-split-html",
+    "requests": [
+      {
+        "body": "{\"mrkdwn\": false, \"attachments\": [{\"title\": \"over\", \"text\": \"<b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>.\", \"color\": \"#3AA3E3\"}]}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/T1JJ3T3L2/A1BRTD4JD/TIAJKDNL0AZKC0XRIDEVI7"
+      }
+    ]
   }
 ]

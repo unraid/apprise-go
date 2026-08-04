@@ -38,5 +38,20 @@
         "url": "http://evo.example.com:8080/message/sendText/instance1"
       }
     ]
+  },
+  {
+    "name": "overflow-split-html",
+    "requests": [
+      {
+        "body": "{\"number\": \"15551234567\", \"text\": \"<b>over</b><br />\\r\\n<b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>.\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://evo.example.com/message/sendText/instance1"
+      }
+    ]
   }
 ]
