@@ -51,11 +51,14 @@ var FrameworkArgs = map[string]FrameworkArg{
 			"upstream by the 46elks and discord fixtures, which take " +
 			"different branches of the sizing logic — discord repeats the " +
 			"title with a [1/2] counter where 46elks folds it into the body. " +
-			"Not covered: services that override the framework's splitting, " +
-			"telegram being one, and the fifteen whose body_maxlen upstream " +
-			"computes per instance rather than declaring, which " +
-			"overflow_limits.py reports as null and ApplyOverflow leaves " +
-			"alone. Old note: ?overflow=split makes upstream send one request per chunk and " +
+			"The eight services whose limits upstream computes per instance " +
+			"rather than declaring — twilio's depends on ?method=, webex's " +
+			"on whether it is a webhook — are resolved from the URL and " +
+			"covered by fixtures of their own. Not covered: the four " +
+			"plugins that take over splitting entirely (telegram, " +
+			"evolution, google_chat, slack), which convert or repair markup " +
+			"around the split; TestOverflowOverridesAreKnown fails when " +
+			"upstream adds another. Old note: ?overflow=split makes upstream send one request per chunk and " +
 			"?overflow=truncate shortens the body to the provider's " +
 			"body_maxlen. The port does neither, so a split sends one " +
 			"request where upstream sends several. The default mode is " +

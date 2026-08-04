@@ -2,6 +2,7 @@ package parity
 
 import (
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -100,4 +101,88 @@ func loadUpstreamOverflowLimits(t *testing.T) map[string]upstreamLimits {
 	}
 
 	return limits
+}
+
+// overflowOverrides are the plugins that do their own splitting instead of
+// taking the framework's. They convert or repair markup around the split —
+// telegram merges the title itself and repairs markdown across chunks, and
+// evolution, google_chat and slack convert CommonMark before splitting — so
+// the limits table cannot describe them and ApplyOverflow does not try.
+var overflowOverrides = map[string]string{
+	"telegram":    "merges the title itself and repairs markdown across chunks",
+	"evolution":   "converts HTML-derived CommonMark before splitting",
+	"google_chat": "converts HTML-derived CommonMark before splitting",
+	"slack":       "markdown-aware splitting that protects links",
+}
+
+// TestOverflowOverridesAreKnown fails when upstream adds a plugin that takes
+// over its own splitting, so a new one is a decision rather than a silent
+// difference in what gets sent.
+//
+// This list exists because the first two were found by tripping over them: a
+// fixture failed, and only then did anyone look. Nothing was enumerating which
+// plugins override the framework, which is the same shape as the framework
+// arguments themselves going unnoticed.
+func TestOverflowOverridesAreKnown(t *testing.T) {
+	root := testutil.AppriseSourceRoot(t)
+
+	found := map[string]bool{}
+	err := filepath.Walk(filepath.Join(root, "apprise", "plugins"),
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() || !strings.HasSuffix(path, ".py") {
+				return err
+			}
+
+			source, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			if !strings.Contains(string(source), "def _build_send_calls") &&
+				!strings.Contains(string(source), "def _apply_overflow") {
+				return nil
+			}
+
+			name := strings.TrimSuffix(filepath.Base(path), ".py")
+			if name == "base" {
+				// The framework's own definition, which is what the others
+				// are overriding.
+				name = filepath.Base(filepath.Dir(path))
+				if name == "plugins" {
+					return nil
+				}
+			}
+			found[name] = true
+
+			return nil
+		})
+	if err != nil {
+		t.Fatalf("walk upstream plugins: %v", err)
+	}
+
+	var unlisted []string
+	for name := range found {
+		if _, ok := overflowOverrides[name]; !ok {
+			unlisted = append(unlisted, name)
+		}
+	}
+	if len(unlisted) > 0 {
+		sort.Strings(unlisted)
+		t.Errorf("%d plugin(s) override the framework's splitting and are not "+
+			"listed: %s\nApplyOverflow does not describe them, so each is a "+
+			"difference in what gets sent. Add it to overflowOverrides with "+
+			"what it does differently.",
+			len(unlisted), strings.Join(unlisted, ", "))
+	}
+
+	var stale []string
+	for name := range overflowOverrides {
+		if !found[name] {
+			stale = append(stale, name)
+		}
+	}
+	if len(stale) > 0 {
+		sort.Strings(stale)
+		t.Errorf("overflowOverrides names %d plugin(s) that no longer override "+
+			"anything: %s", len(stale), strings.Join(stale, ", "))
+	}
 }

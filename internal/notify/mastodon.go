@@ -663,3 +663,20 @@ func extractMastodonHashtags(message string) []string {
 
 	return tags
 }
+
+// mastodonPingTokens resolves the ?ping= tokens the way the target does, so
+// the overflow budget subtracts exactly what the status will carry.
+func mastodonPingTokens(target *ParsedURL) []string {
+	if target == nil {
+		return nil
+	}
+
+	tokens := []string{}
+	for _, entry := range sortedUniqueTargets(parseDelimitedList(target.Query["ping"])) {
+		if normalized, ok := normalizeMastodonPingToken(entry); ok {
+			tokens = append(tokens, normalized)
+		}
+	}
+
+	return tokens
+}

@@ -98,11 +98,6 @@ func DispatchSendWithOverflow(
 		title = ApplyEmojis(title)
 	}
 
-	schema := ""
-	if parsed != nil {
-		schema = parsed.Scheme
-	}
-
 	// The transport settings for this send: how long to wait for a
 	// connection and for a reply, and whether to follow redirects.
 	options := defaultHTTPOptions()
@@ -135,7 +130,7 @@ func DispatchSendWithOverflow(
 		}
 	}
 
-	parts := ApplyOverflow(schema, mode, format, title, body)
+	parts := ApplyOverflowForURL(parsed, mode, format, title, body)
 	for index, part := range parts {
 		// Attachments ride with the first part only; upstream does not repeat
 		// them across a split.

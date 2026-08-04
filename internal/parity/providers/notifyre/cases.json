@@ -41,5 +41,12 @@
       "%7Brepo%7D/internal/parity/fixtures/pixel.png"
     ],
     "attachment_dropped": true
+  },
+  {
+    "name": "overflow-split-dynamic",
+    "url": "notifyre://apikey123/15551234567?overflow=split",
+    "body": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word",
+    "title": "over",
+    "type": "info"
   }
 ]

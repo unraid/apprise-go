@@ -26,5 +26,12 @@
     "attachments": [
       "%7Brepo%7D/internal/parity/fixtures/pixel.png"
     ]
+  },
+  {
+    "name": "overflow-split-dynamic",
+    "url": "tweet://ckey/csecret/akey/asecret?overflow=split",
+    "body": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word",
+    "title": "over",
+    "type": "info"
   }
 ]

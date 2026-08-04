@@ -67,7 +67,28 @@ type MessagePart struct {
 // the parts to send. The default mode returns the content untouched, which is
 // what every provider here did before this existed.
 func ApplyOverflow(schema, mode, format, title, body string) []MessagePart {
+	return applyOverflowWithLimits(schema, mode, format, title, body, nil)
+}
+
+// ApplyOverflowForURL is ApplyOverflow for a service whose limits depend on
+// its URL. Eight upstream plugins compute body_maxlen or title_maxlen from an
+// argument rather than declaring a constant — twilio's depends on ?method=,
+// webex's on whether it is a webhook — so the generated table records them as
+// unknown and they are resolved here instead.
+func ApplyOverflowForURL(target *ParsedURL, mode, format, title, body string) []MessagePart {
+	schema := ""
+	if target != nil {
+		schema = target.Scheme
+	}
+
+	return applyOverflowWithLimits(schema, mode, format, title, body, target)
+}
+
+func applyOverflowWithLimits(schema, mode, format, title, body string, target *ParsedURL) []MessagePart {
 	limits, known := overflowLimitsFor(schema)
+	if resolved, ok := dynamicOverflowLimits(schema, target, limits); ok {
+		limits, known = resolved, true
+	}
 
 	// A service has its own format; ?format= overrides it. The fold depends
 	// on it, so telegram's HTML default gives a different separator from
@@ -565,4 +586,96 @@ func parseTimezone(raw string) *time.Location {
 	}
 
 	return location
+}
+
+// dynamicOverflowLimits fills in the limits upstream computes per instance.
+// Each is derived from a single URL argument, so resolving them needs the
+// parsed URL rather than the schema alone.
+//
+// Reported as unknown by overflow_limits.py, since a property cannot be read
+// off a class — which is why they were skipped rather than wrong.
+func dynamicOverflowLimits(schema string, target *ParsedURL, base overflowLimits) (overflowLimits, bool) {
+	if target == nil {
+		return base, false
+	}
+
+	query := func(name string) string {
+		return strings.ToLower(strings.TrimSpace(target.Query[name]))
+	}
+
+	switch strings.ToLower(strings.TrimSpace(schema)) {
+	case "twilio":
+		// SMS or a voice call, which have different ceilings.
+		base.bodyMax = 160
+		if method := query("method"); method != "" && strings.HasPrefix("call", method) {
+			base.bodyMax = 4000
+		}
+
+		return base, true
+
+	case "webex", "wxteams":
+		// A webhook takes far less than the bot API.
+		base.bodyMax = 7439
+		if mode := query("mode"); mode != "" && strings.HasPrefix("webhook", mode) {
+			base.bodyMax = 1000
+		}
+
+		return base, true
+
+	case "sns":
+		// A topic carries a title of its own; an SMS does not.
+		if mode := query("mode"); mode != "" && strings.HasPrefix("topic", mode) {
+			base.bodyMax, base.titleMax = 256000, 100
+
+			return base, true
+		}
+		base.bodyMax, base.titleMax = 160, 0
+
+		return base, true
+
+	case "notifyre":
+		// Fax has room for far more than a text message.
+		base.bodyMax = 160
+		if mode := query("mode"); mode != "" && strings.HasPrefix("fax", mode) {
+			base.bodyMax = 32768
+		}
+
+		return base, true
+
+	case "tweet", "twitter", "x":
+		// A direct message is not held to the public post limit.
+		base.bodyMax = 280
+		if mode := query("mode"); mode != "" && strings.HasPrefix("dm", mode) {
+			base.bodyMax = 10000
+		}
+
+		return base, true
+
+	case "dingtalk":
+		// Only markdown carries a title.
+		base.titleMax = 0
+		if strings.HasPrefix(query("format"), "markdown") {
+			base.titleMax = 250
+		}
+
+		return base, true
+
+	case "xmpp", "xmpps":
+		// ?subject=yes is what gives XMPP a title at all.
+		base.titleMax = 0
+		if parseBoolWithDefault(target.Query["subject"], false) {
+			base.titleMax = 250
+		}
+
+		return base, true
+
+	case "mastodon", "mastodons", "toot", "toots":
+		// The ping tokens are prepended to every status, so they come out of
+		// the body's budget.
+		base.bodyMax = 500 - len(mastodonPingPayload(mastodonPingTokens(target)))
+
+		return base, true
+	}
+
+	return base, false
 }
