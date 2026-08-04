@@ -155,7 +155,7 @@ func (t *TwitterTarget) uploadMedia(attachments []Attachment) ([][]string, error
 
 	for index, attachment := range attachments {
 		// Images only; anything else is ignored rather than refused.
-		if !strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+		if !strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
 			continue
 		}
 
@@ -165,7 +165,7 @@ func (t *TwitterTarget) uploadMedia(attachments []Attachment) ([][]string, error
 		}
 
 		// Only PNG and JPEG batch; a gif stands alone and splits the run.
-		if !twitterBatchablePattern.MatchString(attachment.MimeType) {
+		if !twitterBatchablePattern.MatchString(attachment.MIMEType) {
 			if len(current) > 0 {
 				batches = append(batches, current)
 				current = nil

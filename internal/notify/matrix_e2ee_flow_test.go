@@ -133,10 +133,10 @@ func TestMatrixE2EEAttachmentIsEncryptedBeforeUpload(t *testing.T) {
 			return err
 		}
 
-		return notify.SendWithAttachments(sender, "body", "title", notify.NotifyInfo,
+		return notify.DispatchSend(sender, "body", "title", notify.NotifyInfo,
 			[]notify.Attachment{{
 				Name:     "notes.txt",
-				MimeType: "text/plain",
+				MIMEType: "text/plain",
 				Data:     []byte(secret),
 			}})
 	})

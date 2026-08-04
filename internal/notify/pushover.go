@@ -266,7 +266,7 @@ func (p *PushoverTarget) buildRequests(body, title string, notifyType NotifyType
 		// rather than failing, so a PDF simply never arrives.
 		usable := []Attachment{}
 		for _, attachment := range attachments {
-			if strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+			if strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
 				usable = append(usable, attachment)
 			}
 		}

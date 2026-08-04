@@ -132,7 +132,7 @@ func (k *KookTarget) SendWithAttachments(body, title string, notifyType NotifyTy
 
 		// An image is posted as one so it renders; anything else is a file.
 		messageType := kookTypeFile
-		if strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+		if strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
 			messageType = kookTypeImage
 		}
 
@@ -187,7 +187,7 @@ func (k *KookTarget) uploadAsset(attachment Attachment, index int) (string, erro
 		formFields{}, "file",
 		Attachment{
 			Name:     attachment.FileName(index, ".dat"),
-			MimeType: attachment.MimeType,
+			MIMEType: attachment.MIMEType,
 			Data:     attachment.Data,
 		}, true)
 	if err != nil {

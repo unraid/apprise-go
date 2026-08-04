@@ -315,7 +315,7 @@ func (o *Office365Target) uploadAttachment(attachment Attachment, messageID stri
 		"AttachmentItem": map[string]any{
 			"attachmentType": "file",
 			"name":           attachment.FileName(index, ".dat"),
-			"contentType":    attachment.MimeType,
+			"contentType":    attachment.MIMEType,
 			"size":           len(attachment.Data),
 		},
 	})

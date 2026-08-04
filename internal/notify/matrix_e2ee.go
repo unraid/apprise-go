@@ -428,14 +428,14 @@ func (m *MatrixTarget) sendEncryptedAttachment(roomID string, attachment Attachm
 	fileInfo["url"] = contentURI
 
 	name := attachmentNameOrDefault(attachment)
-	isImage := strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/")
+	isImage := strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/")
 
 	content := map[string]any{
 		"msgtype": "m.image",
 		"body":    name,
 		"file":    fileInfo,
 		"info": map[string]any{
-			"mimetype": attachment.MimeType,
+			"mimetype": attachment.MIMEType,
 			"size":     len(attachment.Data),
 		},
 	}

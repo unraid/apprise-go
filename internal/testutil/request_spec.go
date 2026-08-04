@@ -64,16 +64,43 @@ func CapturePythonRequestsWithFormat(t *testing.T, url, body, title, bodyFormat 
 func CapturePythonRequestsWithFormatAndTypeResult(t *testing.T, url, body, title, bodyFormat string, notifyType notify.NotifyType) ([]notify.RequestSpec, *bool) {
 	t.Helper()
 
+	return CapturePythonRequestsWithFormatTypeAndAttachmentsResult(t, url, body, title, bodyFormat, notifyType, nil)
+}
+
+// CapturePythonRequestsWithAttachments captures what upstream sends for a
+// notification carrying attachments, so the Go side can be diffed against it
+// rather than checked against a hand-written expectation.
+func CapturePythonRequestsWithAttachments(
+	t *testing.T,
+	url, body, title string,
+	notifyType notify.NotifyType,
+	attachments []string,
+) []notify.RequestSpec {
+	t.Helper()
+
+	specs, _ := CapturePythonRequestsWithFormatTypeAndAttachmentsResult(
+		t, url, body, title, "", notifyType, attachments)
+
+	return specs
+}
+
+func CapturePythonRequestsWithFormatTypeAndAttachmentsResult(t *testing.T, url, body, title, bodyFormat string, notifyType notify.NotifyType, attachments []string) ([]notify.RequestSpec, *bool) {
+	t.Helper()
+
 	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
-	stdout, stderr, err := RunPythonScript(
-		t,
-		script,
+	args := []string{
 		"--url", url,
 		"--body", body,
 		"--title", title,
 		"--type", string(notifyType),
-		"--body-format", bodyFormat,
-	)
+	}
+	if bodyFormat != "" {
+		args = append(args, "--body-format", bodyFormat)
+	}
+	for _, attachment := range attachments {
+		args = append(args, "--attach", attachment)
+	}
+	stdout, stderr, err := RunPythonScript(t, script, args...)
 	if err != nil {
 		t.Fatalf("capture request failed: %v (stderr: %s)", err, strings.TrimSpace(stderr))
 	}
@@ -137,34 +164,4 @@ func parsePythonCapturePayload(t *testing.T, stdout string) pythonCapturePayload
 	payload.Requests = specs
 
 	return payload
-}
-
-// CapturePythonRequestsWithAttachments captures what upstream sends for a
-// notification carrying attachments, so the Go side can be diffed against it
-// rather than checked against a hand-written expectation.
-func CapturePythonRequestsWithAttachments(
-	t *testing.T,
-	url, body, title string,
-	notifyType notify.NotifyType,
-	attachments []string,
-) []notify.RequestSpec {
-	t.Helper()
-
-	args := []string{
-		"--url", url,
-		"--body", body,
-		"--title", title,
-		"--type", string(notifyType),
-	}
-	for _, attachment := range attachments {
-		args = append(args, "--attach", attachment)
-	}
-
-	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
-	stdout, stderr, err := RunPythonScript(t, script, args...)
-	if err != nil {
-		t.Fatalf("capture request with attachments failed: %v (stderr: %s)", err, strings.TrimSpace(stderr))
-	}
-
-	return parsePythonCapturePayload(t, stdout).specs()
 }

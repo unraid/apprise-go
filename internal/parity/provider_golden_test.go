@@ -91,7 +91,7 @@ func TestProviderGoldenRequests(t *testing.T) {
 
 				attachments := loadCaseAttachments(t, c)
 				goSpecs := testutil.CaptureGoRequests(t, func() error {
-					return notify.SendWithAttachments(target, c.Body, c.Title, notifyType, attachments)
+					return notify.DispatchSend(target, c.Body, c.Title, notifyType, attachments)
 				})
 
 				assertRequestSpecSequenceMatchesExcept(t, expected.specs(t), goSpecs,
@@ -155,7 +155,7 @@ func loadCaseAttachments(t *testing.T, c providerCase) []notify.Attachment {
 		return nil
 	}
 
-	attachments, err := notify.LoadAttachments(c.Attachments)
+	attachments, err := notify.ParseAttachments(c.Attachments)
 	if err != nil {
 		t.Fatalf("load attachments for %s: %v", c.Name, err)
 	}

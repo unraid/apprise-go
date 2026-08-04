@@ -103,7 +103,7 @@ KEEP_HEADERS = {
 }
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
-CACHE_VERSION = 11
+CACHE_VERSION = 13
 # A recipient device for Matrix end-to-end encryption. Upstream verifies the
 # signatures on device keys and one-time keys before it will encrypt to a
 # device, so the mock signs them with upstream's own account implementation
@@ -216,6 +216,36 @@ def apprise_git_sha():
     return output.decode("utf-8", "replace").strip()
 
 
+def stable_attachment_cache_entries(attachments):
+    entries = []
+    for attachment in attachments or []:
+        parsed = urlparse(attachment)
+        if parsed.scheme in ("http", "https"):
+            entries.append({"kind": "url", "value": attachment})
+            continue
+
+        path = Path(parsed.path) if parsed.scheme == "file" else Path(attachment)
+        if path.is_file():
+            try:
+                data = path.read_bytes()
+            except OSError:
+                entries.append({"kind": "path", "name": path.name})
+                continue
+            entries.append(
+                {
+                    "kind": "file",
+                    "name": path.name,
+                    "size": len(data),
+                    "sha256": hashlib.sha256(data).hexdigest(),
+                    "query": parsed.query,
+                }
+            )
+            continue
+
+        entries.append({"kind": "path", "name": path.name or attachment})
+    return entries
+
+
 def script_sha():
     try:
         return hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
@@ -287,6 +317,7 @@ def cache_key(url, body, title, notify_type, body_format, attach=None):
         # An attachment shapes the request, so it belongs in the key.
         "attach": sorted(attach or []),
         "attach_shas": referenced_file_shas_for(attach or []),
+        "attachments": stable_attachment_cache_entries(attach or []),
         "apprise_version": apprise_version,
         "apprise_sha": apprise_git_sha(),
         # The mocked responses live in this script, so a change to it must
@@ -938,6 +969,8 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
             response._content = b'{"success":true}'
         else:
             response._content = b"ok"
+        response.headers.setdefault("Content-Type", "text/plain")
+        response.headers["Content-Length"] = str(len(response.content))
         response.url = prepared.url
         return response
 
@@ -949,6 +982,15 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
         asset = AppriseAsset(**asset_kwargs)
         service = apprise.Apprise(asset=asset)
         service.add(url)
+        if len(service) == 0:
+            # Some providers can instantiate successfully even when add() leaves
+            # the service list empty in this editable test environment. Fall
+            # back to explicit instantiation so the capture path still exercises
+            # the provider's normal notify flow.
+            instance = apprise.Apprise.instantiate(url, asset=asset)
+            if instance:
+                service.servers.append(instance)
+
         notify_kwargs = {
             "body": body,
             "title": title,

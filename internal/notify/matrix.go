@@ -322,7 +322,7 @@ func (m *MatrixTarget) sendServer(body, title string, notifyType NotifyType, att
 func (m *MatrixTarget) uploadAttachments(attachments []Attachment) ([]map[string]any, error) {
 	payloads := make([]map[string]any, 0, len(attachments))
 	for _, attachment := range attachments {
-		isImage := strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/")
+		isImage := strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/")
 
 		// The older API only ever posts images, so anything else is skipped
 		// rather than sent as a file it has no message type for.
@@ -342,7 +342,7 @@ func (m *MatrixTarget) uploadAttachments(attachments []Attachment) ([]map[string
 
 		if m.version != matrixVersionV3 {
 			payloads = append(payloads, map[string]any{
-				"info":    map[string]any{"mimetype": attachment.MimeType},
+				"info":    map[string]any{"mimetype": attachment.MIMEType},
 				"msgtype": "m.image",
 				"body":    "tta.webp",
 				"url":     contentURI,
@@ -353,7 +353,7 @@ func (m *MatrixTarget) uploadAttachments(attachments []Attachment) ([]map[string
 		payload := map[string]any{
 			"body": attachment.Name,
 			"info": map[string]any{
-				"mimetype": attachment.MimeType,
+				"mimetype": attachment.MIMEType,
 				"size":     len(attachment.Data),
 			},
 			"msgtype": "m.image",
@@ -380,7 +380,7 @@ func (m *MatrixTarget) uploadFetch(attachment Attachment, params url.Values) (bo
 
 	headers := map[string]string{
 		"User-Agent":   matrixDefaultUserAgent,
-		"Content-Type": attachment.MimeType,
+		"Content-Type": attachment.MIMEType,
 		"Accept":       "application/json",
 	}
 	if m.accessToken != "" {

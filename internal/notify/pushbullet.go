@@ -119,7 +119,7 @@ func (p *PushbulletTarget) uploadAttachment(attachment Attachment, index int) (m
 
 	request, err := json.Marshal(map[string]any{
 		"file_name": name,
-		"file_type": attachment.MimeType,
+		"file_type": attachment.MIMEType,
 	})
 	if err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ func (p *PushbulletTarget) uploadAttachment(attachment Attachment, index int) (m
 	uploadBody, contentType, err := singleFileAttachmentBody(
 		formFields{}, "file", Attachment{
 			Name:     upload.FileName,
-			MimeType: upload.FileType,
+			MIMEType: upload.FileType,
 			Data:     attachment.Data,
 		}, false)
 	if err != nil {

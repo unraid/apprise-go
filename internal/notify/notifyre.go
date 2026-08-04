@@ -150,7 +150,7 @@ func (n *NotifyreTarget) buildFaxRequest(text string, attachments []Attachment) 
 	for _, attachment := range attachments {
 		documents = append(documents, map[string]any{
 			"base64Str":   attachment.Base64(),
-			"contentType": attachment.MimeType,
+			"contentType": attachment.MIMEType,
 		})
 	}
 

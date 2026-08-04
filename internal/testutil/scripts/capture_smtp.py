@@ -23,10 +23,11 @@ def main():
 
     apobj = apprise.Apprise(asset=AppriseAsset(**asset_kwargs))
     apobj.add(args.url)
-    notify_kwargs = {}
-    if args.attach:
-        notify_kwargs["attach"] = args.attach
-    success = apobj.notify(body=args.body, title=args.title, **notify_kwargs)
+    success = apobj.notify(
+        body=args.body,
+        title=args.title,
+        attach=args.attach or None,
+    )
     print(json.dumps({"success": bool(success)}, ensure_ascii=True))
 
 

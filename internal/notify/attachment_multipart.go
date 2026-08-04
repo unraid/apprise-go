@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/textproto"
-	"regexp"
 	"strings"
 )
 
@@ -63,7 +62,7 @@ func attachmentPartHeader(field string, attachment Attachment, withType bool) te
 		return header
 	}
 
-	mimeType := attachment.MimeType
+	mimeType := attachment.MIMEType
 	if mimeType == "" {
 		mimeType = "application/octet-stream"
 	}
@@ -108,10 +107,14 @@ func mailgunAttachmentBody(fields formFields, attachments []Attachment) (body st
 }
 
 // formAttachmentBody builds the multipart body the generic form:// webhook
-// sends. The field name comes from ?attach_as=; a wildcard in it is replaced
-// by a two-digit counter so several files get distinct names, and without one
-// every file reuses the same field.
-func formAttachmentBody(fields formFields, attachAs string, attachments []Attachment) (body string, contentType string, err error) {
+// sends. The field name is the template parseFormAttachAs produced: numbered
+// per file when it carries a placeholder, and reused as-is when it does not.
+func formAttachmentBody(
+	fields formFields,
+	attachAs string,
+	numbered bool,
+	attachments []Attachment,
+) (body string, contentType string, err error) {
 	var buffer bytes.Buffer
 	writer := multipart.NewWriter(&buffer)
 
@@ -121,7 +124,7 @@ func formAttachmentBody(fields formFields, attachAs string, attachments []Attach
 
 	for index, attachment := range attachments {
 		part, err := writer.CreatePart(attachmentPartHeader(
-			formAttachmentField(attachAs, index), attachment, true))
+			formAttachmentField(attachAs, numbered, index), attachment, true))
 		if err != nil {
 			return "", "", err
 		}
@@ -137,22 +140,13 @@ func formAttachmentBody(fields formFields, attachAs string, attachments []Attach
 	return buffer.String(), writer.FormDataContentType(), nil
 }
 
-// formAttachmentWildcard matches the placeholder characters upstream accepts
-// in an attach_as value.
-var formAttachmentWildcard = regexp.MustCompile(`[*?+$:.%]+`)
-
-func formAttachmentField(attachAs string, index int) string {
-	name := strings.TrimSpace(attachAs)
-	if name == "" {
-		name = "file*"
+// formAttachmentField names the part for one file.
+func formAttachmentField(attachAs string, numbered bool, index int) string {
+	if !numbered {
+		return attachAs
 	}
 
-	counter := fmt.Sprintf("%02d", index+1)
-	if formAttachmentWildcard.MatchString(name) {
-		return formAttachmentWildcard.ReplaceAllString(name, counter)
-	}
-
-	return name
+	return fmt.Sprintf(attachAs, index+1)
 }
 
 // singleFileAttachmentBody builds a multipart body carrying form fields plus
@@ -201,7 +195,7 @@ func appriseAPIFormAttachmentBody(fields formFields, attachments []Attachment) (
 			fmt.Sprintf("file%02d", index+1),
 			Attachment{
 				Name:     attachment.FileName(index, ".dat"),
-				MimeType: attachment.MimeType,
+				MIMEType: attachment.MIMEType,
 				Data:     attachment.Data,
 			}, true))
 		if err != nil {
@@ -240,7 +234,7 @@ func indexedFileAttachmentBody(
 			fieldFor(index),
 			Attachment{
 				Name:     attachment.FileName(index, ".dat"),
-				MimeType: attachment.MimeType,
+				MIMEType: attachment.MIMEType,
 				Data:     attachment.Data,
 			}, withType))
 		if err != nil {

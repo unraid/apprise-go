@@ -28,7 +28,11 @@ type FormTarget struct {
 	// The URL's own ordering for payloadExtras and params.
 	payloadExtraOrder []string
 	paramOrder        []string
-	attachAs          string
+
+	// attachAs is the field-name template for uploaded files; attachMulti
+	// says whether it carries a counter to be filled in per file.
+	attachAs    string
+	attachMulti bool
 }
 
 func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
@@ -38,6 +42,14 @@ func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
 	}
 	if _, ok := formMethods[method]; !ok {
 		return nil, fmt.Errorf("invalid method: %s", method)
+	}
+
+	// The URL argument is attach-as; attach_as is only the name it maps to
+	// internally, and reading that spelling meant the documented one did
+	// nothing.
+	attachAs, attachMulti, err := parseFormAttachAs(target.Query["attach-as"])
+	if err != nil {
+		return nil, err
 	}
 
 	payloadExtras := cloneMap(target.QueryPayload)
@@ -70,7 +82,8 @@ func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
 		// The URL argument is attach-as; attach_as is only the name it maps
 		// to internally, and reading that spelling meant the documented one
 		// did nothing.
-		attachAs: strings.TrimSpace(target.Query["attach-as"]),
+		attachAs:    attachAs,
+		attachMulti: attachMulti,
 	}, nil
 }
 
@@ -149,7 +162,7 @@ func (f *FormTarget) buildRequest(body, title string, notifyType NotifyType, att
 			// Files turn the form-encoded body multipart; the field name
 			// comes from ?attach_as=, numbered when it carries a wildcard.
 			var err error
-			bodyPayload, contentType, err = formAttachmentBody(payload, f.attachAs, attachments)
+			bodyPayload, contentType, err = formAttachmentBody(payload, f.attachAs, f.attachMulti, attachments)
 			if err != nil {
 				return RequestSpec{}, err
 			}
@@ -366,4 +379,40 @@ func init() {
 		"service_url":      nil,
 		"setup_url":        "https://appriseit.com/services/form/",
 	})
+}
+
+// parseFormAttachAs turns the ?attach-as= value into a field-name template and
+// says whether it numbers its files. A wildcard becomes a two-digit counter so
+// several files get distinct names; without one every file reuses the field.
+//
+// More than one placeholder is rejected rather than silently taking the first:
+// a name with two counters in it is a typo, and guessing which was meant would
+// put the files under names the caller did not ask for.
+func parseFormAttachAs(raw string) (string, bool, error) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return "file%02d", true, nil
+	}
+	if strings.Count(value, "%02d") > 1 {
+		return "", false, fmt.Errorf("attach-as supports only one placeholder")
+	}
+	if strings.Contains(value, "%02d") {
+		return value, true, nil
+	}
+
+	wildcard := -1
+	for i, ch := range value {
+		if !strings.ContainsRune("*?+$:.%", ch) {
+			continue
+		}
+		if wildcard >= 0 {
+			return "", false, fmt.Errorf("attach-as supports only one wildcard")
+		}
+		wildcard = i
+	}
+	if wildcard < 0 {
+		return value, false, nil
+	}
+
+	return value[:wildcard] + "%02d" + value[wildcard+1:], true, nil
 }

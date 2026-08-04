@@ -30,9 +30,12 @@ var ErrNoTargets = errors.New("apprise: no notification URLs configured")
 type Option func(*notifyOptions)
 
 type notifyOptions struct {
-	title       string
-	notifyType  NotifyType
-	inputFormat string
+	title              string
+	notifyType         NotifyType
+	inputFormat        string
+	rawAttachments     []string
+	attachmentMaxBytes int64
+	attachmentErr      error
 }
 
 // Apprise stores notification target URLs and sends messages to them.
@@ -93,6 +96,25 @@ func WithNotifyType(notifyType NotifyType) Option {
 func WithInputFormat(inputFormat string) Option {
 	return func(opts *notifyOptions) {
 		opts.inputFormat = inputFormat
+	}
+}
+
+// WithAttachmentMaxBytes sets the maximum size for each remote attachment.
+func WithAttachmentMaxBytes(maxBytes int64) Option {
+	return func(opts *notifyOptions) {
+		if maxBytes <= 0 {
+			opts.attachmentErr = fmt.Errorf("maximum attachment size must be positive")
+			return
+		}
+		opts.attachmentMaxBytes = maxBytes
+	}
+}
+
+// WithAttachments attaches one or more local file paths or trusted attachment URLs to the notification.
+// Attachment URLs are fetched as provided; do not pass untrusted end-user URLs.
+func WithAttachments(rawAttachments ...string) Option {
+	return func(opts *notifyOptions) {
+		opts.rawAttachments = append(opts.rawAttachments, rawAttachments...)
 	}
 }
 
@@ -165,9 +187,17 @@ func (a *Apprise) Send(body string, options ...Option) error {
 		}
 	}
 
+	if opts.attachmentErr != nil {
+		return opts.attachmentErr
+	}
+	attachments, err := notify.ParseAttachmentsWithMaxBytes(opts.rawAttachments, opts.attachmentMaxBytes)
+	if err != nil {
+		return err
+	}
+
 	var errs []error
 	for _, rawURL := range urls {
-		if err := notify.SendTargetURL(rawURL, body, opts.title, opts.inputFormat, opts.notifyType); err != nil {
+		if err := notify.SendTargetURLWithAttachments(rawURL, body, opts.title, opts.inputFormat, opts.notifyType, attachments); err != nil {
 			errs = append(errs, &TargetError{
 				URL: rawURL,
 				Err: err,
@@ -188,7 +218,8 @@ func Send(rawURLs []string, body string, options ...Option) error {
 
 func defaultNotifyOptions() notifyOptions {
 	return notifyOptions{
-		notifyType:  NotifyInfo,
-		inputFormat: "text",
+		notifyType:         NotifyInfo,
+		inputFormat:        "text",
+		attachmentMaxBytes: notify.DefaultMaxAttachmentBytes,
 	}
 }

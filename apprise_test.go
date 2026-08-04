@@ -32,6 +32,43 @@ func TestAppriseSendJSONTarget(t *testing.T) {
 	testutil.AssertRequestSpecSequenceMatches(t, pythonRequests, goRequests)
 }
 
+func TestAppriseSendJSONTargetWithAttachmentMatchesPython(t *testing.T) {
+	testutil.RequirePythonApprise(t)
+
+	attachment := writeAttachmentFixture(t, "report.txt", "attachment body\n")
+	targetURL := "json://example.com/notify"
+	body := "hello"
+	title := "Greeting"
+
+	pythonRequests := testutil.CapturePythonRequestsWithAttachments(
+		t, targetURL, body, title, notify.NotifyInfo, []string{attachment})
+	goRequests := testutil.CaptureGoRequests(t, func() error {
+		client := New()
+		if err := client.Add(targetURL); err != nil {
+			return err
+		}
+		return client.Send(body, WithTitle(title), WithAttachments(attachment))
+	})
+
+	testutil.AssertRequestSpecSequenceMatches(t, pythonRequests, goRequests)
+}
+
+func TestAppriseSendAttachmentMaxBytes(t *testing.T) {
+	attachmentServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("12345"))
+	}))
+	defer attachmentServer.Close()
+
+	client := New()
+	if err := client.Add("json://example.com/notify"); err != nil {
+		t.Fatalf("add target: %v", err)
+	}
+	err := client.Send("hello", WithAttachments(attachmentServer.URL), WithAttachmentMaxBytes(4))
+	if err == nil || !strings.Contains(err.Error(), "attachment exceeds maximum size") {
+		t.Fatalf("error = %v, want maximum size error", err)
+	}
+}
+
 func TestAppriseSendConvertsInputFormat(t *testing.T) {
 	testutil.RequirePythonApprise(t)
 
@@ -75,6 +112,11 @@ func TestAppriseAddRejectsUnsupportedSchema(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "unsupported URL scheme: unknown") {
 		t.Fatalf("error = %v, want unsupported schema", err)
 	}
+}
+
+func writeAttachmentFixture(t *testing.T, name, body string) string {
+	t.Helper()
+	return testutil.WriteAttachmentFixture(t, name, body)
 }
 
 func captureRequestSpec(t *testing.T, r *http.Request) notify.RequestSpec {

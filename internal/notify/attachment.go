@@ -3,116 +3,195 @@ package notify
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
-// Attachment is a file to send alongside a notification.
-//
-// The contents are read once, up front, rather than streamed. A notification
-// goes to every target of every URL, so a stream would be consumed by the
-// first one and arrive empty at the rest.
+// DefaultMaxAttachmentBytes matches Python Apprise's default attachment cap.
+const DefaultMaxAttachmentBytes int64 = 1048576000
+
+var attachmentHTTPClient = &http.Client{Timeout: 30 * time.Second}
+
 type Attachment struct {
+	Source   string
 	Name     string
-	MimeType string
+	MIMEType string
 	Data     []byte
 }
 
-// AttachmentSender is implemented by providers that can transmit attachments.
-//
-// It is deliberately separate from Sender: a provider that cannot carry a file
-// should fail to satisfy this interface rather than accept an attachment and
-// quietly drop it. Callers check for it and report the gap.
-type AttachmentSender interface {
-	Sender
-
-	SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error
+func ParseAttachments(rawValues []string) ([]Attachment, error) {
+	return ParseAttachmentsWithMaxBytes(rawValues, DefaultMaxAttachmentBytes)
 }
 
-// LoadAttachment reads a local file. A file:// prefix is accepted so the same
-// syntax works whether or not the caller strips it.
-func LoadAttachment(location string) (Attachment, error) {
-	path := strings.TrimSpace(location)
-	path = strings.TrimPrefix(path, "file://")
-	if path == "" {
-		return Attachment{}, fmt.Errorf("empty attachment path")
+// ParseAttachmentsWithMaxBytes parses attachments using maxBytes for each remote attachment fetch.
+func ParseAttachmentsWithMaxBytes(rawValues []string, maxBytes int64) ([]Attachment, error) {
+	if maxBytes <= 0 {
+		return nil, fmt.Errorf("maximum attachment size must be positive")
 	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return Attachment{}, fmt.Errorf("read attachment %s: %w", path, err)
-	}
-
-	name := filepath.Base(path)
-
-	return Attachment{
-		Name:     name,
-		MimeType: attachmentMimeType(name, data),
-		Data:     data,
-	}, nil
-}
-
-// LoadAttachments reads every location, stopping at the first failure so a
-// notification never goes out with only some of what was asked for.
-func LoadAttachments(locations []string) ([]Attachment, error) {
-	attachments := make([]Attachment, 0, len(locations))
-	for _, location := range locations {
-		if strings.TrimSpace(location) == "" {
-			continue
-		}
-		attachment, err := LoadAttachment(location)
+	attachments := make([]Attachment, 0, len(rawValues))
+	for _, raw := range rawValues {
+		attachment, err := ParseAttachmentWithMaxBytes(raw, maxBytes)
 		if err != nil {
 			return nil, err
 		}
 		attachments = append(attachments, attachment)
 	}
-
 	return attachments, nil
 }
 
-// attachmentMimeType prefers the extension and falls back to sniffing the
-// contents, which is what a receiver would do with an unhelpful name.
-func attachmentMimeType(name string, data []byte) string {
-	if byExtension := mime.TypeByExtension(filepath.Ext(name)); byExtension != "" {
-		return strings.SplitN(byExtension, ";", 2)[0]
-	}
-	if len(data) > 0 {
-		return strings.SplitN(http.DetectContentType(data), ";", 2)[0]
-	}
-
-	return "application/octet-stream"
+func ParseAttachment(raw string) (Attachment, error) {
+	return ParseAttachmentWithMaxBytes(raw, DefaultMaxAttachmentBytes)
 }
 
-// SendWithAttachments delivers a notification, including attachments when
-// there are any.
-//
-// A target that cannot carry them is an error rather than a silent downgrade:
-// someone attaching a file and seeing a success has every reason to believe it
-// arrived.
-func SendWithAttachments(target Sender, body, title string, notifyType NotifyType, attachments []Attachment) error {
-	if len(attachments) == 0 {
-		return target.Send(body, title, notifyType)
+// ParseAttachmentWithMaxBytes parses an attachment using maxBytes for a remote attachment fetch.
+func ParseAttachmentWithMaxBytes(raw string, maxBytes int64) (Attachment, error) {
+	source := strings.TrimSpace(raw)
+	if source == "" {
+		return Attachment{}, fmt.Errorf("empty attachment")
+	}
+	if maxBytes <= 0 {
+		return Attachment{}, fmt.Errorf("maximum attachment size must be positive")
 	}
 
-	sender, ok := target.(AttachmentSender)
-	if !ok {
-		return fmt.Errorf("this service does not support attachments")
+	location, params := splitAttachmentParams(source)
+	name := strings.TrimSpace(params.Get("name"))
+	mimeType := strings.TrimSpace(params.Get("mime"))
+	if mimeType == "" {
+		mimeType = strings.TrimSpace(params.Get("mimetype"))
 	}
 
-	return sender.SendWithAttachments(body, title, notifyType, attachments)
+	var data []byte
+	var err error
+	switch strings.ToLower(attachmentScheme(location)) {
+	case "http", "https":
+		data, err = readHTTPAttachment(location, maxBytes)
+	case "file":
+		data, location, err = readFileURLAttachment(location)
+	default:
+		// #nosec G304 -- attachment paths are explicitly supplied by the caller.
+		data, err = os.ReadFile(location)
+	}
+	if err != nil {
+		return Attachment{}, err
+	}
+
+	if name == "" {
+		name = filepath.Base(location)
+	}
+	if name == "" || name == "." || name == string(filepath.Separator) {
+		name = "apprise-attachment"
+	}
+
+	if mimeType == "" {
+		mimeType = detectMIMEType(name, data)
+	}
+
+	return Attachment{
+		Source:   source,
+		Name:     name,
+		MIMEType: mimeType,
+		Data:     data,
+	}, nil
 }
 
-// Base64 returns the attachment encoded the way a JSON email API expects it.
 func (a Attachment) Base64() string {
 	return base64.StdEncoding.EncodeToString(a.Data)
 }
 
-// FileName returns the attachment's name, falling back to a generated one so
-// a nameless attachment still arrives with something usable.
+func splitAttachmentParams(raw string) (string, url.Values) {
+	parsed, err := url.Parse(raw)
+	if err == nil && parsed.Scheme != "" {
+		params := parsed.Query()
+		parsed.RawQuery = ""
+		return parsed.String(), params
+	}
+
+	parts := strings.SplitN(raw, "?", 2)
+	if len(parts) == 1 {
+		return raw, url.Values{}
+	}
+	params, err := url.ParseQuery(parts[1])
+	if err != nil {
+		return parts[0], url.Values{}
+	}
+	return parts[0], params
+}
+
+func attachmentScheme(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return ""
+	}
+	return parsed.Scheme
+}
+
+func readHTTPAttachment(raw string, maxBytes int64) ([]byte, error) {
+	return readHTTPAttachmentWithClient(raw, attachmentHTTPClient, maxBytes)
+}
+
+func readHTTPAttachmentWithClient(raw string, client *http.Client, maxBytes int64) ([]byte, error) {
+	// Attachment URLs are explicit caller input, matching Python Apprise's
+	// trusted-URL behavior. Do not pass untrusted end-user URLs here without
+	// applying application-level SSRF policy before calling WithAttachments.
+	req, err := http.NewRequest(http.MethodGet, raw, nil) // #nosec G107 -- attachment URLs are explicitly supplied by the caller.
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		return nil, &HTTPStatusError{StatusCode: resp.StatusCode}
+	}
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(data)) > maxBytes {
+		return nil, fmt.Errorf("attachment exceeds maximum size of %d bytes", maxBytes)
+	}
+	return data, nil
+}
+
+func readFileURLAttachment(raw string) ([]byte, string, error) {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return nil, "", err
+	}
+	path := parsed.Path
+	if path == "" && parsed.Host != "" {
+		path = parsed.Host
+	}
+	// #nosec G304 -- file:// attachment paths are explicitly supplied by the caller.
+	data, err := os.ReadFile(path)
+	return data, path, err
+}
+
+func detectMIMEType(name string, data []byte) string {
+	if ext := filepath.Ext(name); ext != "" {
+		if value := mime.TypeByExtension(ext); value != "" {
+			if mediaType, _, err := mime.ParseMediaType(value); err == nil && mediaType != "" {
+				return mediaType
+			}
+			return value
+		}
+	}
+	if len(data) > 0 {
+		return http.DetectContentType(data)
+	}
+	return "application/octet-stream"
+}
+
 func (a Attachment) FileName(index int, extension string) string {
 	if name := strings.TrimSpace(a.Name); name != "" {
 		return name
@@ -195,7 +274,7 @@ func attachmentsSparkPostStyle(attachments []Attachment) []any {
 	for index, attachment := range attachments {
 		out = append(out, map[string]any{
 			"name": attachment.FileName(index, ".dat"),
-			"type": attachment.MimeType,
+			"type": attachment.MIMEType,
 			"data": attachment.Base64(),
 		})
 	}
@@ -209,7 +288,7 @@ func attachmentsSMTP2GoStyle(attachments []Attachment) []any {
 		out = append(out, map[string]any{
 			"filename": attachment.FileName(index, ".dat"),
 			"fileblob": attachment.Base64(),
-			"mimetype": attachment.MimeType,
+			"mimetype": attachment.MIMEType,
 		})
 	}
 
@@ -224,7 +303,7 @@ func attachmentsPostmarkStyle(attachments []Attachment) []any {
 		out = append(out, map[string]any{
 			"Name":        attachment.FileName(index, ".dat"),
 			"Content":     attachment.Base64(),
-			"ContentType": attachment.MimeType,
+			"ContentType": attachment.MIMEType,
 		})
 	}
 
@@ -237,7 +316,7 @@ func attachmentsSMSEagleStyle(attachments []Attachment) []any {
 	out := make([]any, 0, len(attachments))
 	for _, attachment := range attachments {
 		out = append(out, map[string]any{
-			"content_type": attachment.MimeType,
+			"content_type": attachment.MIMEType,
 			"content":      attachment.Base64(),
 		})
 	}
@@ -252,7 +331,7 @@ func attachmentsCustomJSONStyle(attachments []Attachment) []any {
 		out = append(out, map[string]any{
 			"filename": attachment.FileName(index, ".dat"),
 			"base64":   attachment.Base64(),
-			"mimetype": attachment.MimeType,
+			"mimetype": attachment.MIMEType,
 		})
 	}
 
@@ -270,7 +349,7 @@ func attachmentsCustomXMLStyle(attachments []Attachment) string {
 	builder.WriteString(`<Attachments format="base64">`)
 	for index, attachment := range attachments {
 		fmt.Fprintf(&builder, `<Attachment filename="%s" mimetype="%s">`,
-			escapeXML(attachment.FileName(index, ".dat")), escapeXML(attachment.MimeType))
+			escapeXML(attachment.FileName(index, ".dat")), escapeXML(attachment.MIMEType))
 		builder.WriteString(attachment.Base64())
 		builder.WriteString("</Attachment>")
 	}

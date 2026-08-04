@@ -55,7 +55,7 @@ func TestAttachmentParity(t *testing.T) {
 				t.Fatal("provider does not accept attachments")
 			}
 
-			attachment, err := notify.LoadAttachment(path)
+			attachment, err := notify.ParseAttachment(path)
 			if err != nil {
 				t.Fatalf("load attachment: %v", err)
 			}

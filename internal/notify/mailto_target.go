@@ -481,7 +481,7 @@ func buildMailtoBody(body, format string, inline bool, attachments []Attachment)
 
 	for index, attachment := range attachments {
 		name := attachment.FileName(index, ".dat")
-		mimeType := attachment.MimeType
+		mimeType := attachment.MIMEType
 		if mimeType == "" {
 			mimeType = "application/octet-stream"
 		}
@@ -530,7 +530,7 @@ func applyMailtoInline(body, format string, attachments []Attachment) (string, m
 		// Plain text cannot embed anything, so images are named instead.
 		var listed []string
 		for index, attachment := range attachments {
-			if strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+			if strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
 				listed = append(listed, names[index])
 			}
 		}
@@ -554,7 +554,7 @@ func applyMailtoInline(body, format string, attachments []Attachment) (string, m
 	}
 
 	for index, attachment := range attachments {
-		if !strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+		if !strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
 			continue
 		}
 		if _, ok := refs[names[index]]; ok {

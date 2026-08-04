@@ -224,7 +224,7 @@ func (p *PushSaferTarget) Send(body, title string, notifyType NotifyType) error 
 func (p *PushSaferTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	images := []Attachment{}
 	for _, attachment := range attachments {
-		if strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+		if strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
 			images = append(images, attachment)
 		}
 	}
@@ -296,7 +296,7 @@ func (p *PushSaferTarget) buildSpecWithImages(
 			break
 		}
 		values.Set(pushSaferPictureFields[index],
-			fmt.Sprintf("data:%s;base64,%s", image.MimeType, image.Base64()))
+			fmt.Sprintf("data:%s;base64,%s", image.MIMEType, image.Base64()))
 	}
 
 	scheme := "http"

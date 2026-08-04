@@ -236,7 +236,7 @@ var mastodonMediaPattern = regexp.MustCompile(`(?i)^(image|video|audio)/.*`)
 func (m *MastodonTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	mediaIDs := []string{}
 	for index, attachment := range attachments {
-		if !mastodonMediaPattern.MatchString(attachment.MimeType) {
+		if !mastodonMediaPattern.MatchString(attachment.MIMEType) {
 			continue
 		}
 

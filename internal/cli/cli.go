@@ -294,11 +294,11 @@ func Run(args []string, stdout, stderr io.Writer) int {
 
 	// Read every attachment before anything is sent, so a missing file fails
 	// the run rather than reaching some targets and not others.
-	attachments, err := notify.LoadAttachments(opts.attachments)
+	attachments, err := notify.ParseAttachments(opts.attachments)
 	if err != nil {
-		fmt.Fprintln(stderr, err)
+		fmt.Fprintf(stderr, "attachment error: %s\n", err)
 
-		return 1
+		return 2
 	}
 
 	failed := false
@@ -328,7 +328,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 			continue
 		}
 
-		if err := notify.SendWithAttachments(target, sendBody, title, nt, attachments); err != nil {
+		if err := notify.DispatchSend(target, sendBody, title, nt, attachments); err != nil {
 			fmt.Fprintf(stderr, "%s notify error: %s\n", notify.TargetSchemaName(parsed.Scheme), err)
 			failed = true
 		}

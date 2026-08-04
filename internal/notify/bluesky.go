@@ -90,7 +90,7 @@ func (b *BlueskyTarget) SendWithAttachments(body, title string, notifyType Notif
 	blobs := []blueskyBlob{}
 	for index, attachment := range attachments {
 		// Images only; anything else is ignored rather than rejected.
-		if !strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+		if !strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
 			continue
 		}
 
@@ -143,7 +143,7 @@ func (b *BlueskyTarget) uploadBlob(attachment Attachment, accessToken string) (a
 		URL:    b.endpoint + blueskyUploadBlobPath,
 		Headers: map[string]string{
 			"User-Agent":    "Apprise",
-			"Content-Type":  attachment.MimeType,
+			"Content-Type":  attachment.MIMEType,
 			"Authorization": "Bearer " + accessToken,
 		},
 		Body: string(attachment.Data),

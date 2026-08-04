@@ -55,7 +55,7 @@ func TestProviderRequestParity(t *testing.T) {
 				}
 
 				goSpecs, err := testutil.CaptureGoRequestsResult(t, func() error {
-					return notify.SendWithAttachments(target, c.Body, c.Title, notifyType, attachments)
+					return notify.DispatchSend(target, c.Body, c.Title, notifyType, attachments)
 				})
 				if shouldSkip := assertNotifySuccessMatches(t, pythonSuccess, err); shouldSkip {
 					return

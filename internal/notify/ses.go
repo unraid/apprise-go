@@ -244,7 +244,7 @@ func buildSESMIME(fromName, fromEmail, toEmail, body, title string, now time.Tim
 	builder.WriteString(encodedBody)
 
 	for index, attachment := range attachments {
-		mimeType := attachment.MimeType
+		mimeType := attachment.MIMEType
 		if mimeType == "" {
 			mimeType = "application/octet-stream"
 		}

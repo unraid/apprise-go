@@ -23,7 +23,7 @@ func TestDiscordTransmitsAttachment(t *testing.T) {
 
 	attachment := notify.Attachment{
 		Name:     "report.txt",
-		MimeType: "text/plain",
+		MIMEType: "text/plain",
 		Data:     []byte("the attached bytes"),
 	}
 
@@ -96,7 +96,7 @@ func TestDiscordWithoutAttachmentStaysJSON(t *testing.T) {
 func TestEmailProvidersEncodeAttachments(t *testing.T) {
 	attachment := notify.Attachment{
 		Name:     "report.pdf",
-		MimeType: "application/pdf",
+		MIMEType: "application/pdf",
 		Data:     []byte("PDFDATA"),
 	}
 	encoded := "UERGREFUQQ==" // base64 of PDFDATA

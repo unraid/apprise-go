@@ -172,14 +172,14 @@ func TestMailtoAttachmentParity(t *testing.T) {
 
 			attachments := make([]notify.Attachment, 0, len(tc.attachments))
 			for _, path := range tc.attachments {
-				attachment, err := notify.LoadAttachment(path)
+				attachment, err := notify.ParseAttachment(path)
 				if err != nil {
 					t.Fatalf("load attachment: %v", err)
 				}
 				attachments = append(attachments, attachment)
 			}
 
-			if err := notify.SendWithAttachments(
+			if err := notify.DispatchSend(
 				target, tc.body, "title", notify.NotifyInfo, attachments); err != nil {
 				t.Fatalf("go mailto send failed: %v", err)
 			}

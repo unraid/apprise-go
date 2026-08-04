@@ -174,7 +174,7 @@ func (m *MattermostTarget) uploadFile(channelID string, attachment Attachment, i
 		fields, "files",
 		Attachment{
 			Name:     attachment.FileName(index, ".dat"),
-			MimeType: attachment.MimeType,
+			MIMEType: attachment.MIMEType,
 			Data:     attachment.Data,
 		}, true)
 	if err != nil {

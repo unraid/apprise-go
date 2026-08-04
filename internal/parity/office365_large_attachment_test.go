@@ -40,13 +40,13 @@ func TestOffice365LargeAttachmentParity(t *testing.T) {
 		t.Fatalf("build target: %v", err)
 	}
 
-	attachment, err := notify.LoadAttachment(path)
+	attachment, err := notify.ParseAttachment(path)
 	if err != nil {
 		t.Fatalf("load attachment: %v", err)
 	}
 
 	goSpecs := testutil.CaptureGoRequests(t, func() error {
-		return notify.SendWithAttachments(
+		return notify.DispatchSend(
 			target, "body", "title", notify.NotifyInfo, []notify.Attachment{attachment})
 	})
 

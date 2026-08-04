@@ -236,7 +236,7 @@ func (t *TelegramTarget) buildAttachmentSpec(
 	caption string,
 	index int,
 ) (RequestSpec, error) {
-	route := telegramRouteFor(attachment.MimeType)
+	route := telegramRouteFor(attachment.MIMEType)
 
 	values := formFields{}
 	if caption != "" {

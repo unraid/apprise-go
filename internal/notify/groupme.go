@@ -85,7 +85,7 @@ func (g *GroupMeTarget) SendWithAttachments(body, title string, notifyType Notif
 		if g.token == "" {
 			break
 		}
-		if !strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+		if !strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
 			continue
 		}
 
@@ -118,7 +118,7 @@ func (g *GroupMeTarget) uploadImage(attachment Attachment) (string, error) {
 		URL:    groupmeImageURL,
 		Headers: map[string]string{
 			"User-Agent":     "Apprise",
-			"Content-Type":   attachment.MimeType,
+			"Content-Type":   attachment.MIMEType,
 			"X-Access-Token": g.token,
 		},
 		Body: string(attachment.Data),

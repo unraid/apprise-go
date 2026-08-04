@@ -38,13 +38,13 @@ func TestSESSignsAnAttachmentBody(t *testing.T) {
 
 	attachments := []notify.Attachment{{
 		Name:     "notes.txt",
-		MimeType: "text/plain",
+		MIMEType: "text/plain",
 		Data:     []byte("plain text attachment\n"),
 	}}
 
 	capture := func() (body, signature string) {
 		specs := testutil.CaptureGoRequests(t, func() error {
-			return notify.SendWithAttachments(sender, "body", "title", notify.NotifyInfo, attachments)
+			return notify.DispatchSend(sender, "body", "title", notify.NotifyInfo, attachments)
 		})
 		if len(specs) != 1 {
 			t.Fatalf("expected one request, got %d", len(specs))
