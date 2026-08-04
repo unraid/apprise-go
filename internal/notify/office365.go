@@ -9,7 +9,15 @@ import (
 	"time"
 )
 
-const office365GraphURL = "https://graph.microsoft.com"
+const (
+	office365GraphURL = "https://graph.microsoft.com"
+
+	// Anything past this has to be uploaded against a saved draft rather
+	// than carried inline in the message.
+	office365InlineAttachmentMax = 3145728
+
+	office365UploadChunkSize = 5242880
+)
 
 // Personal (consumer) accounts authenticate through the consumers endpoint
 // with a delegated refresh token rather than client credentials.
@@ -198,6 +206,14 @@ func (o *Office365Target) BuildRequest(body, title string, notifyType NotifyType
 }
 
 func (o *Office365Target) Send(body, title string, notifyType NotifyType) error {
+	return o.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments splits the files by size. Anything Graph will accept
+// inline rides along in the message; anything larger forces the message to be
+// saved as a draft first, so each file has a message to be uploaded against
+// before the draft is sent.
+func (o *Office365Target) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	if len(o.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -213,31 +229,142 @@ func (o *Office365Target) Send(body, title string, notifyType NotifyType) error 
 		o.resolveFromEmail()
 	}
 
+	var small, large []Attachment
+	for _, attachment := range attachments {
+		if len(attachment.Data) > office365InlineAttachmentMax {
+			large = append(large, attachment)
+			continue
+		}
+		small = append(small, attachment)
+	}
+
 	for _, target := range o.targets {
-		payload, err := o.mailPayload(body, title, target)
+		payload, err := o.mailPayload(body, title, target, small)
 		if err != nil {
 			return err
 		}
-		spec := RequestSpec{
-			Method: "POST",
-			URL:    office365GraphURL + o.mailboxPath() + "/sendMail",
-			Headers: map[string]string{
-				"User-Agent":   "Apprise",
-				"Accept":       "*/*",
-				"Content-Type": "application/json",
-				"Authorization": fmt.Sprintf(
-					"Bearer %s",
-					o.token,
-				),
-			},
-			Body: string(payload),
+
+		// With a large file the same payload creates a draft instead of
+		// sending, and the send happens once the uploads are done.
+		url := office365GraphURL + o.mailboxPath() + "/sendMail"
+		if len(large) > 0 {
+			url = office365GraphURL + o.mailboxPath() + "/messages"
 		}
-		if err := SendRequest(spec); err != nil {
+
+		spec := RequestSpec{
+			Method:  "POST",
+			URL:     url,
+			Headers: o.graphHeaders(),
+			Body:    string(payload),
+		}
+
+		if len(large) == 0 {
+			if err := SendRequest(spec); err != nil {
+				return err
+			}
+			continue
+		}
+
+		var draft struct {
+			ID string `json:"id"`
+		}
+		if err := doJSONRequest(spec, &draft); err != nil {
+			return err
+		}
+		if draft.ID == "" {
+			return fmt.Errorf("email draft id could not be retrieved")
+		}
+
+		for index, attachment := range large {
+			if err := o.uploadAttachment(attachment, draft.ID, index); err != nil {
+				return err
+			}
+		}
+
+		if err := SendRequest(RequestSpec{
+			Method: "POST",
+			URL: fmt.Sprintf("%s%s/messages/%s/send",
+				office365GraphURL, o.mailboxPath(), draft.ID),
+			Headers: o.graphHeaders(),
+			// The send takes no payload, but upstream still serialises the
+			// absent one, so the body is the JSON literal null.
+			Body: "null",
+		}); err != nil {
 			return err
 		}
 	}
 
 	_ = notifyType
+	return nil
+}
+
+func (o *Office365Target) graphHeaders() map[string]string {
+	return map[string]string{
+		"User-Agent":    "Apprise",
+		"Accept":        "*/*",
+		"Content-Type":  "application/json",
+		"Authorization": fmt.Sprintf("Bearer %s", o.token),
+	}
+}
+
+// uploadAttachment opens an upload session for one file and streams it to the
+// URL the session returns. Note the session path is /message/, not /messages/
+// as everywhere else; that is upstream's spelling.
+func (o *Office365Target) uploadAttachment(attachment Attachment, messageID string, index int) error {
+	payload, err := json.Marshal(map[string]any{
+		"AttachmentItem": map[string]any{
+			"attachmentType": "file",
+			"name":           attachment.FileName(index, ".dat"),
+			"contentType":    attachment.MimeType,
+			"size":           len(attachment.Data),
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	var session struct {
+		UploadURL string `json:"uploadUrl"`
+	}
+	if err := doJSONRequest(RequestSpec{
+		Method: "POST",
+		URL: fmt.Sprintf("%s%s/message/%s/attachments/createUploadSession",
+			office365GraphURL, o.mailboxPath(), messageID),
+		Headers: o.graphHeaders(),
+		Body:    string(payload),
+	}, &session); err != nil {
+		return err
+	}
+	if session.UploadURL == "" {
+		return fmt.Errorf("no upload url for attachment %s", attachment.Name)
+	}
+
+	size := len(attachment.Data)
+	for start := 0; start < size; start += office365UploadChunkSize {
+		end := start + office365UploadChunkSize
+		if end > size {
+			end = size
+		}
+
+		chunk := attachment.Data[start:end]
+		if err := SendRequest(RequestSpec{
+			Method: "PUT",
+			URL:    session.UploadURL,
+			Headers: map[string]string{
+				"User-Agent": "Apprise",
+				"Accept":     "*/*",
+				// No content type: the chunk is a slice of the file, not a
+				// document of its own. Length is left to the transport.
+				"Content-Range": fmt.Sprintf("bytes %d-%d/%d",
+					start, end-1, size),
+				"Authorization": fmt.Sprintf("Bearer %s", o.token),
+			},
+			Body: string(chunk),
+		}); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -318,7 +445,7 @@ func (o *Office365Target) authenticate() error {
 	return nil
 }
 
-func (o *Office365Target) mailPayload(body, title, target string) ([]byte, error) {
+func (o *Office365Target) mailPayload(body, title, target string, attachments []Attachment) ([]byte, error) {
 	message := map[string]any{
 		"subject": title,
 		"body": map[string]string{
@@ -351,6 +478,21 @@ func (o *Office365Target) mailPayload(body, title, target string) ([]byte, error
 			})
 		}
 		message["replyTo"] = addresses
+	}
+
+	if len(attachments) > 0 {
+		entries := make([]map[string]any, 0, len(attachments))
+		for index, attachment := range attachments {
+			entries = append(entries, map[string]any{
+				"@odata.type": "#microsoft.graph.fileAttachment",
+				"name":        attachment.FileName(index, ".dat"),
+				// Upstream sends the literal string rather than the file's
+				// type here. Matching it is the point of this port.
+				"contentType":  "attachment.mimetype",
+				"contentBytes": attachment.Base64(),
+			})
+		}
+		message["attachments"] = entries
 	}
 
 	// The API wants the string "true"/"false" here, not a boolean.

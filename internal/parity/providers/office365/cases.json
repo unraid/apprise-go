@@ -40,5 +40,16 @@
     "url": "azure://sender@outlook.com/tenant123/client123/secret123/target@example.com?mode=org",
     "body": "hello",
     "title": "t"
+  },
+  {
+    "name": "attachment-inline",
+    "url": "azure://sender@example.com/tenant123/client123/secret123/target@example.com",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png",
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ]
   }
 ]

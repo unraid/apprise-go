@@ -96,6 +96,15 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	} else if strings.Contains(req.URL.Host, "login.microsoftonline.com") && strings.HasSuffix(req.URL.Path, "/oauth2/v2.0/token") {
 		responseBody = `{"access_token":"token","expires_in":3600}`
 		contentType = "application/json"
+	} else if req.URL.Host == "graph.microsoft.com" && strings.HasSuffix(req.URL.Path, "/attachments/createUploadSession") {
+		responseBody = `{"uploadUrl":"https://upload.example.com/session123"}`
+		contentType = "application/json"
+	} else if req.URL.Host == "graph.microsoft.com" && strings.HasSuffix(req.URL.Path, "/messages") && req.Method == http.MethodPost {
+		responseBody = `{"id":"draft123"}`
+		contentType = "application/json"
+	} else if req.URL.Host == "upload.example.com" {
+		responseBody = `{}`
+		contentType = "application/json"
 	} else if req.URL.Host == "graph.microsoft.com" && strings.HasPrefix(req.URL.Path, "/v1.0/users/") && req.Method == http.MethodGet {
 		responseBody = `{"mail":"user@example.com","userPrincipalName":"user@example.com","displayName":"Apprise"}`
 		contentType = "application/json"

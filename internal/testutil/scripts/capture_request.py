@@ -91,10 +91,19 @@ import apprise
 from apprise import AppriseAsset
 
 DROP_HEADERS = {"x-apprise-id", "x-apprise-recursion-count"}
-KEEP_HEADERS = {"content-type", "accept", "accepts", "authorization"}
+# content-range is kept because it is the whole protocol of a chunked upload
+# session; dropping it would leave the part of the request most worth checking
+# uncompared.
+KEEP_HEADERS = {
+    "content-type",
+    "accept",
+    "accepts",
+    "authorization",
+    "content-range",
+}
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
-CACHE_VERSION = 10
+CACHE_VERSION = 11
 # A recipient device for Matrix end-to-end encryption. Upstream verifies the
 # signatures on device keys and one-time keys before it will encrypt to a
 # device, so the mock signs them with upstream's own account implementation
@@ -623,6 +632,22 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
             "/oauth2/v2.0/token"
         ):
             response._content = b'{"access_token":"token","expires_in":3600}'
+        elif parsed.netloc == "graph.microsoft.com" and parsed.path.endswith(
+            "/attachments/createUploadSession"
+        ):
+            response._content = (
+                b'{"uploadUrl":"https://upload.example.com/session123"}'
+            )
+        elif (
+            parsed.netloc == "graph.microsoft.com"
+            and parsed.path.endswith("/messages")
+            and method.upper() == "POST"
+        ):
+            # A draft, which the caller needs an id from before it can attach
+            # anything to it.
+            response._content = b'{"id":"draft123"}'
+        elif parsed.netloc == "upload.example.com":
+            response._content = b"{}"
         elif parsed.netloc == "graph.microsoft.com" and parsed.path.startswith(
             "/v1.0/users/"
         ):
