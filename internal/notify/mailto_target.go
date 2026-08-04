@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/mail"
 	"net/smtp"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -38,6 +39,10 @@ type MailtoTarget struct {
 	headers      map[string]string
 	notifyFormat string
 	verifyTLS    bool
+
+	// inline embeds image attachments in the body rather than leaving them
+	// as downloads, which turns the message into multipart/related.
+	inline bool
 }
 
 type mailtoMessage struct {
@@ -163,6 +168,7 @@ func NewMailtoTarget(target *ParsedURL) (*MailtoTarget, error) {
 		headers:      headers,
 		notifyFormat: format,
 		verifyTLS:    verifyTLS,
+		inline:       parseBoolWithDefault(target.Query["inline"], false),
 	}, nil
 }
 
@@ -222,6 +228,10 @@ func parseMailtoEmailList(inputs []string) []string {
 }
 
 func (m *MailtoTarget) Send(body, title string, notifyType NotifyType) error {
+	return m.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (m *MailtoTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	client, err := m.connect()
 	if err != nil {
 		return err
@@ -230,7 +240,7 @@ func (m *MailtoTarget) Send(body, title string, notifyType NotifyType) error {
 		_ = client.Quit()
 	}()
 
-	messages, err := m.buildMessages(body, title)
+	messages, err := m.buildMessages(body, title, attachments)
 	if err != nil {
 		return err
 	}
@@ -321,7 +331,7 @@ func (m *MailtoTarget) authenticate(client *smtp.Client) (*smtp.Client, error) {
 	return client, nil
 }
 
-func (m *MailtoTarget) buildMessages(body, title string) ([]mailtoMessage, error) {
+func (m *MailtoTarget) buildMessages(body, title string, attachments []Attachment) ([]mailtoMessage, error) {
 	if len(m.targets) == 0 {
 		return nil, fmt.Errorf("missing targets")
 	}
@@ -344,7 +354,8 @@ func (m *MailtoTarget) buildMessages(body, title string) ([]mailtoMessage, error
 		bcc := filterEmailList(m.bcc, nil, target)
 		reply := filterEmailList(m.replyTo, nil, target)
 
-		contentTypeHeader, transferHeader, messageBody := buildMailtoBody(body, format)
+		contentTypeHeader, transferHeader, messageBody := buildMailtoBody(
+			body, format, m.inline, attachments)
 		headers := []string{
 			fmt.Sprintf("Subject: %s", subject),
 			fmt.Sprintf("From: %s", fromHeader),
@@ -433,7 +444,138 @@ func normalizeCRLF(value string) string {
 	return strings.ReplaceAll(value, "\n", "\r\n")
 }
 
-func buildMailtoBody(body, format string) (string, string, string) {
+// buildMailtoBody returns the message's content type, transfer encoding and
+// body. Attachments wrap whatever the body would otherwise have been in one
+// more multipart layer, so the text keeps its own structure inside it.
+func buildMailtoBody(body, format string, inline bool, attachments []Attachment) (string, string, string) {
+	// Inline mode rewrites the body before it is encoded, appending an anchor
+	// per image and deciding whether the message is related or mixed.
+	cidRefs := map[string]struct{}{}
+	if inline && len(attachments) > 0 {
+		body, cidRefs = applyMailtoInline(body, format, attachments)
+	}
+
+	contentType, transfer, encoded := buildMailtoContentBody(body, format)
+	if len(attachments) == 0 {
+		return contentType, transfer, encoded
+	}
+
+	// A message carrying an inline image is related rather than mixed: the
+	// parts are one document, not a document plus downloads.
+	subtype := "mixed"
+	if len(cidRefs) > 0 {
+		subtype = "related"
+	}
+
+	boundary := mailtoBoundary()
+	var builder strings.Builder
+	builder.WriteString("--" + boundary + "\r\n")
+
+	// The text's own headers travel with it, one layer down.
+	builder.WriteString("Content-Type: " + contentType + "\r\n")
+	builder.WriteString("MIME-Version: 1.0\r\n")
+	if transfer != "" {
+		builder.WriteString("Content-Transfer-Encoding: " + transfer + "\r\n")
+	}
+	builder.WriteString("\r\n" + encoded + "\r\n")
+
+	for index, attachment := range attachments {
+		name := attachment.FileName(index, ".dat")
+		mimeType := attachment.MimeType
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+
+		builder.WriteString("--" + boundary + "\r\n")
+		builder.WriteString("Content-Transfer-Encoding: base64\r\n")
+		builder.WriteString("MIME-Version: 1.0\r\n")
+		builder.WriteString("Content-Type: " + mimeType + "\r\n")
+
+		if _, embedded := cidRefs[name]; embedded {
+			builder.WriteString(fmt.Sprintf(
+				"Content-Disposition: inline; filename=%q\r\n", name))
+			// Spaces are escaped so the id still matches the cid: URI in
+			// the body, which cannot carry a raw space.
+			builder.WriteString(fmt.Sprintf("Content-ID: <%s>\r\n",
+				strings.ReplaceAll(name, " ", "%20")))
+		} else {
+			builder.WriteString(fmt.Sprintf(
+				"Content-Disposition: attachment; filename=%q\r\n", name))
+		}
+
+		builder.WriteString("\r\n")
+		builder.WriteString(normalizeCRLF(wrapBase64(attachment.Base64(), 76)))
+	}
+
+	builder.WriteString("\r\n--" + boundary + "--\r\n")
+
+	return fmt.Sprintf("multipart/%s; boundary=%q", subtype, boundary), "", builder.String()
+}
+
+// applyMailtoInline rewrites the body so images are referenced from it, and
+// reports which filenames ended up embedded.
+//
+// A cid: URI the caller already wrote is honoured for any attachment type —
+// it can only resolve inside the same message, so writing one is a deliberate
+// act. Images not already referenced get an anchor appended.
+func applyMailtoInline(body, format string, attachments []Attachment) (string, map[string]struct{}) {
+	names := make([]string, len(attachments))
+	nameSet := map[string]struct{}{}
+	for index, attachment := range attachments {
+		names[index] = attachment.FileName(index, ".dat")
+		nameSet[names[index]] = struct{}{}
+	}
+
+	if format != "html" {
+		// Plain text cannot embed anything, so images are named instead.
+		var listed []string
+		for index, attachment := range attachments {
+			if strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+				listed = append(listed, names[index])
+			}
+		}
+		if len(listed) > 0 {
+			for _, name := range listed {
+				body += "\n[Image: " + name + "]"
+			}
+		}
+
+		return body, nil
+	}
+
+	refs := map[string]struct{}{}
+	for _, match := range mailtoCIDPattern.FindAllStringSubmatch(body, -1) {
+		ref := strings.ReplaceAll(match[1], "%20", " ")
+		// A reference with no matching file cannot resolve, so it is left
+		// out rather than making the message related for nothing.
+		if _, ok := nameSet[ref]; ok {
+			refs[ref] = struct{}{}
+		}
+	}
+
+	for index, attachment := range attachments {
+		if !strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+			continue
+		}
+		if _, ok := refs[names[index]]; ok {
+			continue
+		}
+		refs[names[index]] = struct{}{}
+		body += fmt.Sprintf(`<br/><img src="cid:%s">`,
+			strings.ReplaceAll(names[index], " ", "%20"))
+	}
+
+	return body, refs
+}
+
+// mailtoCIDPattern finds the filenames a body already references inline.
+var mailtoCIDPattern = regexp.MustCompile(`cid:([^\s"'>)]+)`)
+
+func mailtoBoundary() string {
+	return fmt.Sprintf("===============%d==", time.Now().UnixNano())
+}
+
+func buildMailtoContentBody(body, format string) (string, string, string) {
 	if format == "html" {
 		plain := htmlToText(body)
 		html := body

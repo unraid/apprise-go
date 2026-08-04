@@ -41,6 +41,23 @@ func TestAttachmentSupportIsImplemented(t *testing.T) {
 		}
 	}
 
+	// A provider outside the HTTP parity set still advertises the flag, and
+	// mailto sat in exactly that blind spot: it declared attachment support,
+	// sent nothing, and never appeared in the count because the walk below
+	// only reaches providers with request fixtures. Anything here is covered
+	// by a test of its own instead.
+	elsewhere := map[string]string{
+		"mailto":  "mailto_attachment_parity_test.go",
+		"mailtos": "mailto_attachment_parity_test.go",
+	}
+
+	for schema, where := range elsewhere {
+		if !advertising[schema] {
+			t.Errorf("%s no longer advertises attachment support; "+
+				"drop it from this list and from %s", schema, where)
+		}
+	}
+
 	checked, missing := 0, []string{}
 	for name := range defs {
 		def := defs[name]
@@ -77,6 +94,41 @@ func TestAttachmentSupportIsImplemented(t *testing.T) {
 
 	if checked == 0 {
 		t.Fatal("no advertising provider could be built; the check is not running")
+	}
+
+	// Anything advertising the flag is either walked above or named in the
+	// list of providers covered elsewhere. A new one in neither place is the
+	// blind spot mailto used to sit in.
+	walked := map[string]struct{}{}
+	for name := range defs {
+		for _, schema := range defs[name].Schemas {
+			walked[strings.ToLower(schema)] = struct{}{}
+		}
+	}
+
+	unwatched := []string{}
+	for schema, supported := range advertising {
+		if !supported {
+			continue
+		}
+		if _, ok := walked[schema]; ok {
+			continue
+		}
+		if _, ok := elsewhere[schema]; ok {
+			continue
+		}
+		if notify.IsKnownGapSchema(schema) {
+			continue
+		}
+		unwatched = append(unwatched, schema)
+	}
+
+	if len(unwatched) > 0 {
+		sort.Strings(unwatched)
+		t.Errorf("%d schemas advertise attachment support but no test checks "+
+			"they can send one; give them a request fixture or a test of "+
+			"their own and name them above:\n  %s",
+			len(unwatched), strings.Join(unwatched, ", "))
 	}
 
 	if len(missing) > 0 {

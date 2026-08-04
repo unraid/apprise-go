@@ -13,6 +13,7 @@ def main():
     parser.add_argument("--body", default="")
     parser.add_argument("--title", default="")
     parser.add_argument("--body-format", default="")
+    parser.add_argument("--attach", action="append", default=[])
     args = parser.parse_args()
 
     asset_kwargs = {}
@@ -22,7 +23,10 @@ def main():
 
     apobj = apprise.Apprise(asset=AppriseAsset(**asset_kwargs))
     apobj.add(args.url)
-    success = apobj.notify(body=args.body, title=args.title)
+    notify_kwargs = {}
+    if args.attach:
+        notify_kwargs["attach"] = args.attach
+    success = apobj.notify(body=args.body, title=args.title, **notify_kwargs)
     print(json.dumps({"success": bool(success)}, ensure_ascii=True))
 
 

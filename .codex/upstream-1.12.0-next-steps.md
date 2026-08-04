@@ -80,10 +80,18 @@ frozen clock would let that case come back.
 
 ### Attachments are done
 
-All 41 providers that advertise attachment support now transmit one, verified
+Every provider that advertises attachment support now transmits one, verified
 against upstream. `TestAttachmentSupportIsImplemented` was written failing,
 naming the providers still short, and is now a guard against the gap
 reopening.
+
+It guards two ways. A provider with request fixtures has to implement
+`AttachmentSender`, and a schema advertising the flag that no fixture reaches
+has to be named as covered elsewhere. mailto sat in that second gap: it
+declared attachment support, sent nothing, and never appeared in the count
+because the walk only reached HTTP providers. It is covered by
+`mailto_attachment_parity_test.go` now, which compares the MIME tree the
+message is built from against upstream's.
 
 Adding a file to a provider is the same recipe as adding a provider, plus:
 
