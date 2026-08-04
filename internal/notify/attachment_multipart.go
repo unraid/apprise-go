@@ -11,7 +11,7 @@ import (
 )
 
 // discordStyleAttachmentBody builds the multipart body Discord and the
-// services modelled on it expect: the ordinary JSON payload under
+// services modeled on it expect: the ordinary JSON payload under
 // payload_json, then one part per file named files[N].
 //
 // The content type is returned alongside the body because it carries the

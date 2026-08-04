@@ -69,7 +69,7 @@ func NewRingCentralTarget(target *ParsedURL) (*RingCentralTarget, error) {
 		clientSecret = secret
 	}
 	// The token override has to land before the mode is detected, so that a
-	// JWT supplied this way is still recognised as one.
+	// JWT supplied this way is still recognized as one.
 	if override := strings.TrimSpace(target.Query["token"]); override != "" {
 		token = override
 	}

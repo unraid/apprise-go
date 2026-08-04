@@ -304,28 +304,6 @@ type twitterLookupResponse struct {
 	Data []twitterUser `json:"data"`
 }
 
-type twitterDMRequest struct {
-	Event twitterDMEvent `json:"event"`
-}
-
-type twitterDMEvent struct {
-	Type          string               `json:"type"`
-	MessageCreate twitterDMMessageBody `json:"message_create"`
-}
-
-type twitterDMMessageBody struct {
-	Target      twitterDMTarget `json:"target"`
-	MessageData twitterDMText   `json:"message_data"`
-}
-
-type twitterDMTarget struct {
-	RecipientID string `json:"recipient_id"`
-}
-
-type twitterDMText struct {
-	Text string `json:"text"`
-}
-
 var twitterUserPattern = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
 
 func normalizeTwitterTarget(raw string) (string, bool) {

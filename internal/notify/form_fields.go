@@ -78,18 +78,6 @@ func (f *formFields) Encode() string {
 	return out.String()
 }
 
-// sortedKeys orders a map's keys so a body built from one is at least stable
-// between runs. Prefer orderedKeys where the URL's own order was kept.
-func sortedKeys(values map[string]string) []string {
-	keys := make([]string, 0, len(values))
-	for key := range values {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-
-	return keys
-}
-
 // orderedKeys walks an order list, keeping only the keys still present in the
 // map. Callers remove entries from these maps after parsing — form:// lifts
 // the reserved payload names out of the extras — so the two can disagree.

@@ -290,8 +290,8 @@ func TestDeviceKeysAdvertiseBothAlgorithms(t *testing.T) {
 	}
 }
 
-// Upstream serialises the event with Python's json.dumps defaults before
-// encrypting, so our serialisation has to produce the same bytes or the
+// Upstream serializes the event with Python's json.dumps defaults before
+// encrypting, so our serialization has to produce the same bytes or the
 // ciphertext diverges even when the crypto is correct.
 func TestMarshalEventMatchesPythonSpacing(t *testing.T) {
 	payload := struct {

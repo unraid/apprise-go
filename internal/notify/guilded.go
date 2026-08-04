@@ -202,7 +202,7 @@ func (g *GuildedTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 // SendWithAttachments posts the message, then the files separately, the way
-// Discord does — Guilded is modelled on it.
+// Discord does — Guilded is modeled on it.
 func (g *GuildedTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	spec, err := g.buildRequest(body, title, notifyType, nil)
 	if err != nil {

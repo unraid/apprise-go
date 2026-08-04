@@ -24,7 +24,7 @@ var mastodonHashtagPattern = regexp.MustCompile(`^[^\W_][\w]*$`)
 var mastodonHashtagDigits = regexp.MustCompile(`^[0-9]+$`)
 
 // Go's regexp has no lookaround, so the boundary conditions upstream writes as
-// (?<![#%\w]) and (?![#%\w]) are handled by capturing the neighbours.
+// (?<![#%\w]) and (?![#%\w]) are handled by capturing the neighbors.
 var mastodonHashtagDetectPattern = regexp.MustCompile(`(?:^|[^#%\w])(#[^\W_][\w]*)(?:$|[^#%\w])`)
 
 type MastodonTarget struct {
@@ -265,7 +265,7 @@ func (m *MastodonTarget) uploadMedia(attachment Attachment, index int) (string, 
 	fields.Set("description", name)
 
 	// Mastodon is handed a filename and a handle without a type, so the part
-	// is labelled application/octet-stream rather than the file's own type.
+	// is labeled application/octet-stream rather than the file's own type.
 	requestBody, contentType, err := singleFileAttachmentBody(
 		fields, "file",
 		Attachment{

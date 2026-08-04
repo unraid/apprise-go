@@ -67,7 +67,7 @@ func (b *BlueskyTarget) Send(body, title string, notifyType NotifyType) error {
 
 // SendWithAttachments uploads each image as a blob, then posts one record per
 // image embedding it. Bluesky has no way to attach several images to one
-// post here, so posts after the first are labelled "02/03" rather than
+// post here, so posts after the first are labeled "02/03" rather than
 // repeating the message.
 func (b *BlueskyTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	_ = notifyType

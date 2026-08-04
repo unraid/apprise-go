@@ -135,7 +135,7 @@ func (s *SOGSTarget) buildRequests(body, title string, notifyType NotifyType) ([
 	message := buildSessionMessage(mergeTitleBody(title, body))
 	messageSignature := ed25519.Sign(s.signingKey, message)
 
-	// The request body is assembled by hand rather than marshalled, because
+	// The request body is assembled by hand rather than marshaled, because
 	// the auth signature covers these exact bytes: upstream produces them
 	// with Python's json.dumps, which puts a space after the colon and the
 	// comma. Compact JSON would be a valid request with a signature upstream

@@ -20,7 +20,9 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"sort"
 )
 
@@ -82,7 +84,9 @@ func pbVarint(value uint64) []byte {
 
 // pbVarintField encodes a varint field with its tag.
 func pbVarintField(field int, value uint64) []byte {
-	return append(pbVarint(uint64(field)<<3|0), pbVarint(value)...)
+	// The wire type for a varint is 0, so the tag is just the field number
+	// shifted; the term is left out rather than written as |0.
+	return append(pbVarint(uint64(field)<<3), pbVarint(value)...)
 }
 
 // pbBytes encodes a length delimited field with its tag.
@@ -415,7 +419,7 @@ func (s *MegolmSession) messageKeys() (aesKey, macKey, iv []byte, err error) {
 // Encrypt returns the base64 Megolm ciphertext for a room event payload:
 // version byte, protobuf body, truncated HMAC, then an Ed25519 signature.
 //
-// The plaintext is encrypted verbatim, so callers must serialise the event
+// The plaintext is encrypted verbatim, so callers must serialize the event
 // exactly as upstream does or the ciphertext will not match it byte for byte.
 // Upstream uses Python's json.dumps defaults, which put a space after every
 // colon and comma and preserve the order the payload was built in. See
@@ -479,7 +483,7 @@ func encodeJSONString(value string) ([]byte, error) {
 	return bytes.TrimRight(buf.Bytes(), "\n"), nil
 }
 
-// MarshalEvent serialises an event payload the way upstream does before
+// MarshalEvent serializes an event payload the way upstream does before
 // encrypting it: a space after every colon and comma, and member order taken
 // from the value rather than sorted. Pass a struct, whose field order
 // encoding/json preserves; a map would be re-ordered and produce a ciphertext
@@ -520,8 +524,14 @@ func MarshalEvent(payload any) ([]byte, error) {
 
 	for {
 		token, err := decoder.Token()
-		if err != nil {
+		if errors.Is(err, io.EOF) {
 			break
+		}
+		// Anything other than the end of input is malformed JSON, and
+		// returning the canonical form of a document that did not parse
+		// would be worse than saying so.
+		if err != nil {
+			return nil, err
 		}
 
 		switch typed := token.(type) {

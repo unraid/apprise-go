@@ -233,7 +233,7 @@ func (d *DiscordTarget) SendWithAttachments(body, title string, notifyType Notif
 	delete(payload, "allow_mentions")
 
 	// With batching off each file is its own message, which is the legacy
-	// one-per-message behaviour.
+	// one-per-message behavior.
 	perRequest := discordMaxAttachments
 	if !d.batch {
 		perRequest = 1

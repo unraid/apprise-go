@@ -301,7 +301,7 @@ func (m *MatrixTarget) shareRoomKey(roomID string, session *matrixolm.MegolmSess
 }
 
 // matrixRoomKeyEvent is a struct rather than a map because the Olm ciphertext
-// covers the serialised bytes: a map would be re-sorted by encoding/json and
+// covers the serialized bytes: a map would be re-sorted by encoding/json and
 // produce a ciphertext upstream never would.
 type matrixRoomKeyEvent struct {
 	Type          string            `json:"type"`

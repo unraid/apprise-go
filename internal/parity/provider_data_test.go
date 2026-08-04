@@ -36,7 +36,7 @@ type providerCase struct {
 
 	// SendsNothing marks a case where upstream deliberately issues no request
 	// at all — an Opsgenie note against an alert that was never created, for
-	// instance. Sending nothing is a real behaviour worth pinning, but an
+	// instance. Sending nothing is a real behavior worth pinning, but an
 	// empty golden otherwise means the capture silently failed, so the case
 	// has to say which one it is.
 	SendsNothing bool `json:"sends_nothing"`

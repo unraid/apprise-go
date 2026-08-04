@@ -286,7 +286,7 @@ func (o *Office365Target) SendWithAttachments(body, title string, notifyType Not
 			URL: fmt.Sprintf("%s%s/messages/%s/send",
 				office365GraphURL, o.mailboxPath(), draft.ID),
 			Headers: o.graphHeaders(),
-			// The send takes no payload, but upstream still serialises the
+			// The send takes no payload, but upstream still serializes the
 			// absent one, so the body is the JSON literal null.
 			Body: "null",
 		}); err != nil {

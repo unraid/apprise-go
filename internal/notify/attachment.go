@@ -269,8 +269,8 @@ func attachmentsCustomXMLStyle(attachments []Attachment) string {
 	var builder strings.Builder
 	builder.WriteString(`<Attachments format="base64">`)
 	for index, attachment := range attachments {
-		builder.WriteString(fmt.Sprintf(`<Attachment filename="%s" mimetype="%s">`,
-			escapeXML(attachment.FileName(index, ".dat")), escapeXML(attachment.MimeType)))
+		fmt.Fprintf(&builder, `<Attachment filename="%s" mimetype="%s">`,
+			escapeXML(attachment.FileName(index, ".dat")), escapeXML(attachment.MimeType))
 		builder.WriteString(attachment.Base64())
 		builder.WriteString("</Attachment>")
 	}
