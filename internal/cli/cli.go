@@ -274,7 +274,6 @@ func Run(args []string, stdout, stderr io.Writer) int {
 
 	// TODO: Wire these options into CLI behavior once the runtime supports them.
 	_ = opts.disableAsync
-	_ = opts.attachments
 	_ = opts.pluginPaths
 	_ = opts.theme
 	_ = opts.recursionDepth
@@ -292,6 +291,15 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		storagePath = ""
 	}
 	notify.ConfigureStorage(storagePath, opts.storageUIDLength, nil)
+
+	// Read every attachment before anything is sent, so a missing file fails
+	// the run rather than reaching some targets and not others.
+	attachments, err := notify.LoadAttachments(opts.attachments)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+
+		return 1
+	}
 
 	failed := false
 	for _, entry := range tagged {
@@ -320,7 +328,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 			continue
 		}
 
-		if err := target.Send(sendBody, title, nt); err != nil {
+		if err := notify.SendWithAttachments(target, sendBody, title, nt, attachments); err != nil {
 			fmt.Fprintf(stderr, "%s notify error: %s\n", notify.TargetSchemaName(parsed.Scheme), err)
 			failed = true
 		}

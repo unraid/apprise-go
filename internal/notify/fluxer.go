@@ -139,7 +139,7 @@ func NewFluxerTarget(target *ParsedURL) (*FluxerTarget, error) {
 	return fluxer, nil
 }
 
-func (f *FluxerTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+func (f *FluxerTarget) buildPayload(body, title string, notifyType NotifyType) (map[string]any, error) {
 	payload := map[string]any{
 		"tts": f.tts,
 		// Text-to-speech means there is no reason to wait for the message.
@@ -206,11 +206,24 @@ func (f *FluxerTarget) BuildRequest(body, title string, notifyType NotifyType) (
 		}
 	}
 
+	return payload, nil
+}
+
+func (f *FluxerTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	payload, err := f.buildPayload(body, title, notifyType)
+	if err != nil {
+		return RequestSpec{}, err
+	}
+
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
 	}
 
+	return f.specFor(string(data), "application/json; charset=utf-8")
+}
+
+func (f *FluxerTarget) specFor(requestBody, contentType string) (RequestSpec, error) {
 	targetURL := fmt.Sprintf("%s/webhooks/%s/%s", f.prefix(), f.webhookID, f.webhookToken)
 	if f.threadID != "" {
 		parsed, err := url.Parse(targetURL)
@@ -229,19 +242,57 @@ func (f *FluxerTarget) BuildRequest(body, title string, notifyType NotifyType) (
 		Headers: map[string]string{
 			"User-Agent":   "Apprise",
 			"Accept":       "*/*",
-			"Content-Type": "application/json; charset=utf-8",
+			"Content-Type": contentType,
 		},
-		Body: string(data),
+		Body: requestBody,
 	}, nil
 }
 
 func (f *FluxerTarget) Send(body, title string, notifyType NotifyType) error {
+	return f.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments posts the message, then one further request per file.
+// Fluxer does not carry files alongside the text the way Discord does: each
+// attachment is its own post, with the embed dropped and text-to-speech off
+// so the filename is not read aloud.
+func (f *FluxerTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	spec, err := f.BuildRequest(body, title, notifyType)
 	if err != nil {
 		return err
 	}
+	if err := SendRequest(spec); err != nil {
+		return err
+	}
 
-	return SendRequest(spec)
+	if len(attachments) == 0 {
+		return nil
+	}
+
+	payload, err := f.buildPayload(body, title, notifyType)
+	if err != nil {
+		return err
+	}
+	payload["tts"] = false
+	payload["wait"] = false
+	delete(payload, "embeds")
+	delete(payload, "allow_mentions")
+
+	for _, attachment := range attachments {
+		requestBody, contentType, err := discordStyleAttachmentBody(payload, []Attachment{attachment})
+		if err != nil {
+			return err
+		}
+		spec, err := f.specFor(requestBody, contentType)
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // prefix is the scheme and authority the webhook path hangs off: the cloud API

@@ -86,7 +86,7 @@ func NewGuildedTarget(target *ParsedURL) (*GuildedTarget, error) {
 	}, nil
 }
 
-func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+func (g *GuildedTarget) buildPayload(body, title string, notifyType NotifyType) (map[string]any, error) {
 	payload := map[string]any{
 		"tts":  g.tts,
 		"wait": !g.tts,
@@ -113,7 +113,7 @@ func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) 
 	if g.templatePath != "" {
 		rendered, err := renderNotifyTemplate(g.templatePath, g.templateTokens, body, title, notifyType, "256x256")
 		if err != nil {
-			return RequestSpec{}, err
+			return nil, err
 		}
 		for key, value := range rendered {
 			payload[key] = value
@@ -137,15 +137,40 @@ func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		}
 	}
 
-	data, err := json.Marshal(payload)
+	return payload, nil
+}
+
+func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return g.buildRequest(body, title, notifyType, nil)
+}
+
+func (g *GuildedTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
+	payload, err := g.buildPayload(body, title, notifyType)
 	if err != nil {
 		return RequestSpec{}, err
+	}
+
+	requestBody := ""
+	contentType := "application/json; charset=utf-8"
+	if len(attachments) > 0 {
+		// Files move the payload into a multipart field, and the generated
+		// boundary decides the content type.
+		requestBody, contentType, err = discordStyleAttachmentBody(payload, attachments)
+		if err != nil {
+			return RequestSpec{}, err
+		}
+	} else {
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		requestBody = string(data)
 	}
 
 	headers := map[string]string{
 		"User-Agent":   "Apprise",
 		"Accept":       "*/*",
-		"Content-Type": "application/json; charset=utf-8",
+		"Content-Type": contentType,
 	}
 
 	targetURL := fmt.Sprintf("%s/%s/%s", guildedWebhookBase, g.webhookID, g.webhookToken)
@@ -164,12 +189,16 @@ func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		Method:  "POST",
 		URL:     targetURL,
 		Headers: headers,
-		Body:    string(data),
+		Body:    requestBody,
 	}, nil
 }
 
 func (g *GuildedTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := g.BuildRequest(body, title, notifyType)
+	return g.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (g *GuildedTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	spec, err := g.buildRequest(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
