@@ -33,5 +33,25 @@
     "body": "b",
     "title": "",
     "type": "info"
+  },
+  {
+    "name": "attachment-image",
+    "url": "kook://bottoken123/1234567890",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
+  },
+  {
+    "name": "attachment-file",
+    "url": "kook://bottoken123/1234567890",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ]
   }
 ]

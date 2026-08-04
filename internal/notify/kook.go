@@ -3,6 +3,7 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -14,6 +15,9 @@ const (
 	kookTypeKMark = 9
 	kookModeBot   = "bot"
 	kookModeHook  = "webhook"
+	// Message types for an uploaded asset.
+	kookTypeImage = 2
+	kookTypeFile  = 4
 )
 
 // Channel and user IDs are numeric snowflakes.
@@ -99,6 +103,13 @@ func (k *KookTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 }
 
 func (k *KookTarget) Send(body, title string, notifyType NotifyType) error {
+	return k.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments sends the message, then uploads each file to Kook's CDN
+// and posts the resulting URL to every target. Webhook mode has no CDN
+// credentials, so it carries no files.
+func (k *KookTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	specs, err := k.buildRequests(body, title, notifyType)
 	if err != nil {
 		return err
@@ -110,7 +121,112 @@ func (k *KookTarget) Send(body, title string, notifyType NotifyType) error {
 		}
 	}
 
+	if len(attachments) == 0 || k.mode != kookModeBot {
+		return nil
+	}
+
+	for index, attachment := range attachments {
+		cdnURL, err := k.uploadAsset(attachment, index)
+		if err != nil {
+			return err
+		}
+
+		// An image is posted as one so it renders; anything else is a file.
+		messageType := kookTypeFile
+		if strings.HasPrefix(strings.ToLower(attachment.MimeType), "image/") {
+			messageType = kookTypeImage
+		}
+
+		for _, endpoint := range k.endpoints() {
+			data, err := json.Marshal(map[string]any{
+				"type":      messageType,
+				"target_id": endpoint.id,
+				"content":   cdnURL,
+			})
+			if err != nil {
+				return err
+			}
+
+			if err := SendRequest(RequestSpec{
+				Method:  "POST",
+				URL:     endpoint.url,
+				Headers: k.botHeaders(""),
+				Body:    string(data),
+			}); err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
+}
+
+// uploadAsset posts a file to Kook's CDN and returns the URL a message can
+// reference.
+// kookEndpoint pairs a target with the endpoint that reaches it.
+type kookEndpoint struct {
+	url string
+	id  string
+}
+
+// endpoints lists every target; channels go to the message endpoint and users
+// to the DM one, with every channel before the first user.
+func (k *KookTarget) endpoints() []kookEndpoint {
+	endpoints := make([]kookEndpoint, 0, len(k.channels)+len(k.dmUsers))
+	for _, channel := range k.channels {
+		endpoints = append(endpoints, kookEndpoint{kookAPIURL + "/message/create", channel})
+	}
+	for _, user := range k.dmUsers {
+		endpoints = append(endpoints, kookEndpoint{kookAPIURL + "/direct-message/create", user})
+	}
+
+	return endpoints
+}
+
+func (k *KookTarget) uploadAsset(attachment Attachment, index int) (string, error) {
+	requestBody, contentType, err := singleFileAttachmentBody(
+		url.Values{}, "file",
+		Attachment{
+			Name:     attachment.FileName(index, ".dat"),
+			MimeType: attachment.MimeType,
+			Data:     attachment.Data,
+		}, true)
+	if err != nil {
+		return "", err
+	}
+
+	var response struct {
+		Data struct {
+			URL string `json:"url"`
+		} `json:"data"`
+	}
+	if err := doJSONRequest(RequestSpec{
+		Method:  "POST",
+		URL:     kookAPIURL + "/asset/create",
+		Headers: k.botHeaders(contentType),
+		Body:    requestBody,
+	}, &response); err != nil {
+		return "", err
+	}
+	if response.Data.URL == "" {
+		return "", fmt.Errorf("kook cdn upload returned no url")
+	}
+
+	return response.Data.URL, nil
+}
+
+func (k *KookTarget) botHeaders(contentType string) map[string]string {
+	headers := map[string]string{
+		"User-Agent":    "Apprise",
+		"Accept":        "*/*",
+		"Authorization": "Bot " + k.token,
+	}
+	if contentType == "" {
+		contentType = "application/json"
+	}
+	headers["Content-Type"] = contentType
+
+	return headers
 }
 
 func (k *KookTarget) buildRequests(body, title string, notifyType NotifyType) ([]RequestSpec, error) {
@@ -154,19 +270,7 @@ func (k *KookTarget) buildRequests(body, title string, notifyType NotifyType) ([
 		"Content-Type":  "application/json",
 	}
 
-	// Channels go to the message endpoint and users to the DM endpoint;
-	// upstream sends every channel before the first user.
-	type kookEndpoint struct {
-		url string
-		id  string
-	}
-	endpoints := make([]kookEndpoint, 0, len(k.channels)+len(k.dmUsers))
-	for _, channel := range k.channels {
-		endpoints = append(endpoints, kookEndpoint{kookAPIURL + "/message/create", channel})
-	}
-	for _, user := range k.dmUsers {
-		endpoints = append(endpoints, kookEndpoint{kookAPIURL + "/direct-message/create", user})
-	}
+	endpoints := k.endpoints()
 
 	specs := make([]RequestSpec, 0, len(endpoints))
 	for _, endpoint := range endpoints {

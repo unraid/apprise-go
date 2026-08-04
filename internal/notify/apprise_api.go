@@ -68,6 +68,10 @@ func NewAppriseTarget(target *ParsedURL) (*AppriseTarget, error) {
 }
 
 func (a *AppriseTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return a.buildRequest(body, title, notifyType, nil)
+}
+
+func (a *AppriseTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
 	scheme := "http"
 	if strings.ToLower(a.target.Scheme) == "apprises" {
 		scheme = "https"
@@ -107,6 +111,22 @@ func (a *AppriseTarget) BuildRequest(body, title string, notifyType NotifyType) 
 			values.Add("tag", tag)
 		}
 
+		if len(attachments) > 0 {
+			// Form mode uploads the files, numbered fileNN.
+			requestBody, contentType, err := appriseAPIFormAttachmentBody(values, attachments)
+			if err != nil {
+				return RequestSpec{}, err
+			}
+			headers["Content-Type"] = contentType
+
+			return RequestSpec{
+				Method:  "POST",
+				URL:     u.String(),
+				Headers: headers,
+				Body:    requestBody,
+			}, nil
+		}
+
 		headers["Content-Type"] = "application/x-www-form-urlencoded"
 		return RequestSpec{
 			Method:  "POST",
@@ -125,6 +145,10 @@ func (a *AppriseTarget) BuildRequest(body, title string, notifyType NotifyType) 
 	if len(a.tags) > 0 {
 		payload["tag"] = a.tags
 	}
+	if len(attachments) > 0 {
+		// JSON mode carries the files base64 encoded in the body.
+		payload["attachments"] = attachmentsCustomJSONStyle(attachments)
+	}
 
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -141,7 +165,11 @@ func (a *AppriseTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (a *AppriseTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := a.BuildRequest(body, title, notifyType)
+	return a.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (a *AppriseTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	spec, err := a.buildRequest(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}

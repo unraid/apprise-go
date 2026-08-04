@@ -831,6 +831,11 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
                 )
             else:
                 response._content = b'{"id":"message-id"}'
+        elif parsed.path == "/api/v3/asset/create":
+            # Kook answers a CDN upload with the URL a message references.
+            response._content = (
+                b'{"code":0,"data":{"url":"https://img.kookapp.cn/assets/pixel.png"}}'
+            )
         elif parsed.netloc == "image.groupme.com":
             # GroupMe answers an image upload with the URL to reference.
             response._content = (

@@ -19,5 +19,25 @@
     "body": "hello from python",
     "title": "apprise parity",
     "type": "info"
+  },
+  {
+    "name": "attachment-form",
+    "url": "apprise://example.com/ABC123?method=form",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
+  },
+  {
+    "name": "attachment-json",
+    "url": "apprise://example.com/ABC123?method=json",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
   }
 ]

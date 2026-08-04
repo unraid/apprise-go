@@ -51,6 +51,9 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	} else if strings.HasSuffix(req.URL.Host, "ringcentral.com") && req.URL.Path == "/restapi/oauth/token" {
 		responseBody = `{"access_token":"token","expires_in":3600,"scope":"SMS","owner_id":"owner","endpoint_id":"endpoint"}`
 		contentType = "application/json"
+	} else if req.URL.Path == "/api/v3/asset/create" {
+		responseBody = `{"code":0,"data":{"url":"https://img.kookapp.cn/assets/pixel.png"}}`
+		contentType = "application/json"
 	} else if req.URL.Host == "image.groupme.com" {
 		responseBody = `{"payload":{"url":"https://i.groupme.com/pixel.png"}}`
 		contentType = "application/json"
