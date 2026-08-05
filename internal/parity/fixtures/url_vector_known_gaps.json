@@ -114,24 +114,6 @@
   "upstream": "rejects"
  },
  {
-  "url": "matrixs://user:pass@hostname:0/#room_alias",
-  "schema": "matrixs",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "matrixs://user:pass@hostname:65536/#room_alias",
-  "schema": "matrixs",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "matrixs://user:pass@hostname:port/#room_alias",
-  "schema": "matrixs",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "mmost://team@localhost/3ccdd113474722377935511fc85d3dd4?channel=$!garbag3^&mode=bot",
   "schema": "mmost",
   "go": "rejects",

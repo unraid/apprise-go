@@ -25,6 +25,29 @@ import sys
 INVALID_HOST = "-_"
 
 
+def _with_port(url: str, port: str) -> str | None:
+    """Set the authority's port, replacing one if already present."""
+    try:
+        schema, rest = url.split("://", 1)
+    except ValueError:
+        return None
+
+    tail = ""
+    for idx, ch in enumerate(rest):
+        if ch in "/?#":
+            tail = rest[idx:]
+            rest = rest[:idx]
+            break
+
+    userinfo, at, host = rest.rpartition("@")
+    if not host:
+        return None
+    # An IPv6 literal keeps its brackets; its colons are not a port separator.
+    if not host.startswith("[") and ":" in host:
+        host = host.rsplit(":", 1)[0]
+    return f"{schema}://{userinfo}{at}{host}:{port}{tail}"
+
+
 def _replace_host(url: str, value: str) -> str | None:
     try:
         schema, rest = url.split("://", 1)
@@ -54,12 +77,16 @@ def main() -> int:
     from apprise import Apprise
     from apprise.plugins import NotifyBase, N_MGR
 
-    # Which schemas actually put a hostname in the host position. A plugin
-    # whose authority is an api key or a device id also refuses a malformed
-    # value there, but for its own reasons -- dot://apikey@device_id carries an
-    # underscore quite legitimately. Applying hostname rules to those rejects
-    # working URLs, so the check is limited to schemas whose template names
-    # {host}.
+    # Which schemas leave upstream's host verification switched on.
+    #
+    # parse_url verifies the host unless the plugin passes verify_host=False,
+    # and that opt-out is the only reliable signal. The templates are not:
+    # schan declares {token} in the host position and still has its authority
+    # checked as a hostname, while dot declares one too and opts out, so
+    # dot://apikey@device_id keeps its underscore. Reading the call is exact
+    # where inferring from templates is guesswork.
+    import inspect as _inspect
+
     hostname_schemas: set[str] = set()
     ambiguous: set[str] = set()
     for entry in N_MGR.plugins():
@@ -70,19 +97,14 @@ def main() -> int:
                 protocols.append(value)
             elif isinstance(value, (list, tuple)):
                 protocols.extend(v for v in value if isinstance(v, str))
-        for template in getattr(entry, "templates", None) or ():
-            if not template.startswith("{schema}://"):
-                continue
-            authority = template[len("{schema}://"):].split("/")[0].split("?")[0]
-            hostpart = authority.rpartition("@")[2].split(":")[0]
-            if hostpart == "{host}":
-                hostname_schemas.update(p.lower() for p in protocols)
-            elif hostpart.startswith("{"):
-                # Another template puts something that is not a hostname in the
-                # same position -- sendpulse takes a client id there as well as
-                # a server -- so which rules apply depends on the individual
-                # URL and cannot be decided per schema.
-                ambiguous.update(p.lower() for p in protocols)
+
+        parse = getattr(entry, "parse_url", None)
+        try:
+            source = _inspect.getsource(parse) if parse else ""
+        except (OSError, TypeError):
+            source = ""
+        if "verify_host=False" not in source:
+            hostname_schemas.update(p.lower() for p in protocols)
 
     base_for: dict[str, str] = {}
     for name in sorted(os.listdir(args.cases_root)):
@@ -179,12 +201,43 @@ def main() -> int:
             and not accepted(invalid)
             and not hostname_rule_conflicts(schema)
         )
-        if not (rejects_empty or rejects_invalid):
+        # Port range is not a framework rule: json:// happily accepts :70000
+        # while matrix refuses :0, so each schema is asked separately. A schema
+        # that rejects a legal port simply does not take one, and is not
+        # recorded.
+        # The port probe needs a base URL that actually names a server. A
+        # schema's first parity case may be a form whose authority is a token
+        # -- matrix's is a t2bot key -- and a port means nothing there, so an
+        # accepted vector with a real hostname is preferred when one exists.
+        port_base = base
+        for candidate in accepted_by_schema.get(schema, []):
+            parsed_candidate = _parse_url(candidate, verify_host=False)
+            if not parsed_candidate:
+                continue
+            candidate_host = (parsed_candidate.get("host") or "").strip()
+            if candidate_host and is_hostname(candidate_host, underscore=False):
+                port_base = candidate
+                break
+
+        rejects_bad_port = False
+        legal = _with_port(port_base, "8080")
+        if legal is not None and accepted(legal):
+            rejects_bad_port = all(
+                not accepted(candidate)
+                for candidate in (
+                    _with_port(port_base, "0"),
+                    _with_port(port_base, "65536"),
+                )
+                if candidate is not None
+            )
+
+        if not (rejects_empty or rejects_invalid or rejects_bad_port):
             continue
 
         out[schema] = {
             "rejects_empty": rejects_empty,
             "rejects_invalid": rejects_invalid,
+            "rejects_bad_port": rejects_bad_port,
         }
 
     json.dump(out, sys.stdout)

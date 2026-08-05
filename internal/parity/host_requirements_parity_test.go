@@ -34,6 +34,7 @@ func TestHostRequirementTableCurrent(t *testing.T) {
 	var probed map[string]struct {
 		RejectsEmpty   bool `json:"rejects_empty"`
 		RejectsInvalid bool `json:"rejects_invalid"`
+		RejectsBadPort bool `json:"rejects_bad_port"`
 	}
 	if err := json.Unmarshal([]byte(stdout), &probed); err != nil {
 		t.Fatalf("decode host probe: %v", err)
@@ -56,6 +57,9 @@ func TestHostRequirementTableCurrent(t *testing.T) {
 		}
 		if got.RejectsInvalid != want.RejectsInvalid {
 			problems = append(problems, schema+": rejects_invalid differs")
+		}
+		if got.RejectsBadPort != want.RejectsBadPort {
+			problems = append(problems, schema+": rejects_bad_port differs")
 		}
 	}
 	for schema := range table {

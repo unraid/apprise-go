@@ -34,6 +34,10 @@ type hostRequirement struct {
 	// RejectsInvalid means a host that is present but is not a valid hostname
 	// is an error rather than something to pass along to the request.
 	RejectsInvalid bool `json:"rejects_invalid"`
+	// RejectsBadPort means a port outside 1-65535 is an error. This is not a
+	// framework rule -- json:// accepts :70000 and only matrix refuses :0 --
+	// so it is recorded per schema rather than applied everywhere.
+	RejectsBadPort bool `json:"rejects_bad_port"`
 }
 
 var (
@@ -103,6 +107,19 @@ func (e *InvalidHostError) Error() string {
 	return fmt.Sprintf("invalid hostname %q for %s://", e.Host, e.Schema)
 }
 
+// InvalidPortError reports a port outside the legal range.
+type InvalidPortError struct {
+	Schema string
+	Port   int
+}
+
+func (e *InvalidPortError) Error() string {
+	if e.Port == 0 {
+		return fmt.Sprintf("invalid port for %s:// (expected a number in 1-65535)", e.Schema)
+	}
+	return fmt.Sprintf("invalid port %d for %s:// (expected 1-65535)", e.Port, e.Schema)
+}
+
 // applyHostRequirements checks the URL's authority against upstream's rules.
 func applyHostRequirements(parsed *ParsedURL) error {
 	if parsed == nil {
@@ -129,6 +146,18 @@ func applyHostRequirements(parsed *ParsedURL) error {
 
 	if rule.RejectsInvalid && host != "" && !isValidHostname(host) {
 		return &InvalidHostError{Schema: parsed.Scheme, Host: host}
+	}
+
+	if rule.RejectsBadPort {
+		if parsed.HasPort && (parsed.Port < 1 || parsed.Port > 65535) {
+			return &InvalidPortError{Schema: parsed.Scheme, Port: parsed.Port}
+		}
+		// A port that is not a number at all never becomes HasPort: the parser
+		// leaves it attached to the host rather than failing, so "host:port"
+		// arrives here as one string.
+		if !parsed.HasPort && !strings.HasPrefix(host, "[") && strings.Contains(host, ":") {
+			return &InvalidPortError{Schema: parsed.Scheme, Port: 0}
+		}
 	}
 
 	return nil
