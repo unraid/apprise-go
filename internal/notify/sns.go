@@ -20,7 +20,11 @@ type SNSTarget struct {
 
 func NewSNSTarget(target *ParsedURL) (*SNSTarget, error) {
 	accessKey := strings.TrimSpace(target.Host)
-	if rawAccess := strings.TrimSpace(target.Query["access"]); rawAccess != "" {
+	// ?key= is upstream's preferred alias for the access key id; ?access= is
+	// kept for backwards compatibility and loses to it.
+	if rawKey := strings.TrimSpace(target.Query["key"]); rawKey != "" {
+		accessKey = rawKey
+	} else if rawAccess := strings.TrimSpace(target.Query["access"]); rawAccess != "" {
 		accessKey = rawAccess
 	}
 	if accessKey == "" {

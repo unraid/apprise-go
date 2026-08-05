@@ -1,7 +1,10 @@
 package parity
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -37,6 +40,29 @@ var knownPartialFailureGaps = map[string]string{
 		"still diverges once the first request fails.",
 	"twitter/x-default": "the port reports success where upstream reports failure; the failed " +
 		"request is not making it into the verdict.",
+}
+
+// goldenRequestCount reports how many requests a case's golden fixture records.
+func goldenRequestCount(t *testing.T, providerDir, caseName string) int {
+	t.Helper()
+
+	raw, err := os.ReadFile(filepath.Join(providerDir, "golden.json")) // #nosec G304 -- fixture path built from the provider directory
+	if err != nil {
+		return 0
+	}
+	var cases []struct {
+		Name     string            `json:"name"`
+		Requests []json.RawMessage `json:"requests"`
+	}
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		return 0
+	}
+	for _, c := range cases {
+		if c.Name == caseName {
+			return len(c.Requests)
+		}
+	}
+	return 0
 }
 
 func TestPartialFailureParity(t *testing.T) {
@@ -82,9 +108,11 @@ func TestPartialFailureParity(t *testing.T) {
 			}
 
 			// A single-request case cannot show the difference: there is no
-			// "rest of the send" to abandon.
-			baseline := testutil.CapturePythonRequests(t, c.URL, c.Body, c.Title)
-			if len(baseline) < 2 {
+			// "rest of the send" to abandon. The golden fixture already
+			// records how many requests the case makes, so this is read off
+			// disk rather than paid for with a Python subprocess per case --
+			// which is what pushed the whole package past CI's timeout.
+			if goldenRequestCount(t, def.Dir, c.Name) < 2 {
 				continue
 			}
 			multiCases++

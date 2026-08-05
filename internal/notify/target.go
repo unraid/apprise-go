@@ -44,6 +44,12 @@ func NewTarget(parsed *ParsedURL) (Sender, error) {
 	if err := applyChoiceArgs(parsed); err != nil {
 		return nil, err
 	}
+	if err := applyIntArgs(parsed); err != nil {
+		return nil, err
+	}
+	if err := applyTokenFormats(parsed); err != nil {
+		return nil, err
+	}
 	return builder(parsed)
 }
 

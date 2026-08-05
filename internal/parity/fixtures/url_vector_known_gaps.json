@@ -42,12 +42,6 @@
   "upstream": "accepts"
  },
  {
-  "url": "dingtalk://a_bd_/",
-  "schema": "dingtalk",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "dot://@device_id",
   "schema": "dot",
   "go": "rejects",
@@ -82,12 +76,6 @@
   "schema": "forms",
   "go": "accepts",
   "upstream": "rejects"
- },
- {
-  "url": "freemobile://?user=user&pass=password",
-  "schema": "freemobile",
-  "go": "rejects",
-  "upstream": "accepts"
  },
  {
   "url": "groupme://not-a-valid-bot-id!",
@@ -264,18 +252,6 @@
   "upstream": "rejects"
  },
  {
-  "url": "pushplus://invalid!chars00000000000000000000000000000",
-  "schema": "pushplus",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "pushplus://short",
-  "schema": "pushplus",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "pushward://hlk_abc123?volume=2.0",
   "schema": "pushward",
   "go": "accepts",
@@ -298,30 +274,6 @@
   "schema": "pushy",
   "go": "rejects",
   "upstream": "accepts"
- },
- {
-  "url": "qq://invalid!",
-  "schema": "qq",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "reddit://?user=l2g&pass=pass&app_secret=abc123&app_id=54321&to=sub1,sub2",
-  "schema": "reddit",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "reddit://user:password@app%id/app_secret/apprise",
-  "schema": "reddit",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "reddit://user:password@app%id/appsecret/apprise",
-  "schema": "reddit",
-  "go": "accepts",
-  "upstream": "rejects"
  },
  {
   "url": "reddit://user:password@app-id/app-secret",
@@ -348,12 +300,6 @@
   "upstream": "rejects"
  },
  {
-  "url": "ryver://x/ckhrjW8w672m6HG?mode=slack",
-  "schema": "ryver",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "schan://a_bd_/",
   "schema": "schan",
   "go": "accepts",
@@ -366,38 +312,8 @@
   "upstream": "rejects"
  },
  {
-  "url": "sendpulse://?id=ci&secret=cs&user=Chris<chris@example.com>",
-  "schema": "sendpulse",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "sendpulse://?id=ci&secret=cs&user=chris@example.com",
-  "schema": "sendpulse",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "sendpulse://client_id/cs1/?user=chris@example.ca",
-  "schema": "sendpulse",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "sendpulse://example.com/client_id/cs1/?user=chris",
-  "schema": "sendpulse",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
   "url": "serwersms://user:pass@SenderA",
   "schema": "serwersms",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "ses://user@example.com/?key=T1JJ3T3L2&secret=A1BRTD4JD/TIiacevi7FQ&region=us-west-2&to=user2@example.com",
-  "schema": "ses",
   "go": "rejects",
   "upstream": "accepts"
  },
@@ -420,30 +336,6 @@
   "upstream": "rejects"
  },
  {
-  "url": "sns://?key=T1JJ3T3L2&secret=A1BRTD4JD/TIiajkdnlazkcevi7FQ&region=us-west-2&to=12223334444",
-  "schema": "sns",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "spike://invalid-key",
-  "schema": "spike",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "stackfield://11111111-2222-3333-4444-55555555555",
-  "schema": "stackfield",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "stackfield://not-a-valid-uuid",
-  "schema": "stackfield",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "strmlabs://IcIcArukDQtuC1is1X1UdKZjTg118Lag2vScOmso/?currency=ABCD",
   "schema": "strmlabs",
   "go": "accepts",
@@ -452,24 +344,6 @@
  {
   "url": "strmlabs://IcIcArukDQtuC1is1X1UdKZjTg118Lag2vScOmso/?name=t",
   "schema": "strmlabs",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "strmlabs://a_bd_/",
-  "schema": "strmlabs",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "tgram://123456789:abcdefg_hijklmnop/lead2gold/?format=invalid",
-  "schema": "tgram",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "tgram://alpha:abcdefg_hijklmnop/lead2gold/",
-  "schema": "tgram",
   "go": "accepts",
   "upstream": "rejects"
  },

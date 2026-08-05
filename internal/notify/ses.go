@@ -70,7 +70,11 @@ func NewSESTarget(target *ParsedURL) (*SESTarget, error) {
 	if rawSecret := strings.TrimSpace(target.Query["secret"]); rawSecret != "" {
 		secretKey = rawSecret
 	}
-	if rawAccess := strings.TrimSpace(target.Query["access"]); rawAccess != "" {
+	// ?key= is upstream's preferred alias for the access key id; ?access= is
+	// kept for backwards compatibility and loses to it.
+	if rawKey := strings.TrimSpace(target.Query["key"]); rawKey != "" {
+		accessKey = rawKey
+	} else if rawAccess := strings.TrimSpace(target.Query["access"]); rawAccess != "" {
 		accessKey = rawAccess
 	}
 	if rawRegion := strings.TrimSpace(target.Query["region"]); rawRegion != "" {

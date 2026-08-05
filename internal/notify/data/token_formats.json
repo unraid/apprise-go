@@ -1,0 +1,533 @@
+{
+ "atalk": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "apikey"
+   ],
+   "pattern": "^[A-Z0-9_-]+$",
+   "token": "apikey"
+  },
+  "user": {
+   "ignorecase": true,
+   "pattern": "^[A-Z0-9_-]+$",
+   "token": "appuser"
+  }
+ },
+ "brevo": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-zA-Z0-9._-]+$",
+   "token": "apikey"
+  }
+ },
+ "bulkvs": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^\\+?[0-9\\s)(+-]+$",
+   "token": "from_phone"
+  }
+ },
+ "burstsms": {
+  "password": {
+   "ignorecase": true,
+   "override_args": [
+    "secret"
+   ],
+   "pattern": "^[a-z0-9]+$",
+   "token": "secret"
+  },
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "key"
+   ],
+   "pattern": "^[a-z0-9]+$",
+   "token": "apikey"
+  }
+ },
+ "chanify": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "token"
+   ],
+   "pattern": "^[A-Z0-9._-]+$",
+   "token": "token"
+  }
+ },
+ "clickatell": {
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "from"
+   ],
+   "pattern": "^[0-9\\s)(+-]+$",
+   "token": "source"
+  }
+ },
+ "dingtalk": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "token"
+   ],
+   "pattern": "^[a-z0-9]+$",
+   "token": "token"
+  },
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "secret"
+   ],
+   "pattern": "^[a-z0-9]+$",
+   "token": "secret"
+  }
+ },
+ "eight00com": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^\\+?[0-9\\s)(+-]+$",
+   "token": "from_phone"
+  }
+ },
+ "feishu": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "token"
+   ],
+   "pattern": "^[A-Z0-9_-]+$",
+   "token": "token"
+  }
+ },
+ "flock": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-z0-9-]+$",
+   "token": "token"
+  }
+ },
+ "httpsms": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^\\+?[0-9\\s)(+-]+$",
+   "token": "from_phone"
+  }
+ },
+ "join": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-z0-9]{32}$",
+   "token": "apikey"
+  }
+ },
+ "kavenegar": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-z0-9]+$",
+   "token": "apikey"
+  },
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "from"
+   ],
+   "pattern": "^[0-9\\s)(+-]+$",
+   "token": "source"
+  }
+ },
+ "kumulos": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+   "token": "apikey"
+  }
+ },
+ "lark": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-z0-9-]+$",
+   "token": "token"
+  }
+ },
+ "mailersend": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-zA-Z0-9._-]+$",
+   "token": "apikey"
+  }
+ },
+ "msg91": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-z0-9]+$",
+   "token": "authkey"
+  },
+  "user": {
+   "ignorecase": true,
+   "pattern": "^[a-z0-9 _-]+$",
+   "token": "template"
+  }
+ },
+ "msgbird": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-z0-9]{25}$",
+   "token": "apikey"
+  }
+ },
+ "napi": {
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "type"
+   ],
+   "pattern": "^[A-Z0-9_-]+$",
+   "token": "type"
+  }
+ },
+ "nexmo": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "from"
+   ],
+   "pattern": "^\\+?[0-9\\s)(+-]+$",
+   "token": "from_phone"
+  },
+  "password": {
+   "ignorecase": true,
+   "override_args": [
+    "secret"
+   ],
+   "pattern": "^[a-z0-9]+$",
+   "token": "secret"
+  },
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "key"
+   ],
+   "pattern": "^[a-z0-9]+$",
+   "token": "apikey"
+  }
+ },
+ "notificationapi": {
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "type"
+   ],
+   "pattern": "^[A-Z0-9_-]+$",
+   "token": "type"
+  }
+ },
+ "plivo": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "token"
+   ],
+   "pattern": "^[a-z0-9]{30,50}$",
+   "token": "token"
+  },
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "id"
+   ],
+   "pattern": "^[a-z0-9]{20,30}$",
+   "token": "auth_id"
+  }
+ },
+ "prowl": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[A-Za-z0-9]{40}$",
+   "token": "apikey"
+  }
+ },
+ "push": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+   "token": "apikey"
+  }
+ },
+ "pushplus": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "token"
+   ],
+   "pattern": "^[a-z0-9_-]{32,64}$",
+   "token": "token"
+  }
+ },
+ "pushward": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "apikey"
+   ],
+   "pattern": "^hlk_[A-Za-z0-9]+$",
+   "token": "apikey"
+  }
+ },
+ "qq": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-z0-9]{24,64}$",
+   "token": "token"
+  }
+ },
+ "reddit": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-z0-9_-]+$",
+   "token": "app_id"
+  }
+ },
+ "ringc": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-z0-9_-]+$",
+   "token": "client_id"
+  }
+ },
+ "ryver": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[A-Z0-9_-]{3,32}$",
+   "token": "organization"
+  }
+ },
+ "sendgrid": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[A-Z0-9._-]+$",
+   "token": "apikey"
+  }
+ },
+ "serwersms": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "from",
+    "sender"
+   ],
+   "pattern": "^[a-z0-9][a-z0-9 _-]{0,10}$",
+   "token": "sender"
+  }
+ },
+ "sinch": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "from"
+   ],
+   "pattern": "^\\+?[0-9\\s)(+-]+$",
+   "token": "from_phone"
+  },
+  "password": {
+   "ignorecase": true,
+   "override_args": [
+    "token"
+   ],
+   "pattern": "^[a-f0-9]+$",
+   "token": "api_token"
+  },
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "spi"
+   ],
+   "pattern": "^[a-f0-9]+$",
+   "token": "service_plan_id"
+  }
+ },
+ "spike": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-z0-9]{32}$",
+   "token": "token"
+  }
+ },
+ "splunk": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "apikey"
+   ],
+   "pattern": "^[A-Z0-9_-]+$",
+   "token": "apikey"
+  },
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "route",
+    "routing_key"
+   ],
+   "pattern": "^[A-Z0-9_-]+$",
+   "token": "routing_key"
+  }
+ },
+ "spugpush": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-zA-Z0-9_-]{32,64}$",
+   "token": "token"
+  }
+ },
+ "stackfield": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "token"
+   ],
+   "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$",
+   "token": "token"
+  }
+ },
+ "strmlabs": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^[a-z0-9]{40}$",
+   "token": "access_token"
+  }
+ },
+ "tgram": {
+  "host": {
+   "ignorecase": true,
+   "pattern": "^(bot)?(?P<key>[0-9]+:[a-z0-9_-]+)$",
+   "token": "bot_token"
+  }
+ },
+ "twilio": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "from"
+   ],
+   "pattern": "^([a-z]+:)?\\+?[0-9\\s)(+-]+$",
+   "token": "from_phone"
+  },
+  "password": {
+   "ignorecase": true,
+   "override_args": [
+    "token"
+   ],
+   "pattern": "^[a-z0-9]+$",
+   "token": "auth_token"
+  },
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "sid"
+   ],
+   "pattern": "^AC[a-f0-9]+$",
+   "token": "account_sid"
+  }
+ },
+ "victorops": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "apikey"
+   ],
+   "pattern": "^[A-Z0-9_-]+$",
+   "token": "apikey"
+  },
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "route",
+    "routing_key"
+   ],
+   "pattern": "^[A-Z0-9_-]+$",
+   "token": "routing_key"
+  }
+ },
+ "vonage": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "from"
+   ],
+   "pattern": "^\\+?[0-9\\s)(+-]+$",
+   "token": "from_phone"
+  },
+  "password": {
+   "ignorecase": true,
+   "override_args": [
+    "secret"
+   ],
+   "pattern": "^[a-z0-9]+$",
+   "token": "secret"
+  },
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "key"
+   ],
+   "pattern": "^[a-z0-9]+$",
+   "token": "apikey"
+  }
+ },
+ "wechat": {
+  "host": {
+   "ignorecase": false,
+   "pattern": "^[0-9]+$",
+   "token": "host"
+  }
+ },
+ "wecom": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "token"
+   ],
+   "pattern": "^[a-z0-9_-]{32,64}$",
+   "token": "token"
+  }
+ },
+ "wecombot": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "key"
+   ],
+   "pattern": "^[a-z0-9_-]+$",
+   "token": "key"
+  }
+ },
+ "whatsapp": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "from"
+   ],
+   "pattern": "^[0-9]+$",
+   "token": "from_phone_id"
+  },
+  "password": {
+   "ignorecase": true,
+   "override_args": [
+    "token"
+   ],
+   "pattern": "^[a-z0-9]+$",
+   "token": "token"
+  }
+ },
+ "wxpusher": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "token"
+   ],
+   "pattern": "^AT_[^\\s]+$",
+   "token": "token"
+  }
+ }
+}

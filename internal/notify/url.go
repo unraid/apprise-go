@@ -143,7 +143,7 @@ func ParseURL(raw string) (*ParsedURL, error) {
 
 	qsd := parseQSD(u.RawQuery, false, true)
 
-	return &ParsedURL{
+	result := &ParsedURL{
 		Raw:          raw,
 		Scheme:       strings.ToLower(u.Scheme),
 		Host:         host,
@@ -162,7 +162,29 @@ func ParseURL(raw string) (*ParsedURL, error) {
 		QueryAddOrder:     qsd.addOrder,
 		QueryDelOrder:     qsd.delOrder,
 		QueryPayloadOrder: qsd.payloadOrder,
-	}, nil
+	}
+	applyUserPassOverrides(result)
+	return result, nil
+}
+
+// applyUserPassOverrides applies the ?user= and ?pass= query arguments.
+//
+// Upstream does this in NotifyBase.parse_url, so it holds for every schema
+// rather than being a per-plugin convenience: a URL can carry its credentials
+// entirely in the query string and no plugin has to know about it. They
+// override the userinfo outright when both are present.
+func applyUserPassOverrides(parsed *ParsedURL) {
+	if parsed == nil {
+		return
+	}
+	if value, ok := parsed.Query["user"]; ok {
+		parsed.User = value
+		parsed.HasUser = true
+	}
+	if value, ok := parsed.Query["pass"]; ok {
+		parsed.Password = value
+		parsed.HasPassword = true
+	}
 }
 
 func parseLenientURL(raw string, scheme string, splitFirstAt bool) (*ParsedURL, error) {
@@ -214,9 +236,25 @@ func parseLenientURL(raw string, scheme string, splitFirstAt bool) (*ParsedURL, 
 	// or the same URL means different things depending on which path parsed
 	// it -- and a host of "%20%20" would reach a provider as two literal
 	// escapes instead of the whitespace upstream sees and rejects.
-	return &ParsedURL{
+	loweredScheme := strings.ToLower(scheme)
+
+	// Telegram carries its bot token as "id:secret" in the authority, which
+	// looks exactly like userinfo. url.Parse's path applies this fix-up after
+	// sanitizeTelegramAuthority; the manual split has to do the same or the
+	// token arrives as a user and a password and no longer matches its own
+	// format.
+	if loweredScheme == "tgram" && strings.EqualFold(host, telegramAuthorityHost) && user != "" {
+		host = user
+		if password != "" {
+			host += ":" + password
+		}
+		user, password = "", ""
+		hasUser, hasPassword = false, false
+	}
+
+	result := &ParsedURL{
 		Raw:          raw,
-		Scheme:       strings.ToLower(scheme),
+		Scheme:       loweredScheme,
 		Host:         lenientUnquote(host),
 		Port:         0,
 		HasPort:      false,
@@ -233,7 +271,9 @@ func parseLenientURL(raw string, scheme string, splitFirstAt bool) (*ParsedURL, 
 		QueryAddOrder:     qsd.addOrder,
 		QueryDelOrder:     qsd.delOrder,
 		QueryPayloadOrder: qsd.payloadOrder,
-	}, nil
+	}
+	applyUserPassOverrides(result)
+	return result, nil
 }
 
 func urlAuthority(raw string) string {

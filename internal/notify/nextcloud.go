@@ -58,15 +58,12 @@ func NewNextcloudTarget(target *ParsedURL) (*NextcloudTarget, error) {
 	}
 
 	version := nextcloudDefaultVersion
-	// Upstream parses version with int() and rejects anything below the
-	// declared minimum, so "invalid", "0" and "-23" are all errors rather than
-	// silently falling back to the default.
+	// The range itself is enforced centrally from upstream's declared bounds;
+	// see applyIntArgs.
 	if raw := strings.TrimSpace(target.Query["version"]); raw != "" {
-		parsed, err := strconv.Atoi(raw)
-		if err != nil || parsed < 1 {
-			return nil, fmt.Errorf("invalid nextcloud version: %q", raw)
+		if parsed, err := strconv.Atoi(raw); err == nil {
+			version = parsed
 		}
-		version = parsed
 	}
 
 	urlPrefix := strings.Trim(target.Query["url_prefix"], "/")

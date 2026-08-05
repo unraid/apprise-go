@@ -76,14 +76,15 @@ func NewTelegramTarget(target *ParsedURL) (*TelegramTarget, error) {
 
 	detect := parseBoolValue(target.Query["detect"], len(targets) == 0)
 
+	// An unrecognized ?format= falls back to the plugin default rather than
+	// failing: upstream's base class only maps the value it knows and leaves
+	// notify_format at the default otherwise, so a typo changes the rendering
+	// but never rejects the URL.
 	format := normalizeNotifyFormat(target.Query["format"])
-	if format == "" {
-		format = "html"
-	}
 	switch format {
 	case "html", "markdown", "text":
 	default:
-		return nil, fmt.Errorf("invalid format")
+		format = "html"
 	}
 
 	return &TelegramTarget{

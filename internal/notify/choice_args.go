@@ -105,7 +105,7 @@ func (e *ChoiceArgError) Error() string {
 }
 
 // applyChoiceArgs validates the choice arguments present on the URL and
-// canonicalises any that were supplied as a prefix, so the provider code sees
+// canonicalizes any that were supplied as a prefix, so the provider code sees
 // the full declared value rather than the abbreviation the user typed.
 func applyChoiceArgs(parsed *ParsedURL) error {
 	if parsed == nil {

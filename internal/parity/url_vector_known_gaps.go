@@ -42,7 +42,7 @@ func loadURLVectorAllowlist(t *testing.T) map[string]string {
 	t.Helper()
 
 	path := urlVectorGapsPath(t)
-	raw, err := os.ReadFile(path)
+	raw, err := os.ReadFile(path) // #nosec G304 -- fixture path built from the repo root
 	if err != nil {
 		if os.IsNotExist(err) {
 			return map[string]string{}

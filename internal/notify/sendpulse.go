@@ -153,14 +153,13 @@ func NewSendPulseTarget(target *ParsedURL) (*SendPulseTarget, error) {
 		}
 	}
 
+	// An unrecognized ?format= falls back to the plugin default rather than
+	// failing; see the note in telegram.go.
 	format := normalizeNotifyFormat(target.Query["format"])
-	if format == "" {
-		format = "html"
-	}
 	switch format {
 	case "html", "markdown", "text":
 	default:
-		return nil, fmt.Errorf("invalid format")
+		format = "html"
 	}
 
 	templateID := 0
