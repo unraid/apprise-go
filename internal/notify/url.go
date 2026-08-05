@@ -3,6 +3,7 @@ package notify
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -50,6 +51,9 @@ func ParseURL(raw string) (*ParsedURL, error) {
 	sanitized := sanitizeFragment(raw)
 	if strings.EqualFold(schemeCandidate, "tgram") {
 		sanitized = sanitizeTelegramAuthority(sanitized)
+	}
+	if strings.EqualFold(schemeCandidate, "rocket") || strings.EqualFold(schemeCandidate, "rockets") {
+		sanitized = sanitizeRocketAuthority(sanitized)
 	}
 
 	authority := urlAuthority(sanitized)
@@ -165,6 +169,47 @@ func ParseURL(raw string) (*ParsedURL, error) {
 	}
 	applyUserPassOverrides(result)
 	return result, nil
+}
+
+// rocketAuthorityRe matches a Rocket.Chat webhook embedded in the authority,
+// the form rocket://webhook_a/webhook_b@host or
+// rocket://user:webhook_a/webhook_b@host. The slash makes it illegal as
+// userinfo, so no standard parser keeps it in one piece.
+var rocketAuthorityRe = regexp.MustCompile(`(?is)^(?P<schema>[^:]+://)((?P<user>[^:/]+):)?(?P<webhook>[a-z0-9]+(?:/|%2F)[a-z0-9]+)@(?P<url>.+)$`)
+
+// sanitizeRocketAuthority lifts an embedded webhook out of the authority and
+// leaves it as ?webhook=, so what follows is an ordinary URL.
+//
+// Upstream does this rewrite in the plugin's parse_url before handing the
+// result to the base parser. Doing it here instead means every later step --
+// including the shared host and credential checks -- sees the same URL the
+// plugin will, rather than an authority of "user:webhook_a" that is not a
+// hostname and never claimed to be.
+func sanitizeRocketAuthority(raw string) string {
+	m := rocketAuthorityRe.FindStringSubmatch(raw)
+	if m == nil {
+		return raw
+	}
+
+	webhook := m[rocketAuthorityRe.SubexpIndex("webhook")]
+	rest := m[rocketAuthorityRe.SubexpIndex("url")]
+	if strings.Contains(rest, "webhook=") {
+		// An explicit ?webhook= wins; leave the URL alone rather than
+		// producing two of them.
+		return raw
+	}
+
+	rebuilt := m[rocketAuthorityRe.SubexpIndex("schema")]
+	if user := m[rocketAuthorityRe.SubexpIndex("user")]; user != "" {
+		rebuilt += user + "@"
+	}
+	rebuilt += rest
+
+	separator := "?"
+	if strings.Contains(rebuilt, "?") {
+		separator = "&"
+	}
+	return rebuilt + separator + "webhook=" + url.QueryEscape(webhook)
 }
 
 // applyUserPassOverrides applies the ?user= and ?pass= query arguments.

@@ -15,7 +15,7 @@
   }
  },
  "brevo": {
-  "host": {
+  "user": {
    "ignorecase": true,
    "pattern": "^[a-zA-Z0-9._-]+$",
    "token": "apikey"
@@ -152,7 +152,7 @@
   }
  },
  "mailersend": {
-  "host": {
+  "user": {
    "ignorecase": true,
    "pattern": "^[a-zA-Z0-9._-]+$",
    "token": "apikey"
@@ -289,6 +289,16 @@
    "token": "app_id"
   }
  },
+ "resend": {
+  "user": {
+   "ignorecase": true,
+   "override_args": [
+    "apikey"
+   ],
+   "pattern": "^[A-Z0-9._-]+$",
+   "token": "apikey"
+  }
+ },
  "ringc": {
   "host": {
    "ignorecase": true,
@@ -304,7 +314,7 @@
   }
  },
  "sendgrid": {
-  "host": {
+  "user": {
    "ignorecase": true,
    "pattern": "^[A-Z0-9._-]+$",
    "token": "apikey"

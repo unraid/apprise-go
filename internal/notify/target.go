@@ -50,6 +50,9 @@ func NewTarget(parsed *ParsedURL) (Sender, error) {
 	if err := applyTokenFormats(parsed); err != nil {
 		return nil, err
 	}
+	if err := applyHostRequirements(parsed); err != nil {
+		return nil, err
+	}
 	return builder(parsed)
 }
 

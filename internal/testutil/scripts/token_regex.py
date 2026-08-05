@@ -45,6 +45,18 @@ def _authority_tokens(template: str) -> dict[str, str]:
     authority = m.group("authority")
 
     fields: dict[str, str] = {}
+
+    # A template can carry no literal @ and still describe userinfo, because
+    # one of its tokens supplies it: brevo's "{apikey}:{from_email}" becomes
+    # brevo://abcd:user@example.com, where the apikey is the user field and the
+    # email contributes both the password and the host. Reading the authority
+    # positionally would call the apikey a hostname and check it against the
+    # wrong value.
+    if "@" not in authority and authority.count(":") == 1:
+        first, _, second = authority.partition(":")
+        if first.startswith("{") and second.startswith("{"):
+            return {"user": first.strip("{}")}
+
     userinfo, _, hostpart = authority.rpartition("@")
     if userinfo:
         parts = userinfo.split(":")

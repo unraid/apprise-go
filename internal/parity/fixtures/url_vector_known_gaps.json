@@ -24,12 +24,6 @@
   "upstream": "rejects"
  },
  {
-  "url": "brevo://invalid-api-key+*-d:user@example.com",
-  "schema": "brevo",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "bulksms://",
   "schema": "bulksms",
   "go": "rejects",
@@ -58,24 +52,6 @@
   "schema": "fcm",
   "go": "rejects",
   "upstream": "accepts"
- },
- {
-  "url": "form://",
-  "schema": "form",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "form://:@/",
-  "schema": "form",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "forms://",
-  "schema": "forms",
-  "go": "accepts",
-  "upstream": "rejects"
  },
  {
   "url": "groupme://not-a-valid-bot-id!",
@@ -108,24 +84,6 @@
   "upstream": "rejects"
  },
  {
-  "url": "json://",
-  "schema": "json",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "json://:@/",
-  "schema": "json",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "jsons://",
-  "schema": "jsons",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "line://token",
   "schema": "line",
   "go": "rejects",
@@ -140,24 +98,6 @@
  {
   "url": "mailersend://abcd@host",
   "schema": "mailersend",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "mailersend://bad+key*!:user@example.com",
-  "schema": "mailersend",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "mailgun://",
-  "schema": "mailgun",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "mailgun://:@/",
-  "schema": "mailgun",
   "go": "accepts",
   "upstream": "rejects"
  },
@@ -188,12 +128,6 @@
  {
   "url": "matrixs://user:pass@hostname:port/#room_alias",
   "schema": "matrixs",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "mmost://localhost:invalid-port/3ccdd113474722377935511fc85d3dd4",
-  "schema": "mmost",
   "go": "accepts",
   "upstream": "rejects"
  },
@@ -282,12 +216,6 @@
   "upstream": "accepts"
  },
  {
-  "url": "resend://invalid-api-key+*-d:user@example.com",
-  "schema": "resend",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "rocket://user:pass@localhost",
   "schema": "rocket",
   "go": "accepts",
@@ -302,12 +230,6 @@
  {
   "url": "schan://a_bd_/",
   "schema": "schan",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "sendgrid://invalid-api-key+*-d:user@example.com",
-  "schema": "sendgrid",
   "go": "accepts",
   "upstream": "rejects"
  },
@@ -388,23 +310,5 @@
   "schema": "wxpusher",
   "go": "rejects",
   "upstream": "accepts"
- },
- {
-  "url": "xml://",
-  "schema": "xml",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "xml://:@/",
-  "schema": "xml",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "xmls://",
-  "schema": "xmls",
-  "go": "accepts",
-  "upstream": "rejects"
  }
 ]
