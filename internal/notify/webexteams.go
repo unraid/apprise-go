@@ -159,6 +159,8 @@ func (w *WebexTeamsTarget) Send(body, title string, notifyType NotifyType) error
 // carries the message text, so a notification with three files does not
 // arrive as three copies of the message.
 func (w *WebexTeamsTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(attachments) == 0 || w.mode != "bot" {
 		specs, err := w.buildRequests(body, title, notifyType)
 		if err != nil {
@@ -166,12 +168,10 @@ func (w *WebexTeamsTarget) SendWithAttachments(body, title string, notifyType No
 		}
 
 		for _, spec := range specs {
-			if err := SendRequest(spec); err != nil {
-				return err
-			}
+			outcome.record(SendRequest(spec))
 		}
 
-		return nil
+		return outcome.err()
 	}
 
 	message := body
@@ -214,7 +214,7 @@ func (w *WebexTeamsTarget) SendWithAttachments(body, title string, notifyType No
 		}
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func init() {

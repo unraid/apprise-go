@@ -146,6 +146,13 @@ func DispatchSendWithInput(
 	}
 
 	parts := ApplyOverflowForURLWithInput(parsed, mode, format, inputFormat, title, body)
+
+	// A split message is still one notification. Upstream sends every part and
+	// reports failure at the end, so abandoning the rest after one part is
+	// rejected delivers a truncated message and reports the same failure a
+	// complete send would have -- the reader gets half a sentence and nothing
+	// says why.
+	var outcome sendOutcome
 	for index, part := range parts {
 		// Attachments ride with the first part only; upstream does not repeat
 		// them across a split.
@@ -165,20 +172,17 @@ func DispatchSendWithInput(
 				break
 			}
 		}
-		if err != nil {
+		if err != nil && optional {
 			// ?optional=yes absorbs a failure once every attempt has been
 			// made, so a service the caller does not depend on cannot fail
 			// the notification. It does not skip retries — upstream runs
 			// them all and only reinterprets the final result.
-			if optional {
-				continue
-			}
-
-			return err
+			continue
 		}
+		outcome.record(err)
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func DispatchSend(target Sender, body, title string, notifyType NotifyType, attachments []Attachment) error {

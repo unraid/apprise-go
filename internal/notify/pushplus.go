@@ -106,13 +106,13 @@ func (p *PushplusTarget) BuildRequest(body, title string, notifyType NotifyType)
 }
 
 func (p *PushplusTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	for _, spec := range p.buildRequests(body, title, notifyType) {
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 // buildRequests returns one request per group topic, or a single personal

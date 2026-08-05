@@ -68,6 +68,8 @@ func (l *LineTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 }
 
 func (l *LineTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(l.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -77,12 +79,10 @@ func (l *LineTarget) Send(body, title string, notifyType NotifyType) error {
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (l *LineTarget) buildRequestForTarget(target, body, title string, notifyType NotifyType) (RequestSpec, error) {

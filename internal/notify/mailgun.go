@@ -191,6 +191,8 @@ func (m *MailgunTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (m *MailgunTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if m.disabled {
 		return nil
 	}
@@ -237,14 +239,12 @@ func (m *MailgunTarget) SendWithAttachments(body, title string, notifyType Notif
 			},
 			Body: requestBody,
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (m *MailgunTarget) buildPayload(body, title string, recipients []emailEntry) formFields {

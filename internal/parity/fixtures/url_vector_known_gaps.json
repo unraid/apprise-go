@@ -1,0 +1,536 @@
+[
+ {
+  "url": "apprise://localhost/!",
+  "schema": "apprise",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "apprise://localhost/%%20",
+  "schema": "apprise",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "bark://localhost",
+  "schema": "bark",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "brevo://abcd:user@example.com/newuser@example.com?reply=%20!",
+  "schema": "brevo",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "brevo://invalid-api-key+*-d:user@example.com",
+  "schema": "brevo",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "bulksms://",
+  "schema": "bulksms",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "bulksms://:@/",
+  "schema": "bulksms",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "dingtalk://a_bd_/",
+  "schema": "dingtalk",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "dot://@device_id",
+  "schema": "dot",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "eight00com://GOODTOKEN@9876543210/12",
+  "schema": "eight00com",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "fcm://apikey/",
+  "schema": "fcm",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "form://",
+  "schema": "form",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "form://:@/",
+  "schema": "form",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "forms://",
+  "schema": "forms",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "freemobile://?user=user&pass=password",
+  "schema": "freemobile",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "groupme://not-a-valid-bot-id!",
+  "schema": "groupme",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "hassios://localhost/long.lived.token?nid=!%",
+  "schema": "hassios",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "humhubs://token@hostname/-1",
+  "schema": "humhubs",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "humhubs://token@hostname/0",
+  "schema": "humhubs",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "humhubs://token@hostname/invalid",
+  "schema": "humhubs",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "json://",
+  "schema": "json",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "json://:@/",
+  "schema": "json",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "jsons://",
+  "schema": "jsons",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "line://token",
+  "schema": "line",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "mailersend://abcd:user@example.com/newuser@example.com?reply=%20!",
+  "schema": "mailersend",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "mailersend://abcd@host",
+  "schema": "mailersend",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "mailersend://bad+key*!:user@example.com",
+  "schema": "mailersend",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "mailgun://",
+  "schema": "mailgun",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "mailgun://:@/",
+  "schema": "mailgun",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "mailgun://user@localhost.localdomain",
+  "schema": "mailgun",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "mastodon://access_token@hostname/-/%/",
+  "schema": "mastodon",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "matrixs://user:pass@hostname:0/#room_alias",
+  "schema": "matrixs",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "matrixs://user:pass@hostname:65536/#room_alias",
+  "schema": "matrixs",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "matrixs://user:pass@hostname:port/#room_alias",
+  "schema": "matrixs",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "mmost://localhost:invalid-port/3ccdd113474722377935511fc85d3dd4",
+  "schema": "mmost",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "mmost://team@localhost/3ccdd113474722377935511fc85d3dd4?channel=$!garbag3^&mode=bot",
+  "schema": "mmost",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "napi://client_id/client_secret/id/+15551231234/?type=*(",
+  "schema": "napi",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "ncloud://localhost",
+  "schema": "ncloud",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "notifico://example.com/abcd/ckhrjW8w672m6HG",
+  "schema": "notifico",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "ntfys://user:web@-_/topic1/topic2/?mode=private",
+  "schema": "ntfys",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "octopush://user@myaccount.com/apikey",
+  "schema": "octopush",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "pagerduty://myroutekey@myapikey/%20",
+  "schema": "pagerduty",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "pagerduty://myroutekey@myapikey/mysource/%20",
+  "schema": "pagerduty",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "postmark://abcd@host",
+  "schema": "postmark",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "pushplus://invalid!chars00000000000000000000000000000",
+  "schema": "pushplus",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "pushplus://short",
+  "schema": "pushplus",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "pushward://hlk_abc123?volume=2.0",
+  "schema": "pushward",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "pushward://hlk_abc123?volume=invalid",
+  "schema": "pushward",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "pushy://apikey",
+  "schema": "pushy",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "pushy://apikey/%20(",
+  "schema": "pushy",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "qq://invalid!",
+  "schema": "qq",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "reddit://?user=l2g&pass=pass&app_secret=abc123&app_id=54321&to=sub1,sub2",
+  "schema": "reddit",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "reddit://user:password@app%id/app_secret/apprise",
+  "schema": "reddit",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "reddit://user:password@app%id/appsecret/apprise",
+  "schema": "reddit",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "reddit://user:password@app-id/app-secret",
+  "schema": "reddit",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "resend://invalid-api-key+*-d:user@example.com",
+  "schema": "resend",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "rocket://user:pass@localhost",
+  "schema": "rocket",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "rocket://user:pass@localhost/#/!/@",
+  "schema": "rocket",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "ryver://x/ckhrjW8w672m6HG?mode=slack",
+  "schema": "ryver",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "schan://a_bd_/",
+  "schema": "schan",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "sendgrid://invalid-api-key+*-d:user@example.com",
+  "schema": "sendgrid",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "sendpulse://?id=ci&secret=cs&user=Chris<chris@example.com>",
+  "schema": "sendpulse",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "sendpulse://?id=ci&secret=cs&user=chris@example.com",
+  "schema": "sendpulse",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "sendpulse://client_id/cs1/?user=chris@example.ca",
+  "schema": "sendpulse",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "sendpulse://example.com/client_id/cs1/?user=chris",
+  "schema": "sendpulse",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "serwersms://user:pass@SenderA",
+  "schema": "serwersms",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "ses://user@example.com/?key=T1JJ3T3L2&secret=A1BRTD4JD/TIiacevi7FQ&region=us-west-2&to=user2@example.com",
+  "schema": "ses",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "ses://user@example.com/T1JJ3T3L2/A1BRTD4JD/TIiajkdnlazkcevi7FQ/us-west-2?reply=invalid-email",
+  "schema": "ses",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "smsc://login:password@notaphone",
+  "schema": "smsc",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "smseagle://%20@localhost",
+  "schema": "smseagle",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "sns://?key=T1JJ3T3L2&secret=A1BRTD4JD/TIiajkdnlazkcevi7FQ&region=us-west-2&to=12223334444",
+  "schema": "sns",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "spike://invalid-key",
+  "schema": "spike",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "stackfield://11111111-2222-3333-4444-55555555555",
+  "schema": "stackfield",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "stackfield://not-a-valid-uuid",
+  "schema": "stackfield",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "strmlabs://IcIcArukDQtuC1is1X1UdKZjTg118Lag2vScOmso/?currency=ABCD",
+  "schema": "strmlabs",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "strmlabs://IcIcArukDQtuC1is1X1UdKZjTg118Lag2vScOmso/?name=t",
+  "schema": "strmlabs",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "strmlabs://a_bd_/",
+  "schema": "strmlabs",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "tgram://123456789:abcdefg_hijklmnop/lead2gold/?format=invalid",
+  "schema": "tgram",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "tgram://alpha:abcdefg_hijklmnop/lead2gold/",
+  "schema": "tgram",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "tgram://bottest@123456789:abcdefg_hijklmnop/id1/?topic=invalid",
+  "schema": "tgram",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "threema://user@secret",
+  "schema": "threema",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "viber://?token=tokenb",
+  "schema": "viber",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "viber://tokena",
+  "schema": "viber",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "wxpusher://?token=AT_abc1234",
+  "schema": "wxpusher",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "wxpusher://AT_appid/%20/%20/",
+  "schema": "wxpusher",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "wxpusher://AT_appid/@/#/,/",
+  "schema": "wxpusher",
+  "go": "rejects",
+  "upstream": "accepts"
+ },
+ {
+  "url": "xml://",
+  "schema": "xml",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "xml://:@/",
+  "schema": "xml",
+  "go": "accepts",
+  "upstream": "rejects"
+ },
+ {
+  "url": "xmls://",
+  "schema": "xmls",
+  "go": "accepts",
+  "upstream": "rejects"
+ }
+]

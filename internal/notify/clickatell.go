@@ -76,6 +76,8 @@ func (c *ClickatellTarget) BuildRequest(body, title string, notifyType NotifyTyp
 }
 
 func (c *ClickatellTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(c.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -86,14 +88,12 @@ func (c *ClickatellTarget) Send(body, title string, notifyType NotifyType) error
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (c *ClickatellTarget) buildRequest(target, message string) (RequestSpec, error) {

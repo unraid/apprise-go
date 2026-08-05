@@ -133,6 +133,8 @@ func (b *BulkSMSTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (b *BulkSMSTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(b.targets) == 0 && len(b.groups) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -175,14 +177,12 @@ func (b *BulkSMSTarget) Send(body, title string, notifyType NotifyType) error {
 			},
 			Body: string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (b *BulkSMSTarget) buildPayload(message string, toValue any) map[string]any {

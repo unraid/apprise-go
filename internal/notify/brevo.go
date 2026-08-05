@@ -116,6 +116,8 @@ func (b *BrevoTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (b *BrevoTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(b.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -138,14 +140,12 @@ func (b *BrevoTarget) SendWithAttachments(body, title string, notifyType NotifyT
 			},
 			Body: string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (b *BrevoTarget) buildPayload(body, title, target string, attachments []Attachment) map[string]any {

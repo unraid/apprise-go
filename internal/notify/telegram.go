@@ -135,6 +135,8 @@ func telegramContentPlacement(raw string) string {
 }
 
 func (t *TelegramTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(t.targets) == 0 {
 		if t.detect {
 			return SendRequest(t.buildDetectSpec())
@@ -163,18 +165,14 @@ func (t *TelegramTarget) SendWithAttachments(body, title string, notifyType Noti
 			if err != nil {
 				return err
 			}
-			if err := SendRequest(spec); err != nil {
-				return err
-			}
+			outcome.record(SendRequest(spec))
 		}
 		if caption == "" {
 			spec, err := t.buildSpec(message, recipient)
 			if err != nil {
 				return err
 			}
-			if err := SendRequest(spec); err != nil {
-				return err
-			}
+			outcome.record(SendRequest(spec))
 		}
 
 		// Each file goes to the endpoint Telegram wants for its type; a
@@ -190,15 +188,13 @@ func (t *TelegramTarget) SendWithAttachments(body, title string, notifyType Noti
 			if err != nil {
 				return err
 			}
-			if err := SendRequest(spec); err != nil {
-				return err
-			}
+			outcome.record(SendRequest(spec))
 		}
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (t *TelegramTarget) buildSpec(body string, recipient telegramRecipient) (RequestSpec, error) {

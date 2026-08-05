@@ -175,6 +175,8 @@ func (s *SparkPostTarget) Send(body, title string, notifyType NotifyType) error 
 }
 
 func (s *SparkPostTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(s.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -207,12 +209,10 @@ func (s *SparkPostTarget) SendWithAttachments(body, title string, notifyType Not
 			},
 			Body: string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (s *SparkPostTarget) buildPayload(body, title string, notifyType NotifyType, recipients []emailEntry, attachments []Attachment) map[string]any {

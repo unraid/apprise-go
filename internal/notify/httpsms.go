@@ -107,6 +107,8 @@ func (h *HttpSMSTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (h *HttpSMSTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(h.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -135,12 +137,10 @@ func (h *HttpSMSTarget) Send(body, title string, notifyType NotifyType) error {
 			Body: string(data),
 		}
 
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func init() {

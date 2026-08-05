@@ -61,6 +61,8 @@ func (h *HumHubTarget) Send(body, title string, notifyType NotifyType) error {
 // The upload URL names the post, so the id has to come back from the create
 // before anything can be attached.
 func (h *HumHubTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	specs, err := h.buildRequests(body, title, notifyType)
 	if err != nil {
 		return err
@@ -68,9 +70,7 @@ func (h *HumHubTarget) SendWithAttachments(body, title string, notifyType Notify
 
 	for _, spec := range specs {
 		if len(attachments) == 0 {
-			if err := SendRequest(spec); err != nil {
-				return err
-			}
+			outcome.record(SendRequest(spec))
 			continue
 		}
 
@@ -112,7 +112,7 @@ func (h *HumHubTarget) SendWithAttachments(body, title string, notifyType Notify
 		}
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (h *HumHubTarget) baseURL() string {

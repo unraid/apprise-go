@@ -209,16 +209,16 @@ func (d *DiscordTarget) Send(body, title string, notifyType NotifyType) error {
 // the payload with the message content stripped out, so the body is not
 // repeated under each file.
 func (d *DiscordTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	spec, err := d.buildRequest(body, title, notifyType, nil)
 	if err != nil {
 		return err
 	}
-	if err := SendRequest(spec); err != nil {
-		return err
-	}
+	outcome.record(SendRequest(spec))
 
 	if len(attachments) == 0 {
-		return nil
+		return outcome.err()
 	}
 
 	payload, err := d.buildPayload(body, title, notifyType)
@@ -249,12 +249,10 @@ func (d *DiscordTarget) SendWithAttachments(body, title string, notifyType Notif
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func defaultImageURL(notifyType NotifyType) string {

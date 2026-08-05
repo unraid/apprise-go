@@ -80,6 +80,8 @@ func (p *PushbulletTarget) Send(body, title string, notifyType NotifyType) error
 }
 
 func (p *PushbulletTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	// Every file is uploaded before anything is pushed, so a failed upload
 	// does not leave a message referencing a file that is not there.
 	pushes := make([]map[string]any, 0, len(attachments))
@@ -95,21 +97,17 @@ func (p *PushbulletTarget) SendWithAttachments(body, title string, notifyType No
 	if err != nil {
 		return err
 	}
-	if err := SendRequest(spec); err != nil {
-		return err
-	}
+	outcome.record(SendRequest(spec))
 
 	for _, push := range pushes {
 		spec, err := p.pushSpec(push)
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 // uploadAttachment asks Pushbullet where to put a file, posts it there, and

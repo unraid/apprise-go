@@ -80,6 +80,8 @@ func (f *FortySixElksTarget) BuildRequest(body, title string, notifyType NotifyT
 }
 
 func (f *FortySixElksTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(f.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -90,14 +92,12 @@ func (f *FortySixElksTarget) Send(body, title string, notifyType NotifyType) err
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (f *FortySixElksTarget) buildRequest(target, message string) (RequestSpec, error) {

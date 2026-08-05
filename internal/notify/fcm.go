@@ -145,6 +145,8 @@ func (f *FCMTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 }
 
 func (f *FCMTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(f.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -158,11 +160,9 @@ func (f *FCMTarget) Send(body, title string, notifyType NotifyType) error {
 			if err != nil {
 				return err
 			}
-			if err := SendRequest(spec); err != nil {
-				return err
-			}
+			outcome.record(SendRequest(spec))
 		}
-		return nil
+		return outcome.err()
 	}
 
 	for _, recipient := range f.targets {
@@ -170,12 +170,10 @@ func (f *FCMTarget) Send(body, title string, notifyType NotifyType) error {
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (f *FCMTarget) buildSpec(body, title string, notifyType NotifyType, recipient string) (RequestSpec, error) {

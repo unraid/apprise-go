@@ -130,6 +130,8 @@ func (a *AfricasTalkingTarget) BuildRequest(body, title string, notifyType Notif
 }
 
 func (a *AfricasTalkingTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(a.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -149,14 +151,12 @@ func (a *AfricasTalkingTarget) Send(body, title string, notifyType NotifyType) e
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (a *AfricasTalkingTarget) buildRequest(targets []string, message string) (RequestSpec, error) {

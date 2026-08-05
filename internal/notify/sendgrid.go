@@ -128,6 +128,8 @@ func (s *SendGridTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (s *SendGridTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(s.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -153,14 +155,12 @@ func (s *SendGridTarget) SendWithAttachments(body, title string, notifyType Noti
 			},
 			Body: string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (s *SendGridTarget) buildPayload(body, title, target string, attachments []Attachment) map[string]any {

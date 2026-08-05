@@ -38,10 +38,19 @@ func NewNextcloudTarget(target *ParsedURL) (*NextcloudTarget, error) {
 		if entry == "" {
 			continue
 		}
-		if isNextcloudGroup(entry) {
-			continue
-		}
 		targets = append(targets, entry)
+	}
+
+	// ?to= names recipients as well as the path does, and configuration files
+	// tend to use it, so the list is not complete until it has been read.
+	if raw := strings.TrimSpace(target.Query["to"]); raw != "" {
+		for _, entry := range parseDelimitedList(raw) {
+			entry = strings.TrimPrefix(strings.TrimSpace(entry), "@")
+			if entry == "" {
+				continue
+			}
+			targets = append(targets, entry)
+		}
 	}
 
 	if len(targets) == 0 {
@@ -49,10 +58,15 @@ func NewNextcloudTarget(target *ParsedURL) (*NextcloudTarget, error) {
 	}
 
 	version := nextcloudDefaultVersion
+	// Upstream parses version with int() and rejects anything below the
+	// declared minimum, so "invalid", "0" and "-23" are all errors rather than
+	// silently falling back to the default.
 	if raw := strings.TrimSpace(target.Query["version"]); raw != "" {
-		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
-			version = parsed
+		parsed, err := strconv.Atoi(raw)
+		if err != nil || parsed < 1 {
+			return nil, fmt.Errorf("invalid nextcloud version: %q", raw)
 		}
+		version = parsed
 	}
 
 	urlPrefix := strings.Trim(target.Query["url_prefix"], "/")
@@ -81,19 +95,19 @@ func (n *NextcloudTarget) BuildRequest(body, title string, notifyType NotifyType
 }
 
 func (n *NextcloudTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(n.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
 
 	for _, target := range n.targets {
 		spec := n.buildSpec(body, title, target)
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
-	return nil
+	return outcome.err()
 }
 
 func (n *NextcloudTarget) buildSpec(body, title, target string) RequestSpec {
@@ -149,19 +163,6 @@ func (n *NextcloudTarget) buildURL(target string) string {
 		return fmt.Sprintf("%s/ocs/v2.php/apps/admin_notifications/api/v1/notifications/%s", base, escaped)
 	}
 	return fmt.Sprintf("%s/ocs/v2.php/apps/notifications/api/v2/admin_notifications/%s", base, escaped)
-}
-
-func isNextcloudGroup(entry string) bool {
-	trimmed := strings.TrimSpace(entry)
-	if trimmed == "" {
-		return false
-	}
-	lower := strings.ToLower(strings.TrimPrefix(trimmed, "#"))
-	switch lower {
-	case "all", "everyone", "*":
-		return true
-	}
-	return strings.HasPrefix(trimmed, "#")
 }
 
 func init() {

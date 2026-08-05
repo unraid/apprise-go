@@ -102,15 +102,18 @@ func (p *PostmarkTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (p *PostmarkTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	specs, err := p.buildRequests(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
 
 	for _, spec := range specs {
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
+	}
+	if err := outcome.err(); err != nil {
+		return err
 	}
 
 	return nil

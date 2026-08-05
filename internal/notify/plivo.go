@@ -129,6 +129,8 @@ func (p *PlivoTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 }
 
 func (p *PlivoTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(p.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -174,14 +176,12 @@ func (p *PlivoTarget) Send(body, title string, notifyType NotifyType) error {
 			Body: string(data),
 		}
 
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func init() {

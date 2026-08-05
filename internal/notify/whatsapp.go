@@ -141,6 +141,8 @@ func (w *WhatsAppTarget) BuildRequest(body, title string, notifyType NotifyType)
 }
 
 func (w *WhatsAppTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(w.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -168,12 +170,10 @@ func (w *WhatsAppTarget) Send(body, title string, notifyType NotifyType) error {
 			},
 			Body: string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (w *WhatsAppTarget) buildPayload(message string, notifyType NotifyType, target string) map[string]any {

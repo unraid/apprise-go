@@ -98,6 +98,7 @@ func TestURLVectorParity(t *testing.T) {
 	t.Logf("compared %d upstream url vectors across supported schemas", compared)
 
 	allowed := loadURLVectorAllowlist(t)
+	t.Logf("%d disagreements, %d recorded as known gaps", len(diffs), len(allowed))
 	var unexpected []disagreement
 	for _, d := range diffs {
 		if _, ok := allowed[d.vector.URL]; !ok {
@@ -125,17 +126,17 @@ func TestURLVectorParity(t *testing.T) {
 			d.vector.Schema, verb, upstreamVerb, d.vector.URL, d.vector.Source, d.vector.Declared)
 	}
 
-	// An allowlist entry that no longer disagrees is stale: the underlying
-	// difference was fixed and the entry now hides nothing. Fail so it gets
-	// removed, otherwise the allowlist grows into a place where real
-	// regressions can hide behind a URL that used to be a known problem.
+	// A baseline entry that no longer disagrees is stale: the difference was
+	// fixed and the entry now hides nothing. Fail so it gets deleted, which is
+	// what makes this a ratchet rather than a place for regressions to hide
+	// behind a URL that used to be a known problem.
 	live := map[string]bool{}
 	for _, d := range diffs {
 		live[d.vector.URL] = true
 	}
 	for url := range allowed {
 		if !live[url] {
-			t.Errorf("stale url vector allowlist entry (now agrees with upstream, remove it): %s", url)
+			t.Errorf("stale known-gap entry (now agrees with upstream, remove it): %s", url)
 		}
 	}
 }

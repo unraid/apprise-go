@@ -255,6 +255,9 @@ func (m *MatrixTarget) sendServer(body, title string, notifyType NotifyType, att
 	var uploaded []map[string]any
 	uploadsDone := false
 
+	// A failed room does not end the notification: upstream records the error
+	// and moves to the next one, so the other rooms still receive the message.
+	var outcome sendOutcome
 	for _, room := range rooms {
 		roomID := m.roomJoin(room)
 		if roomID == "" {
@@ -263,7 +266,8 @@ func (m *MatrixTarget) sendServer(body, title string, notifyType NotifyType, att
 
 		if m.includeImage && m.version == matrixVersionV2 {
 			if ok := m.sendImage(roomID, title, notifyType); !ok {
-				return fmt.Errorf("matrix image send failed")
+				outcome.record(fmt.Errorf("matrix image send failed"))
+				continue
 			}
 		}
 
@@ -271,16 +275,15 @@ func (m *MatrixTarget) sendServer(body, title string, notifyType NotifyType, att
 		// plaintext path is what upstream uses too.
 		if m.e2ee && m.version == matrixVersionV3 && m.roomEncrypted(roomID) {
 			if err := m.sendEncrypted(roomID, body, title); err != nil {
-				return err
+				outcome.record(err)
+				continue
 			}
 
 			// An encrypted room takes encrypted files: each one is
 			// encrypted and uploaded separately rather than sharing the
 			// plaintext upload path.
 			for _, attachment := range attachments {
-				if err := m.sendEncryptedAttachment(roomID, attachment); err != nil {
-					return err
-				}
+				outcome.record(m.sendEncryptedAttachment(roomID, attachment))
 			}
 			continue
 		}
@@ -304,17 +307,19 @@ func (m *MatrixTarget) sendServer(body, title string, notifyType NotifyType, att
 
 			ok, _, _ := m.fetch(m.messagePath(roomID), event, nil, m.messageMethod(), "")
 			if !ok {
-				return fmt.Errorf("matrix attachment send failed")
+				outcome.record(fmt.Errorf("matrix attachment send failed"))
+				continue
 			}
 			m.advanceMessageTransaction()
 		}
 
+		outcome.record(nil)
 		if ok := m.sendMessage(roomID, body, title, notifyType); !ok {
-			return fmt.Errorf("matrix send failed")
+			outcome.record(fmt.Errorf("matrix send failed"))
 		}
 	}
 
-	return nil
+	return outcome.err()
 }
 
 // uploadAttachments posts each file to the media endpoint and turns the URI it

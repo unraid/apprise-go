@@ -103,6 +103,8 @@ func (t *ThreemaTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (t *ThreemaTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(t.recipients) == 0 {
 		return nil
 	}
@@ -110,14 +112,12 @@ func (t *ThreemaTarget) Send(body, title string, notifyType NotifyType) error {
 	message := mergeTitleBody(title, body)
 	for _, recipient := range t.recipients {
 		spec := t.buildSpec(message, recipient)
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (t *ThreemaTarget) buildSpec(message string, recipient threemaRecipient) RequestSpec {

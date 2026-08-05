@@ -108,6 +108,8 @@ func (n *NotifiarrTarget) BuildRequest(body, title string, notifyType NotifyType
 }
 
 func (n *NotifiarrTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(n.channels) == 0 {
 		return fmt.Errorf("missing channels")
 	}
@@ -129,12 +131,10 @@ func (n *NotifiarrTarget) Send(body, title string, notifyType NotifyType) error 
 			},
 			Body: string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (n *NotifiarrTarget) buildPayload(body, title string, notifyType NotifyType, channel int) map[string]any {

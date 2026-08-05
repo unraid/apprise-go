@@ -168,6 +168,8 @@ func (v *VapidTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 }
 
 func (v *VapidTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(v.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -188,14 +190,12 @@ func (v *VapidTarget) Send(body, title string, notifyType NotifyType) error {
 			Headers: headers,
 			Body:    string(payload),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 	_ = title
-	return nil
+	return outcome.err()
 }
 
 func (v *VapidTarget) buildHeaders() (map[string]string, error) {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 )
 
@@ -29,7 +30,31 @@ type RocketChatTarget struct {
 	users     []string
 }
 
+// rocketWebhookRe matches a webhook embedded in the authority, the form
+// rocket://webhook_a/webhook_b@host or rocket://user:webhook_a/webhook_b@host.
+// The slash makes it illegal as userinfo, so no standard parser can keep it in
+// one piece -- upstream lifts it out with this regex and reparses what is left,
+// and the port has to do the same or the whole authority lands in the path.
+var rocketWebhookRe = regexp.MustCompile(`(?is)^\s*(?P<schema>[^:]+://)((?P<user>[^:]+):)?(?P<webhook>[a-z0-9]+(?:/|%2F)[a-z0-9]+)@(?P<url>.+)$`)
+
 func NewRocketChatTarget(target *ParsedURL) (*RocketChatTarget, error) {
+	// A webhook in the authority has to come out before anything else is read.
+	embeddedWebhook := ""
+	if m := rocketWebhookRe.FindStringSubmatch(target.Raw); m != nil {
+		embeddedWebhook = lenientUnquote(m[rocketWebhookRe.SubexpIndex("webhook")])
+		rebuilt := m[rocketWebhookRe.SubexpIndex("schema")]
+		if u := m[rocketWebhookRe.SubexpIndex("user")]; u != "" {
+			rebuilt += u + "@"
+		}
+		rebuilt += m[rocketWebhookRe.SubexpIndex("url")]
+
+		reparsed, err := ParseURL(rebuilt)
+		if err != nil {
+			return nil, err
+		}
+		target = reparsed
+	}
+
 	host := strings.TrimSpace(target.Host)
 	if host == "" {
 		return nil, fmt.Errorf("missing host")
@@ -43,6 +68,14 @@ func NewRocketChatTarget(target *ParsedURL) (*RocketChatTarget, error) {
 	user := strings.TrimSpace(target.User)
 	password := strings.TrimSpace(target.Password)
 	webhook := strings.TrimSpace(target.Query["webhook"])
+	if webhook == "" && embeddedWebhook != "" {
+		webhook = embeddedWebhook
+		// Upstream also keeps it as the password, so basic mode still has a
+		// credential to send when the mode is named explicitly.
+		if password == "" {
+			password = embeddedWebhook
+		}
+	}
 	if webhook == "" && password != "" && strings.Contains(password, "/") {
 		webhook = password
 	}
@@ -130,6 +163,8 @@ func (r *RocketChatTarget) BuildRequest(body, title string, notifyType NotifyTyp
 }
 
 func (r *RocketChatTarget) sendWebhook(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	targets := r.webhookTargets()
 	if len(targets) == 0 {
 		spec, err := r.buildWebhookRequest(body, title, notifyType, "")
@@ -144,14 +179,14 @@ func (r *RocketChatTarget) sendWebhook(body, title string, notifyType NotifyType
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
-	return nil
+	return outcome.err()
 }
 
 func (r *RocketChatTarget) sendAuthenticated(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if r.mode == rocketModeBasic {
 		if err := r.login(); err != nil {
 			return err
@@ -170,9 +205,7 @@ func (r *RocketChatTarget) sendAuthenticated(body, title string, notifyType Noti
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	for _, channel := range r.channels {
@@ -182,9 +215,7 @@ func (r *RocketChatTarget) sendAuthenticated(body, title string, notifyType Noti
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	for _, room := range r.rooms {
@@ -194,12 +225,10 @@ func (r *RocketChatTarget) sendAuthenticated(body, title string, notifyType Noti
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (r *RocketChatTarget) buildWebhookRequest(body, title string, notifyType NotifyType, target string) (RequestSpec, error) {

@@ -214,6 +214,8 @@ func (o *Office365Target) Send(body, title string, notifyType NotifyType) error 
 // saved as a draft first, so each file has a message to be uploaded against
 // before the draft is sent.
 func (o *Office365Target) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(o.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -259,9 +261,7 @@ func (o *Office365Target) SendWithAttachments(body, title string, notifyType Not
 		}
 
 		if len(large) == 0 {
-			if err := SendRequest(spec); err != nil {
-				return err
-			}
+			outcome.record(SendRequest(spec))
 			continue
 		}
 
@@ -295,7 +295,7 @@ func (o *Office365Target) SendWithAttachments(body, title string, notifyType Not
 	}
 
 	_ = notifyType
-	return nil
+	return outcome.err()
 }
 
 func (o *Office365Target) graphHeaders() map[string]string {

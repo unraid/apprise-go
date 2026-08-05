@@ -149,6 +149,8 @@ func (s *SESTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (s *SESTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(s.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -161,13 +163,11 @@ func (s *SESTarget) SendWithAttachments(body, title string, notifyType NotifyTyp
 			Headers: s.signer().headers(payload, fixedTime()),
 			Body:    payload,
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
-	return nil
+	return outcome.err()
 }
 
 func (s *SESTarget) notifyURL() string {

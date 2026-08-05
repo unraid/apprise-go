@@ -96,6 +96,8 @@ func (d *D7NetworksTarget) BuildRequest(body, title string, notifyType NotifyTyp
 }
 
 func (d *D7NetworksTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(d.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -114,14 +116,12 @@ func (d *D7NetworksTarget) Send(body, title string, notifyType NotifyType) error
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (d *D7NetworksTarget) buildRequest(recipients []string, message string) (RequestSpec, error) {

@@ -134,6 +134,8 @@ func (s *SMSEagleTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (s *SMSEagleTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	message := mergeTitleBody(title, body)
 	if s.status {
 		message = notifyTypeASCII(notifyType) + " " + message
@@ -181,13 +183,11 @@ func (s *SMSEagleTarget) SendWithAttachments(body, title string, notifyType Noti
 				},
 				Body: string(data),
 			}
-			if err := SendRequest(spec); err != nil {
-				return err
-			}
+			outcome.record(SendRequest(spec))
 		}
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (s *SMSEagleTarget) buildURL() string {

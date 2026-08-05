@@ -109,15 +109,18 @@ func (k *KookTarget) Send(body, title string, notifyType NotifyType) error {
 // and posts the resulting URL to every target. Webhook mode has no CDN
 // credentials, so it carries no files.
 func (k *KookTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	specs, err := k.buildRequests(body, title, notifyType)
 	if err != nil {
 		return err
 	}
 
 	for _, spec := range specs {
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
+	}
+	if err := outcome.err(); err != nil {
+		return err
 	}
 
 	if len(attachments) == 0 || k.mode != kookModeBot {

@@ -96,6 +96,8 @@ func (v *VoipmsTarget) BuildRequest(body, title string, notifyType NotifyType) (
 }
 
 func (v *VoipmsTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(v.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -115,14 +117,12 @@ func (v *VoipmsTarget) Send(body, title string, notifyType NotifyType) error {
 				"Content-Type": "application/x-www-form-urlencoded",
 			},
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (v *VoipmsTarget) buildPayload(message, target string) url.Values {

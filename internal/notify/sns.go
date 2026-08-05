@@ -130,6 +130,8 @@ func (s *SNSTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 }
 
 func (s *SNSTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	message := mergeTitleBody(title, body)
 	for _, phone := range s.phones {
 		payload := s.publishPhonePayload(message, phone)
@@ -139,9 +141,7 @@ func (s *SNSTarget) Send(body, title string, notifyType NotifyType) error {
 			Headers: s.signer().headers(payload, fixedTime()),
 			Body:    payload,
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	for _, topic := range s.topics {
@@ -159,14 +159,12 @@ func (s *SNSTarget) Send(body, title string, notifyType NotifyType) error {
 			Headers: s.signer().headers(payload, fixedTime()),
 			Body:    payload,
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = title
 	_ = notifyType
-	return nil
+	return outcome.err()
 }
 
 func (s *SNSTarget) notifyURL() string {

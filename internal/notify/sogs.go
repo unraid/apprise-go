@@ -114,15 +114,18 @@ func (s *SOGSTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 }
 
 func (s *SOGSTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	specs, err := s.buildRequests(body, title, notifyType)
 	if err != nil {
 		return err
 	}
 
 	for _, spec := range specs {
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
+	}
+	if err := outcome.err(); err != nil {
+		return err
 	}
 
 	return nil

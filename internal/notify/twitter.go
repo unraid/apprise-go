@@ -98,6 +98,8 @@ func (t *TwitterTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (t *TwitterTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	_ = notifyType
 
 	if t.mode == "dm" {
@@ -134,12 +136,10 @@ func (t *TwitterTarget) SendWithAttachments(body, title string, notifyType Notif
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 // uploadMedia uploads each image and groups the ids into the tweets they will
@@ -344,6 +344,8 @@ type twitterRecipient struct {
 }
 
 func (t *TwitterTarget) sendDM(body, title string) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	message := mergeTitleBody(title, body)
 	recipients := t.resolveRecipients()
 	if len(recipients) == 0 {
@@ -383,12 +385,10 @@ func (t *TwitterTarget) sendDM(body, title string) error {
 			Body: string(data),
 		}
 
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (t *TwitterTarget) resolveRecipients() []twitterRecipient {

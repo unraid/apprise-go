@@ -222,6 +222,8 @@ func (p *PushSaferTarget) Send(body, title string, notifyType NotifyType) error 
 // a PDF would silently never arrive. Images go three at a time, since that is
 // all one request carries.
 func (p *PushSaferTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	images := []Attachment{}
 	for _, attachment := range attachments {
 		if strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
@@ -237,28 +239,26 @@ func (p *PushSaferTarget) SendWithAttachments(body, title string, notifyType Not
 		for start := 0; start < len(images); start += len(pushSaferPictureFields) {
 			end := min(start+len(pushSaferPictureFields), len(images))
 			spec := p.buildSpecWithImages(body, title, notifyType, recipient, images[start:end])
-			if err := SendRequest(spec); err != nil {
-				return err
-			}
+			outcome.record(SendRequest(spec))
 		}
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (p *PushSaferTarget) sendPlain(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(p.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
 
 	for _, recipient := range p.targets {
 		spec := p.buildSpec(body, title, notifyType, recipient)
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 // pushSaferPictureFields are the payload keys that carry images; PushSafer

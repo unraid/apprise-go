@@ -74,6 +74,8 @@ func (n *NextcloudTalkTarget) BuildRequest(body, title string, notifyType Notify
 }
 
 func (n *NextcloudTalkTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(n.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -95,14 +97,12 @@ func (n *NextcloudTalkTarget) Send(body, title string, notifyType NotifyType) er
 			Headers: headers,
 			Body:    string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (n *NextcloudTalkTarget) buildHeaders() map[string]string {

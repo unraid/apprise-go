@@ -209,6 +209,9 @@ func (h *HomeAssistantTarget) Send(body, title string, notifyType NotifyType) er
 		return err
 	}
 
+	// Home Assistant is the exception to the carry-on rule: upstream returns
+	// False the moment a post fails rather than trying the remaining targets,
+	// so stopping here is the matching behaviour rather than a missing fix.
 	for _, spec := range specs {
 		if err := SendRequest(spec); err != nil {
 			return err

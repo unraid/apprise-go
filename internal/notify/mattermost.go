@@ -124,6 +124,8 @@ func (m *MattermostTarget) Send(body, title string, notifyType NotifyType) error
 // then references the returned ids in the post. Only bot mode can upload;
 // a webhook has no file API.
 func (m *MattermostTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	message := mergeTitleBody(title, body)
 
 	// A webhook with no channel posts to whichever one it is bound to.
@@ -156,12 +158,10 @@ func (m *MattermostTarget) SendWithAttachments(body, title string, notifyType No
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 // uploadFile posts one file to the channel and returns the id the post

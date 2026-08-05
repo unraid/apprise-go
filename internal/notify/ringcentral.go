@@ -146,6 +146,8 @@ func (r *RingCentralTarget) Send(body, title string, notifyType NotifyType) erro
 // picks one endpoint per notification rather than sending the text by SMS and
 // the files by MMS.
 func (r *RingCentralTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	_ = notifyType
 
 	accessToken, err := r.login()
@@ -159,9 +161,10 @@ func (r *RingCentralTarget) SendWithAttachments(body, title string, notifyType N
 	}
 
 	for _, spec := range specs {
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
+	}
+	if err := outcome.err(); err != nil {
+		return err
 	}
 
 	return nil

@@ -115,6 +115,8 @@ func (r *RedditTarget) BuildRequest(body, title string, notifyType NotifyType) (
 }
 
 func (r *RedditTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if r.token == "" {
 		if err := r.login(); err != nil {
 			return err
@@ -134,14 +136,12 @@ func (r *RedditTarget) Send(body, title string, notifyType NotifyType) error {
 			},
 			Body: form,
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (r *RedditTarget) login() error {

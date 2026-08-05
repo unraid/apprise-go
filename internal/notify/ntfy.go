@@ -229,6 +229,8 @@ func (n *NtfyTarget) Send(body, title string, notifyType NotifyType) error {
 // SendWithAttachments posts one request per file. Only the first carries the
 // message text; repeating it under every attachment would notify twice.
 func (n *NtfyTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(attachments) == 0 {
 		spec, err := n.buildRequest(body, title, notifyType, nil)
 		if err != nil {
@@ -248,12 +250,10 @@ func (n *NtfyTarget) SendWithAttachments(body, title string, notifyType NotifyTy
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (n *NtfyTarget) notifyURL() (string, error) {

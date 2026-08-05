@@ -85,6 +85,8 @@ func (e *EmbyTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 }
 
 func (e *EmbyTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if e.user == "" {
 		return fmt.Errorf("missing user")
 	}
@@ -127,14 +129,12 @@ func (e *EmbyTarget) Send(body, title string, notifyType NotifyType) error {
 			},
 			Body: string(payloadData),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (e *EmbyTarget) isAuthenticated() bool {

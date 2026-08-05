@@ -258,16 +258,16 @@ func (f *FluxerTarget) Send(body, title string, notifyType NotifyType) error {
 // filename is used as the message text, and expects the file described in an
 // attachments array beside it.
 func (f *FluxerTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	spec, err := f.BuildRequest(body, title, notifyType)
 	if err != nil {
 		return err
 	}
-	if err := SendRequest(spec); err != nil {
-		return err
-	}
+	outcome.record(SendRequest(spec))
 
 	if len(attachments) == 0 {
-		return nil
+		return outcome.err()
 	}
 
 	for index, attachment := range attachments {
@@ -295,12 +295,10 @@ func (f *FluxerTarget) SendWithAttachments(body, title string, notifyType Notify
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (f *FluxerTarget) prefix() string {

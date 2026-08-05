@@ -70,6 +70,8 @@ func (b *BlueskyTarget) Send(body, title string, notifyType NotifyType) error {
 // post here, so posts after the first are labeled "02/03" rather than
 // repeating the message.
 func (b *BlueskyTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	_ = notifyType
 
 	if err := b.resolveIdentity(); err != nil {
@@ -125,12 +127,10 @@ func (b *BlueskyTarget) SendWithAttachments(body, title string, notifyType Notif
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 // uploadBlob posts an image and returns the blob reference a post embeds.
