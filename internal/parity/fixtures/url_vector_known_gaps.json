@@ -60,30 +60,6 @@
   "upstream": "rejects"
  },
  {
-  "url": "hassios://localhost/long.lived.token?nid=!%",
-  "schema": "hassios",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "humhubs://token@hostname/-1",
-  "schema": "humhubs",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "humhubs://token@hostname/0",
-  "schema": "humhubs",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "humhubs://token@hostname/invalid",
-  "schema": "humhubs",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "line://token",
   "schema": "line",
   "go": "rejects",
@@ -168,18 +144,6 @@
   "upstream": "rejects"
  },
  {
-  "url": "pushward://hlk_abc123?volume=2.0",
-  "schema": "pushward",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "pushward://hlk_abc123?volume=invalid",
-  "schema": "pushward",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "pushy://apikey",
   "schema": "pushy",
   "go": "rejects",
@@ -236,12 +200,6 @@
  {
   "url": "smseagle://%20@localhost",
   "schema": "smseagle",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "strmlabs://IcIcArukDQtuC1is1X1UdKZjTg118Lag2vScOmso/?currency=ABCD",
-  "schema": "strmlabs",
   "go": "accepts",
   "upstream": "rejects"
  },

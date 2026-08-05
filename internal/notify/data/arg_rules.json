@@ -1,0 +1,58 @@
+{
+ "bulksms": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^\\+?[0-9\\s)(+-]+$"
+  }
+ },
+ "bulkvs": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^\\+?[0-9\\s)(+-]+$"
+  }
+ },
+ "hassio": {
+  "nid": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9_-]+$"
+  }
+ },
+ "hassios": {
+  "nid": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9_-]+$"
+  }
+ },
+ "httpsms": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^\\+?[0-9\\s)(+-]+$"
+  }
+ },
+ "pushward": {
+  "volume": {
+   "kind": "float",
+   "max": 1.0,
+   "min": 0.0
+  }
+ },
+ "sinch": {
+  "region": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z]{2}$"
+  }
+ },
+ "strmlabs": {
+  "currency": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z]{3}$"
+  }
+ }
+}

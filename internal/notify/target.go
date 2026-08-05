@@ -53,6 +53,9 @@ func NewTarget(parsed *ParsedURL) (Sender, error) {
 	if err := applyHostRequirements(parsed); err != nil {
 		return nil, err
 	}
+	if err := applyArgRules(parsed); err != nil {
+		return nil, err
+	}
 	return builder(parsed)
 }
 

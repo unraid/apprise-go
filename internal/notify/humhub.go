@@ -3,6 +3,7 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -30,6 +31,20 @@ func NewHumHubTarget(target *ParsedURL) (*HumHubTarget, error) {
 	if to := strings.TrimSpace(target.Query["to"]); to != "" {
 		targets = append(targets, parseDelimitedList(to)...)
 	}
+	// Container IDs are positive integers. Upstream drops anything else with a
+	// warning and fails only when nothing usable is left, so a URL naming one
+	// good container and one typo still posts to the good one -- and the
+	// canonical form of each id is the parsed integer, not the text.
+	valid := make([]string, 0, len(targets))
+	for _, entry := range targets {
+		id, err := strconv.Atoi(strings.TrimSpace(entry))
+		if err != nil || id <= 0 {
+			continue
+		}
+		valid = append(valid, strconv.Itoa(id))
+	}
+	targets = valid
+
 	if len(targets) == 0 {
 		return nil, fmt.Errorf("missing container ids")
 	}
