@@ -389,7 +389,51 @@ func (c *ircClient) join(channel, key string) error {
 	}
 }
 
+// privmsg sends the message, one command per line.
+//
+// This is a deliberate divergence from upstream. Upstream declares
+// title_maxlen = 0, so the framework folds the title into the body with a CRLF
+// and the plugin writes the result straight into a single PRIVMSG. That
+// newline ends the IRC line: a server reads everything after it as a fresh
+// command, so a title or body carrying one can issue arbitrary IRC commands as
+// the sending user. Notification bodies routinely carry text this port did not
+// author — that is what alerting is — which makes it reachable.
+//
+// Matching upstream byte for byte would reproduce the injection, and what it
+// reproduces is malformed output rather than a delivered message: upstream is
+// not trying to send two commands. Splitting per line is what an IRC client is
+// supposed to do, keeps the visible result the same, and closes the hole.
 func (c *ircClient) privmsg(target, message string) error {
+	for _, line := range ircMessageLines(message) {
+		if err := c.privmsgLine(target, line); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ircMessageLines splits on any newline and drops blank lines, since an empty
+// PRIVMSG is rejected. A message with no newline yields itself, so the ordinary
+// case is one command exactly as before.
+func ircMessageLines(message string) []string {
+	lines := []string{}
+	for _, line := range strings.FieldsFunc(message, func(r rune) bool {
+		return r == '\r' || r == '\n'
+	}) {
+		if strings.TrimSpace(line) != "" {
+			lines = append(lines, line)
+		}
+	}
+
+	if len(lines) == 0 {
+		return []string{""}
+	}
+
+	return lines
+}
+
+func (c *ircClient) privmsgLine(target, message string) error {
 	return c.send(fmt.Sprintf("PRIVMSG %s :%s", target, message))
 }
 

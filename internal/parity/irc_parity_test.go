@@ -38,18 +38,25 @@ func TestIRCParity(t *testing.T) {
 		body   string
 		refuse string
 		expect []string
+
+		// diverges records a case where this port deliberately does not match
+		// upstream, with the reason. The port's own sequence is still pinned.
+		diverges string
 	}{
 		{
 			name:  "channel",
 			path:  "%23apprise",
 			body:  "irc body",
 			title: "irc title",
-			// IRC is not a command either side meant to send: the title is
-			// folded into the body with a CRLF, which ends the PRIVMSG line,
-			// so the server reads "irc body" as a fresh command whose first
-			// word is IRC. Both implementations do it, and the fixture
-			// records it rather than hiding it.
-			expect: []string{"NICK", "USER", "JOIN", "PRIVMSG", "IRC", "QUIT"},
+			diverges: "upstream folds the title into the body with a CRLF and " +
+				"writes the result into one PRIVMSG, so a server reads the " +
+				"second line as a command — it appears in upstream's stream " +
+				"as a stray IRC token. That is a command injection reachable " +
+				"through any notification body this port did not author. One " +
+				"PRIVMSG per line is sent instead, which is what an IRC " +
+				"client is supposed to do and leaves the message identical " +
+				"to a reader.",
+			expect: []string{"NICK", "USER", "JOIN", "PRIVMSG", "PRIVMSG", "QUIT"},
 		},
 		{
 			name:   "user target",
@@ -143,7 +150,11 @@ func TestIRCParity(t *testing.T) {
 			capture.WaitForCommand(t, "QUIT", 1, 20*time.Second)
 			goLines := capture.Lines()
 
-			assertIRCCommandsEqual(t, pythonLines, goLines)
+			if tc.diverges != "" {
+				t.Logf("deliberate divergence, not compared: %s", tc.diverges)
+			} else {
+				assertIRCCommandsEqual(t, pythonLines, goLines)
+			}
 
 			// Pin the expected shape too, so both sides degrading the same
 			// way cannot pass as agreement.

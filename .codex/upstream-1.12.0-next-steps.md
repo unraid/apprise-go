@@ -49,15 +49,18 @@ into a test failure.
   `irc_parity_test.go` runs both implementations against it and compares the
   command streams.
 
-  One thing that surfaced is worth knowing about rather than filing away.
-  Upstream declares `title_maxlen = 0`, so the framework folds the title into
-  the body with a CRLF, and the plugin puts the result straight into the
-  PRIVMSG. That newline ends the IRC line: everything after it is read by the
-  server as a fresh command. This port reproduces it, because matching
-  upstream is the contract, but it is a command-injection vector — a title or
-  body carrying a newline can issue arbitrary IRC commands as the sending
-  user. Diverging is a product decision rather than a porting one, so it is
-  flagged here rather than quietly fixed.
+  One deliberate divergence. Upstream declares `title_maxlen = 0`, so the
+  framework folds the title into the body with a CRLF and the plugin writes the
+  result into a single PRIVMSG. That newline ends the IRC line, so a server
+  reads the rest as a command — a command injection reachable through any
+  notification body this port did not author, which is most of them.
+
+  This port sends one PRIVMSG per line instead. A body without newlines is
+  unchanged, the message reads identically, and the hole is closed. What
+  upstream emits is malformed rather than intended, so matching it would
+  reproduce broken output rather than a delivered message. The IRC fixture
+  records the divergence with its reason and still pins this port's own
+  sequence.
 
   Not covered: ZNC bouncer mode (`?mode=znc`, which sends `user:password` in
   PASS and then a PING/PONG liveness check), NickServ identify beyond the
