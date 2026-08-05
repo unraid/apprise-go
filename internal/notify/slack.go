@@ -50,11 +50,21 @@ type SlackTarget struct {
 	notifyFormat string
 }
 
+// Slack's token formats, matching upstream's template_tokens regexes. The
+// first two webhook tokens are alphanumeric uppercase, the third also accepts
+// lowercase, and a bot token carries the xox[abp]- prefix (optionally behind
+// the xoxe. refresh prefix).
+var (
+	slackTokenABRe     = regexp.MustCompile(`(?i)^[A-Z0-9]+$`)
+	slackTokenCRe      = regexp.MustCompile(`(?i)^[A-Za-z0-9]+$`)
+	slackAccessTokenRe = regexp.MustCompile(`(?i)^(?:xoxe\.)?xox[abp]-[A-Z0-9-]+$`)
+)
+
 func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
+	// The host is only one of the places a token can come from -- ?token=
+	// replaces it outright -- so whether a credential exists is decided after
+	// both have been read, not here.
 	token := strings.TrimSpace(target.Host)
-	if token == "" {
-		return nil, fmt.Errorf("missing token")
-	}
 
 	notifyFormat := strings.ToLower(strings.TrimSpace(target.Query["format"]))
 	if notifyFormat == "" {
@@ -160,11 +170,23 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 	if mode == "" {
 		mode = slackModeWebhook
 	}
-	if mode == slackModeBot && accessToken == "" {
-		return nil, fmt.Errorf("missing bot token")
-	}
-	if mode != slackModeBot && (tokenB == "" || tokenC == "") {
-		return nil, fmt.Errorf("missing webhook credentials")
+	// Upstream validates the tokens it ended up with, not the ones the host
+	// happened to supply, so ?token= alone is a complete credential and a
+	// malformed token is rejected wherever it came from.
+	if mode == slackModeBot {
+		if !slackAccessTokenRe.MatchString(accessToken) {
+			return nil, fmt.Errorf("invalid slack oauth access token: %q", accessToken)
+		}
+	} else {
+		for i, token := range []string{tokenA, tokenB, tokenC} {
+			re := slackTokenABRe
+			if i == 2 {
+				re = slackTokenCRe
+			}
+			if !re.MatchString(token) {
+				return nil, fmt.Errorf("invalid slack token %d: %q", i+1, token)
+			}
+		}
 	}
 
 	templateTokens := map[string]string{}

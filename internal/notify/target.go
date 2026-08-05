@@ -41,6 +41,9 @@ func NewTarget(parsed *ParsedURL) (Sender, error) {
 	if !ok {
 		return nil, &UnsupportedSchemaError{Schema: parsed.Scheme}
 	}
+	if err := applyChoiceArgs(parsed); err != nil {
+		return nil, err
+	}
 	return builder(parsed)
 }
 

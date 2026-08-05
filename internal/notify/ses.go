@@ -41,17 +41,19 @@ func NewSESTarget(target *ParsedURL) (*SESTarget, error) {
 	} else if strings.Contains(target.Host, "@") {
 		fromEmail = strings.TrimSpace(target.Host)
 	}
-	if !isSimpleEmail(fromEmail) {
-		return nil, fmt.Errorf("invalid from email")
+	// ?from= names the sender outright, so a URL with no userinfo at all is
+	// still complete.
+	if raw := strings.TrimSpace(target.Query["from"]); raw != "" {
+		fromEmail = raw
 	}
 
 	entries := splitPath(target.Path)
-	if len(entries) < 2 {
-		return nil, fmt.Errorf("missing credentials")
+	accessKey := ""
+	rest := []string{}
+	if len(entries) > 0 {
+		accessKey = strings.TrimSpace(entries[0])
+		rest = entries[1:]
 	}
-
-	accessKey := strings.TrimSpace(entries[0])
-	rest := entries[1:]
 
 	secretParts := []string{}
 	region := ""
@@ -64,26 +66,32 @@ func NewSESTarget(target *ParsedURL) (*SESTarget, error) {
 		}
 		secretParts = append(secretParts, entry)
 	}
+	secretKey := strings.TrimSpace(strings.Join(secretParts, "/"))
+	if rawSecret := strings.TrimSpace(target.Query["secret"]); rawSecret != "" {
+		secretKey = rawSecret
+	}
+	if rawAccess := strings.TrimSpace(target.Query["access"]); rawAccess != "" {
+		accessKey = rawAccess
+	}
+	if rawRegion := strings.TrimSpace(target.Query["region"]); rawRegion != "" {
+		region = normalizeAWSRegion(rawRegion)
+	}
+
+	// Every field above has both a path form and a query form. Judging any of
+	// them before all the sources have been read rejects URLs that supply
+	// everything through the query string, which is the form configuration
+	// files tend to use.
+	if !isSimpleEmail(fromEmail) {
+		return nil, fmt.Errorf("invalid from email")
+	}
 	if accessKey == "" {
 		return nil, fmt.Errorf("missing access key")
 	}
 	if region == "" {
 		return nil, fmt.Errorf("missing region")
 	}
-
-	secretKey := strings.TrimSpace(strings.Join(secretParts, "/"))
-	if rawSecret := strings.TrimSpace(target.Query["secret"]); rawSecret != "" {
-		secretKey = rawSecret
-	}
 	if secretKey == "" {
 		return nil, fmt.Errorf("missing secret key")
-	}
-
-	if rawAccess := strings.TrimSpace(target.Query["access"]); rawAccess != "" {
-		accessKey = rawAccess
-	}
-	if rawRegion := strings.TrimSpace(target.Query["region"]); rawRegion != "" {
-		region = normalizeAWSRegion(rawRegion)
 	}
 
 	targets := []string{}

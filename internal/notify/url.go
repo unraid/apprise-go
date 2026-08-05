@@ -63,7 +63,14 @@ func ParseURL(raw string) (*ParsedURL, error) {
 
 	u, err := url.Parse(sanitized)
 	if err != nil {
-		if strings.Contains(err.Error(), "invalid port") {
+		// Go's parser rejects a malformed percent-escape outright; Python's
+		// urlsplit does not decode at all, so upstream carries the raw bytes
+		// through and unquotes later with errors ignored. A URL like
+		// tgram://token/%$/ or an encoded @ in a host reaches upstream intact
+		// and is rejected -- or accepted -- on its merits rather than by the
+		// parser, so the manual split has to handle these too.
+		if strings.Contains(err.Error(), "invalid port") ||
+			strings.Contains(err.Error(), "invalid URL escape") {
 			parsed, parseErr := parseLenientURL(sanitized, schemeCandidate, useFirstAt)
 			if parseErr == nil {
 				return parsed, nil
@@ -203,17 +210,21 @@ func parseLenientURL(raw string, scheme string, splitFirstAt bool) (*ParsedURL, 
 
 	qsd := parseQSD(query, false, true)
 
+	// url.Parse decodes these components, so the manual split has to as well
+	// or the same URL means different things depending on which path parsed
+	// it -- and a host of "%20%20" would reach a provider as two literal
+	// escapes instead of the whitespace upstream sees and rejects.
 	return &ParsedURL{
 		Raw:          raw,
 		Scheme:       strings.ToLower(scheme),
-		Host:         host,
+		Host:         lenientUnquote(host),
 		Port:         0,
 		HasPort:      false,
-		User:         user,
+		User:         lenientUnquote(user),
 		HasUser:      hasUser,
-		Password:     password,
+		Password:     lenientUnquote(password),
 		HasPassword:  hasPassword,
-		Path:         path,
+		Path:         lenientUnquote(path),
 		Query:        qsd.qsd,
 		QueryAdd:     qsd.add,
 		QueryDel:     qsd.del,
@@ -376,4 +387,45 @@ func sanitizeTelegramAuthority(raw string) string {
 	}
 
 	return scheme + "://" + tokenParts[0] + ":" + tokenParts[1] + "@" + telegramAuthorityHost + suffix
+}
+
+// lenientUnquote decodes percent-escapes the way Python's urllib.parse.unquote
+// does: a well-formed %XX becomes its byte, and anything else is left exactly
+// as written rather than failing the parse. Go's url.Parse rejects a malformed
+// escape outright, but upstream never sees that error -- urlsplit does not
+// decode at all -- so a URL carrying a stray % reaches the provider intact and
+// is judged on its contents.
+func lenientUnquote(value string) string {
+	if !strings.Contains(value, "%") {
+		return value
+	}
+
+	var out strings.Builder
+	out.Grow(len(value))
+	for i := 0; i < len(value); {
+		if value[i] == '%' && i+2 < len(value) {
+			hi, hiOK := unhex(value[i+1])
+			lo, loOK := unhex(value[i+2])
+			if hiOK && loOK {
+				out.WriteByte(hi<<4 | lo)
+				i += 3
+				continue
+			}
+		}
+		out.WriteByte(value[i])
+		i++
+	}
+	return out.String()
+}
+
+func unhex(c byte) (byte, bool) {
+	switch {
+	case c >= '0' && c <= '9':
+		return c - '0', true
+	case c >= 'a' && c <= 'f':
+		return c - 'a' + 10, true
+	case c >= 'A' && c <= 'F':
+		return c - 'A' + 10, true
+	}
+	return 0, false
 }

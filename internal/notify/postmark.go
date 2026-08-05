@@ -61,10 +61,14 @@ func NewPostmarkTarget(target *ParsedURL) (*PostmarkTarget, error) {
 			valid = append(valid, entry)
 		}
 	}
-	targets = valid
-
+	// Upstream defaults the recipient to the sender when the URL names none.
+	// This applies only when nothing was specified: recipients that were given
+	// and turned out to be invalid are dropped and leave the list empty, which
+	// is a URL that delivers to nobody rather than one that delivers to self.
 	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing recipients")
+		targets = []string{fromEmail}
+	} else {
+		targets = valid
 	}
 
 	format := normalizeNotifyFormat(target.Query["format"])

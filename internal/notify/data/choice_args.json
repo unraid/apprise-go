@@ -1,0 +1,1139 @@
+{
+ "apprise": {
+  "method": {
+   "aliases": [],
+   "values": [
+    "form",
+    "json"
+   ]
+  }
+ },
+ "apprises": {
+  "method": {
+   "aliases": [],
+   "values": [
+    "form",
+    "json"
+   ]
+  }
+ },
+ "atalk": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "bulksms",
+    "premium",
+    "sandbox"
+   ]
+  }
+ },
+ "bulksms": {
+  "route": {
+   "aliases": [],
+   "values": [
+    "ECONOMY",
+    "STANDARD",
+    "PREMIUM"
+   ]
+  }
+ },
+ "burstsms": {
+  "country": {
+   "aliases": [],
+   "values": [
+    "au",
+    "nz",
+    "gb",
+    "us"
+   ]
+  }
+ },
+ "exotel": {
+  "priority": {
+   "aliases": [
+    "+",
+    "high",
+    "normal"
+   ],
+   "values": [
+    "normal",
+    "high"
+   ]
+  },
+  "region": {
+   "aliases": [],
+   "values": [
+    "us",
+    "in"
+   ]
+  }
+ },
+ "fcm": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "legacy",
+    "oauth2"
+   ]
+  },
+  "priority": {
+   "aliases": [
+    "+",
+    "0",
+    "1",
+    "2",
+    "high",
+    "normal"
+   ],
+   "values": [
+    "min",
+    "low",
+    "normal",
+    "high",
+    "max"
+   ]
+  }
+ },
+ "fluxer": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "cloud",
+    "private"
+   ]
+  }
+ },
+ "fluxers": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "cloud",
+    "private"
+   ]
+  }
+ },
+ "form": {
+  "method": {
+   "aliases": [],
+   "values": [
+    "POST",
+    "GET",
+    "DELETE",
+    "PUT",
+    "HEAD",
+    "PATCH",
+    "UPDATE",
+    "OPTIONS"
+   ]
+  }
+ },
+ "forms": {
+  "method": {
+   "aliases": [],
+   "values": [
+    "POST",
+    "GET",
+    "DELETE",
+    "PUT",
+    "HEAD",
+    "PATCH",
+    "UPDATE",
+    "OPTIONS"
+   ]
+  }
+ },
+ "jira": {
+  "action": {
+   "aliases": [],
+   "values": [
+    "map",
+    "new",
+    "close",
+    "delete",
+    "acknowledge",
+    "note"
+   ]
+  },
+  "region": {
+   "aliases": [],
+   "values": [
+    "us",
+    "eu"
+   ]
+  }
+ },
+ "json": {
+  "method": {
+   "aliases": [],
+   "values": [
+    "POST",
+    "GET",
+    "DELETE",
+    "PUT",
+    "HEAD",
+    "PATCH",
+    "UPDATE",
+    "OPTIONS"
+   ]
+  }
+ },
+ "jsons": {
+  "method": {
+   "aliases": [],
+   "values": [
+    "POST",
+    "GET",
+    "DELETE",
+    "PUT",
+    "HEAD",
+    "PATCH",
+    "UPDATE",
+    "OPTIONS"
+   ]
+  }
+ },
+ "kook": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "bot",
+    "webhook"
+   ]
+  }
+ },
+ "lametric": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "cloud",
+    "device"
+   ]
+  }
+ },
+ "lametrics": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "cloud",
+    "device"
+   ]
+  }
+ },
+ "mailgun": {
+  "region": {
+   "aliases": [],
+   "values": [
+    "us",
+    "eu"
+   ]
+  }
+ },
+ "mastodon": {
+  "visibility": {
+   "aliases": [],
+   "values": [
+    "default",
+    "direct",
+    "private",
+    "unlisted",
+    "public"
+   ]
+  }
+ },
+ "mastodons": {
+  "visibility": {
+   "aliases": [],
+   "values": [
+    "default",
+    "direct",
+    "private",
+    "unlisted",
+    "public"
+   ]
+  }
+ },
+ "matrix": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "off",
+    "matrix",
+    "slack",
+    "t2bot",
+    "hookshot"
+   ]
+  },
+  "msgtype": {
+   "aliases": [],
+   "values": [
+    "text",
+    "notice"
+   ]
+  },
+  "version": {
+   "aliases": [],
+   "values": [
+    "2",
+    "3"
+   ]
+  }
+ },
+ "matrixs": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "off",
+    "matrix",
+    "slack",
+    "t2bot",
+    "hookshot"
+   ]
+  },
+  "msgtype": {
+   "aliases": [],
+   "values": [
+    "text",
+    "notice"
+   ]
+  },
+  "version": {
+   "aliases": [],
+   "values": [
+    "2",
+    "3"
+   ]
+  }
+ },
+ "misskey": {
+  "visibility": {
+   "aliases": [],
+   "values": [
+    "public",
+    "home",
+    "followers",
+    "specified"
+   ]
+  }
+ },
+ "misskeys": {
+  "visibility": {
+   "aliases": [],
+   "values": [
+    "public",
+    "home",
+    "followers",
+    "specified"
+   ]
+  }
+ },
+ "mmost": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "webhook",
+    "bot"
+   ]
+  }
+ },
+ "mmosts": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "webhook",
+    "bot"
+   ]
+  }
+ },
+ "napi": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "message",
+    "template"
+   ]
+  },
+  "region": {
+   "aliases": [],
+   "values": [
+    "us",
+    "ca",
+    "eu"
+   ]
+  }
+ },
+ "notificationapi": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "message",
+    "template"
+   ]
+  },
+  "region": {
+   "aliases": [],
+   "values": [
+    "us",
+    "ca",
+    "eu"
+   ]
+  }
+ },
+ "notifyre": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "sms",
+    "fax"
+   ]
+  }
+ },
+ "ntfy": {
+  "auth": {
+   "aliases": [],
+   "values": [
+    "basic",
+    "token"
+   ]
+  },
+  "mode": {
+   "aliases": [],
+   "values": [
+    "cloud",
+    "private"
+   ]
+  }
+ },
+ "ntfys": {
+  "auth": {
+   "aliases": [],
+   "values": [
+    "basic",
+    "token"
+   ]
+  },
+  "mode": {
+   "aliases": [],
+   "values": [
+    "cloud",
+    "private"
+   ]
+  }
+ },
+ "octopush": {
+  "purpose": {
+   "aliases": [],
+   "values": [
+    "alert",
+    "wholesale"
+   ]
+  },
+  "type": {
+   "aliases": [
+    "+",
+    "-",
+    "l",
+    "p",
+    "sms_l",
+    "sms_p",
+    "smsl",
+    "smsp"
+   ],
+   "values": [
+    "sms_premium",
+    "sms_low_cost"
+   ]
+  }
+ },
+ "opsgenie": {
+  "action": {
+   "aliases": [],
+   "values": [
+    "map",
+    "new",
+    "close",
+    "delete",
+    "acknowledge",
+    "note"
+   ]
+  },
+  "region": {
+   "aliases": [],
+   "values": [
+    "us",
+    "eu"
+   ]
+  }
+ },
+ "pagerduty": {
+  "region": {
+   "aliases": [],
+   "values": [
+    "us",
+    "eu"
+   ]
+  },
+  "severity": {
+   "aliases": [],
+   "values": [
+    "info",
+    "warning",
+    "critical",
+    "error"
+   ]
+  }
+ },
+ "parsep": {
+  "device": {
+   "aliases": [],
+   "values": [
+    "all",
+    "ios",
+    "android"
+   ]
+  }
+ },
+ "parseps": {
+  "device": {
+   "aliases": [],
+   "values": [
+    "all",
+    "ios",
+    "android"
+   ]
+  }
+ },
+ "psafer": {
+  "priority": {
+   "aliases": [
+    "+",
+    "0",
+    "1",
+    "2",
+    "a",
+    "all",
+    "e",
+    "h",
+    "high",
+    "l",
+    "m",
+    "n",
+    "normal"
+   ],
+   "values": [
+    "-2",
+    "-1",
+    "0",
+    "1",
+    "2"
+   ]
+  },
+  "sound": {
+   "aliases": [],
+   "values": [
+    "silent",
+    "ahem",
+    "applause",
+    "arrow",
+    "baby",
+    "bell",
+    "bicycle",
+    "bike",
+    "boing",
+    "buzzer",
+    "camera",
+    "carhorn",
+    "horn",
+    "cashregister",
+    "chime",
+    "creakydoor",
+    "cuckooclock",
+    "cuckoo",
+    "disconnect",
+    "dog",
+    "doorbell",
+    "fanfare",
+    "gunshot",
+    "honk",
+    "jawharp",
+    "morse",
+    "electric",
+    "radiotuner",
+    "sirens",
+    "militarytrumpets",
+    "military",
+    "trumpets",
+    "ufo",
+    "whahwhah",
+    "whah",
+    "goodye",
+    "hello",
+    "no",
+    "okay",
+    "ok",
+    "ooohhhweee",
+    "warn",
+    "warning",
+    "welcome",
+    "yeah",
+    "yes",
+    "beep",
+    "beep1",
+    "weee",
+    "wee",
+    "cutinout",
+    "flickglass",
+    "laser",
+    "windchime",
+    "echo",
+    "zipper",
+    "hihat",
+    "beep2",
+    "beep3",
+    "beep4",
+    "alarmarmed",
+    "armed",
+    "alarmdisarmed",
+    "disarmed",
+    "backupready",
+    "dooropen",
+    "dopen",
+    "doorclosed",
+    "dclosed",
+    "windowopen",
+    "wopen",
+    "windowclosed",
+    "wclosed",
+    "lighton",
+    "lon",
+    "lightoff",
+    "loff",
+    "doorbellrang"
+   ]
+  },
+  "vibration": {
+   "aliases": [],
+   "values": [
+    "1",
+    "2",
+    "3"
+   ]
+  }
+ },
+ "psafers": {
+  "priority": {
+   "aliases": [
+    "+",
+    "0",
+    "1",
+    "2",
+    "a",
+    "all",
+    "e",
+    "h",
+    "high",
+    "l",
+    "m",
+    "n",
+    "normal"
+   ],
+   "values": [
+    "-2",
+    "-1",
+    "0",
+    "1",
+    "2"
+   ]
+  },
+  "sound": {
+   "aliases": [],
+   "values": [
+    "silent",
+    "ahem",
+    "applause",
+    "arrow",
+    "baby",
+    "bell",
+    "bicycle",
+    "bike",
+    "boing",
+    "buzzer",
+    "camera",
+    "carhorn",
+    "horn",
+    "cashregister",
+    "chime",
+    "creakydoor",
+    "cuckooclock",
+    "cuckoo",
+    "disconnect",
+    "dog",
+    "doorbell",
+    "fanfare",
+    "gunshot",
+    "honk",
+    "jawharp",
+    "morse",
+    "electric",
+    "radiotuner",
+    "sirens",
+    "militarytrumpets",
+    "military",
+    "trumpets",
+    "ufo",
+    "whahwhah",
+    "whah",
+    "goodye",
+    "hello",
+    "no",
+    "okay",
+    "ok",
+    "ooohhhweee",
+    "warn",
+    "warning",
+    "welcome",
+    "yeah",
+    "yes",
+    "beep",
+    "beep1",
+    "weee",
+    "wee",
+    "cutinout",
+    "flickglass",
+    "laser",
+    "windchime",
+    "echo",
+    "zipper",
+    "hihat",
+    "beep2",
+    "beep3",
+    "beep4",
+    "alarmarmed",
+    "armed",
+    "alarmdisarmed",
+    "disarmed",
+    "backupready",
+    "dooropen",
+    "dopen",
+    "doorclosed",
+    "dclosed",
+    "windowopen",
+    "wopen",
+    "windowclosed",
+    "wclosed",
+    "lighton",
+    "lon",
+    "lightoff",
+    "loff",
+    "doorbellrang"
+   ]
+  },
+  "vibration": {
+   "aliases": [],
+   "values": [
+    "1",
+    "2",
+    "3"
+   ]
+  }
+ },
+ "pushplus": {
+  "channel": {
+   "aliases": [
+    "wecom"
+   ],
+   "values": [
+    "wechat",
+    "webhook",
+    "cp",
+    "mail",
+    "sms"
+   ]
+  }
+ },
+ "pushward": {
+  "failure": {
+   "aliases": [],
+   "values": [
+    "passive",
+    "active",
+    "time-sensitive",
+    "critical"
+   ]
+  },
+  "info": {
+   "aliases": [],
+   "values": [
+    "passive",
+    "active",
+    "time-sensitive",
+    "critical"
+   ]
+  },
+  "level": {
+   "aliases": [],
+   "values": [
+    "passive",
+    "active",
+    "time-sensitive",
+    "critical"
+   ]
+  },
+  "success": {
+   "aliases": [],
+   "values": [
+    "passive",
+    "active",
+    "time-sensitive",
+    "critical"
+   ]
+  },
+  "warning": {
+   "aliases": [],
+   "values": [
+    "passive",
+    "active",
+    "time-sensitive",
+    "critical"
+   ]
+  }
+ },
+ "reddit": {
+  "kind": {
+   "aliases": [],
+   "values": [
+    "auto",
+    "self",
+    "link"
+   ]
+  }
+ },
+ "ringc": {
+  "env": {
+   "aliases": [],
+   "values": [
+    "prod",
+    "sandbox"
+   ]
+  },
+  "mode": {
+   "aliases": [],
+   "values": [
+    "basic",
+    "jwt"
+   ]
+  }
+ },
+ "rocket": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "webhook",
+    "token",
+    "basic"
+   ]
+  }
+ },
+ "rockets": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "webhook",
+    "token",
+    "basic"
+   ]
+  }
+ },
+ "ryver": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "slack",
+    "ryver"
+   ]
+  }
+ },
+ "slack": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "hook",
+    "gov-hook",
+    "bot",
+    "workflow",
+    "trigger"
+   ]
+  }
+ },
+ "smseagle": {
+  "priority": {
+   "aliases": [
+    "+",
+    "0",
+    "1",
+    "e",
+    "high",
+    "n",
+    "normal"
+   ],
+   "values": [
+    "0",
+    "1"
+   ]
+  }
+ },
+ "smseagles": {
+  "priority": {
+   "aliases": [
+    "+",
+    "0",
+    "1",
+    "e",
+    "high",
+    "n",
+    "normal"
+   ],
+   "values": [
+    "0",
+    "1"
+   ]
+  }
+ },
+ "smsmanager": {
+  "gateway": {
+   "aliases": [],
+   "values": [
+    "high",
+    "economy",
+    "low",
+    "direct"
+   ]
+  }
+ },
+ "smsmgr": {
+  "gateway": {
+   "aliases": [],
+   "values": [
+    "high",
+    "economy",
+    "low",
+    "direct"
+   ]
+  }
+ },
+ "sns": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "sms",
+    "topic"
+   ]
+  }
+ },
+ "sparkpost": {
+  "region": {
+   "aliases": [],
+   "values": [
+    "us",
+    "eu"
+   ]
+  }
+ },
+ "splunk": {
+  "action": {
+   "aliases": [],
+   "values": [
+    "map",
+    "info",
+    "acknowledgement",
+    "warning",
+    "recovery",
+    "resolve",
+    "critical"
+   ]
+  }
+ },
+ "strmlabs": {
+  "alert_type": {
+   "aliases": [],
+   "values": [
+    "follow",
+    "subscription",
+    "donation",
+    "host"
+   ]
+  },
+  "call": {
+   "aliases": [],
+   "values": [
+    "ALERTS",
+    "DONATIONS"
+   ]
+  }
+ },
+ "tgram": {
+  "content": {
+   "aliases": [],
+   "values": [
+    "before",
+    "after"
+   ]
+  }
+ },
+ "toot": {
+  "visibility": {
+   "aliases": [],
+   "values": [
+    "default",
+    "direct",
+    "private",
+    "unlisted",
+    "public"
+   ]
+  }
+ },
+ "toots": {
+  "visibility": {
+   "aliases": [],
+   "values": [
+    "default",
+    "direct",
+    "private",
+    "unlisted",
+    "public"
+   ]
+  }
+ },
+ "tweet": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "dm",
+    "tweet"
+   ]
+  }
+ },
+ "twilio": {
+  "method": {
+   "aliases": [],
+   "values": [
+    "sms",
+    "call"
+   ]
+  }
+ },
+ "twitter": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "dm",
+    "tweet"
+   ]
+  }
+ },
+ "vapid": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "chrome",
+    "firefox",
+    "edge",
+    "opera",
+    "apple"
+   ]
+  }
+ },
+ "victorops": {
+  "action": {
+   "aliases": [],
+   "values": [
+    "map",
+    "info",
+    "acknowledgement",
+    "warning",
+    "recovery",
+    "resolve",
+    "critical"
+   ]
+  }
+ },
+ "webex": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "webhook",
+    "bot"
+   ]
+  }
+ },
+ "wecom": {
+  "channel": {
+   "aliases": [
+    "wecom"
+   ],
+   "values": [
+    "wechat",
+    "webhook",
+    "cp",
+    "mail",
+    "sms"
+   ]
+  }
+ },
+ "wxteams": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "webhook",
+    "bot"
+   ]
+  }
+ },
+ "x": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "dm",
+    "tweet"
+   ]
+  }
+ },
+ "xml": {
+  "method": {
+   "aliases": [],
+   "values": [
+    "POST",
+    "GET",
+    "DELETE",
+    "PUT",
+    "HEAD",
+    "PATCH",
+    "UPDATE",
+    "OPTIONS"
+   ]
+  }
+ },
+ "xmls": {
+  "method": {
+   "aliases": [],
+   "values": [
+    "POST",
+    "GET",
+    "DELETE",
+    "PUT",
+    "HEAD",
+    "PATCH",
+    "UPDATE",
+    "OPTIONS"
+   ]
+  }
+ },
+ "zoom": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "simple",
+    "full"
+   ]
+  }
+ }
+}

@@ -45,19 +45,22 @@ func NewSNSTarget(target *ParsedURL) (*SNSTarget, error) {
 		}
 		secretParts = append(secretParts, entry)
 	}
-	if region == "" {
-		return nil, fmt.Errorf("missing region")
-	}
-
 	secretKey := strings.TrimSpace(strings.Join(secretParts, "/"))
 	if rawSecret := strings.TrimSpace(target.Query["secret"]); rawSecret != "" {
 		secretKey = rawSecret
 	}
-	if secretKey == "" {
-		return nil, fmt.Errorf("missing secret key")
-	}
 	if rawRegion := strings.TrimSpace(target.Query["region"]); rawRegion != "" {
 		region = normalizeAWSRegion(rawRegion)
+	}
+
+	// Both credentials and the region have more than one source, so nothing is
+	// missing until every source has been read. sns://?access=..&secret=..&
+	// region=..&to=.. carries no path at all and is still complete.
+	if region == "" {
+		return nil, fmt.Errorf("missing region")
+	}
+	if secretKey == "" {
+		return nil, fmt.Errorf("missing secret key")
 	}
 
 	entries = entries[index:]

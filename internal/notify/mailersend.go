@@ -41,8 +41,9 @@ func NewMailerSendTarget(target *ParsedURL) (*MailerSendTarget, error) {
 	if to := strings.TrimSpace(target.Query["to"]); to != "" {
 		targets = append(targets, parseDelimitedList(to)...)
 	}
+	// Upstream defaults the recipient to the sender when the URL names none.
 	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing recipients")
+		targets = []string{fromEmail}
 	}
 
 	format := normalizeNotifyFormat(target.Query["format"])

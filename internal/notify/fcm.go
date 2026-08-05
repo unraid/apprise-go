@@ -28,6 +28,11 @@ func NewFCMTarget(target *ParsedURL) (*FCMTarget, error) {
 	if apiKey == "" {
 		apiKey = strings.TrimSpace(target.User)
 	}
+	// ?apikey= overrides whatever the host supplied, and is a complete
+	// credential on its own -- fcm://?apikey=...&to=... carries no host at all.
+	if override := strings.TrimSpace(target.Query["apikey"]); override != "" {
+		apiKey = override
+	}
 	project := strings.TrimSpace(target.Query["project"])
 	if project == "" {
 		project = strings.TrimSpace(target.Host)
