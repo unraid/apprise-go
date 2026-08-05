@@ -30,17 +30,11 @@ import (
 // knownPartialFailureGaps are provider cases where mid-send handling still
 // differs from upstream, keyed "provider/case".
 //
-// Same ratchet as the URL vector baseline: a mismatch that is not listed fails
+// Empty, and the ratchet keeps it that way: a mismatch that is not listed fails
 // the build, and a listed entry that has started passing also fails so it gets
-// deleted. These are not approved -- they are unfixed, and the reason says what
-// is actually wrong.
-var knownPartialFailureGaps = map[string]string{
-	"matrix/e2ee-disabled": "the port issues 4 requests to upstream's 6 after a rejected login. " +
-		"Room sends now record-and-continue, but the login/register/join sequence " +
-		"still diverges once the first request fails.",
-	"twitter/x-default": "the port reports success where upstream reports failure; the failed " +
-		"request is not making it into the verdict.",
-}
+// deleted. An entry here is not an approved difference -- it is an unfixed one,
+// and the reason has to say what is actually wrong.
+var knownPartialFailureGaps = map[string]string{}
 
 // goldenRequestCount reports how many requests a case's golden fixture records.
 func goldenRequestCount(t *testing.T, providerDir, caseName string) int {

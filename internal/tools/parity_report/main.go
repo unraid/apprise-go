@@ -119,8 +119,23 @@ func main() {
 	}
 }
 
+// parityTestTimeout is passed to go test explicitly.
+//
+// Without it the package inherits go test's 10 minute default, which the parity
+// suite outgrew: it drives a Python interpreter per capture, and CI runners are
+// slower than a developer machine, so a run that finishes in about four minutes
+// locally can pass ten on a runner. The failure looks like a hung test rather
+// than a slow one, so the limit is stated here instead of being inherited.
+//
+// Override with APPRISE_PARITY_TIMEOUT when bisecting a genuine hang.
+const parityTestTimeout = "45m"
+
 func runParityTests(pkg string) (report, []byte, error) {
-	cmd := exec.Command("go", "test", pkg, "-count=1", "-json", "-v")
+	timeout := parityTestTimeout
+	if override := strings.TrimSpace(os.Getenv("APPRISE_PARITY_TIMEOUT")); override != "" {
+		timeout = override
+	}
+	cmd := exec.Command("go", "test", pkg, "-count=1", "-json", "-v", "-timeout", timeout)
 	cmd.Env = os.Environ()
 	if os.Getenv("GOCACHE") == "" {
 		if dir, err := os.MkdirTemp("", "gocache"); err == nil {

@@ -873,13 +873,18 @@ func (m *MatrixTarget) baseURL() (string, error) {
 			}
 		} else {
 			baseURL, err := m.serverDiscovery()
-			m.discoveryDone = true
-			m.baseURLCached = baseURL
-			if err != nil {
-				return "", err
-			}
-			if baseURL != "" {
-				return baseURL, nil
+			// Only a successful discovery is remembered. Upstream caches the
+			// resolved base URL and nothing else, so a discovery that failed
+			// is attempted again on the next call rather than being recorded
+			// as "already done" -- and a failure falls back to the default
+			// base URL instead of ending the send, because a server without a
+			// .well-known document is a normal server.
+			if err == nil {
+				m.discoveryDone = true
+				m.baseURLCached = baseURL
+				if baseURL != "" {
+					return baseURL, nil
+				}
 			}
 		}
 	}

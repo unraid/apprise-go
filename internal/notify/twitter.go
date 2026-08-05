@@ -349,7 +349,11 @@ func (t *TwitterTarget) sendDM(body, title string) error {
 	message := mergeTitleBody(title, body)
 	recipients := t.resolveRecipients()
 	if len(recipients) == 0 {
-		return nil
+		// Upstream reports failure here rather than success: a direct message
+		// with nobody to send it to has not been delivered, whether the
+		// recipient list was empty to begin with or the lookup that would have
+		// filled it failed.
+		return fmt.Errorf("no twitter direct message recipients")
 	}
 
 	for _, recipient := range recipients {
