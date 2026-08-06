@@ -33,10 +33,6 @@ type DotTarget struct {
 
 func NewDotTarget(target *ParsedURL) (*DotTarget, error) {
 	apikey := strings.TrimSpace(target.User)
-	if apikey == "" {
-		return nil, fmt.Errorf("missing apikey")
-	}
-
 	deviceID := strings.TrimSpace(target.Host)
 	if deviceID == "" {
 		return nil, fmt.Errorf("missing device id")
@@ -75,6 +71,8 @@ func NewDotTarget(target *ParsedURL) (*DotTarget, error) {
 		imageData = ""
 	}
 
+	// Not refused here: upstream builds the object and reports this when the
+	// send is attempted. See the note in bark.go.
 	return &DotTarget{
 		apikey:       apikey,
 		deviceID:     deviceID,
@@ -92,6 +90,10 @@ func NewDotTarget(target *ParsedURL) (*DotTarget, error) {
 }
 
 func (d *DotTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if d.apikey == "" {
+		return RequestSpec{}, fmt.Errorf("missing apikey")
+	}
+
 	spec, err := d.buildRequest(body, title)
 	if err != nil {
 		return RequestSpec{}, err
@@ -103,12 +105,20 @@ func (d *DotTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 }
 
 func (d *DotTarget) Send(body, title string, notifyType NotifyType) error {
+	if d.apikey == "" {
+		return fmt.Errorf("missing apikey")
+	}
+
 	return d.SendWithAttachments(body, title, notifyType, nil)
 }
 
 // SendWithAttachments treats the first attachment as the image. Dot takes one
 // image per device, so any others are ignored rather than sent separately.
 func (d *DotTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	if d.apikey == "" {
+		return fmt.Errorf("missing apikey")
+	}
+
 	_ = notifyType
 
 	// An image supplied by ?image= wins; an attachment fills in otherwise.

@@ -49,10 +49,6 @@ func NewPushyTarget(target *ParsedURL) (*PushyTarget, error) {
 			break
 		}
 	}
-	if selected == "" {
-		return nil, fmt.Errorf("no valid targets")
-	}
-
 	sound := ""
 	if rawSound, ok := target.Query["sound"]; ok && rawSound != "" {
 		sound = rawSound
@@ -70,6 +66,8 @@ func NewPushyTarget(target *ParsedURL) (*PushyTarget, error) {
 	// request and both report failure, so matching upstream keeps the rest
 	// of a configuration file behaving identically either way. The guard
 	// lives on the send path instead.
+	// Not refused here: upstream builds the object and reports this when the
+	// send is attempted. See the note in bark.go.
 	return &PushyTarget{
 		apiKey: apiKey,
 		target: selected,

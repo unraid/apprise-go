@@ -98,10 +98,8 @@ func NewMattermostTarget(target *ParsedURL) (*MattermostTarget, error) {
 		}
 	}
 
-	if mode == "bot" && len(channels) == 0 {
-		return nil, fmt.Errorf("missing channels")
-	}
-
+	// Not refused here: upstream builds the object and reports this when the
+	// send is attempted. See the note in bark.go.
 	return &MattermostTarget{
 		host:         target.Host,
 		port:         target.Port,
@@ -117,6 +115,10 @@ func NewMattermostTarget(target *ParsedURL) (*MattermostTarget, error) {
 }
 
 func (m *MattermostTarget) Send(body, title string, notifyType NotifyType) error {
+	if m.mode == "bot" && len(m.channels) == 0 {
+		return fmt.Errorf("missing channels")
+	}
+
 	return m.SendWithAttachments(body, title, notifyType, nil)
 }
 
@@ -124,6 +126,10 @@ func (m *MattermostTarget) Send(body, title string, notifyType NotifyType) error
 // then references the returned ids in the post. Only bot mode can upload;
 // a webhook has no file API.
 func (m *MattermostTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	if m.mode == "bot" && len(m.channels) == 0 {
+		return fmt.Errorf("missing channels")
+	}
+
 	// Upstream keeps going after a failed target; see sendOutcome.
 	var outcome sendOutcome
 	message := mergeTitleBody(title, body)
@@ -207,6 +213,10 @@ func (m *MattermostTarget) uploadFile(channelID string, attachment Attachment, i
 }
 
 func (m *MattermostTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if m.mode == "bot" && len(m.channels) == 0 {
+		return RequestSpec{}, fmt.Errorf("missing channels")
+	}
+
 	message := mergeTitleBody(title, body)
 	channel := mattermostTarget{}
 	if len(m.channels) > 0 {

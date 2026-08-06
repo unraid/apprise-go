@@ -32,10 +32,6 @@ type BulkSMSTarget struct {
 func NewBulkSMSTarget(target *ParsedURL) (*BulkSMSTarget, error) {
 	user := strings.TrimSpace(target.User)
 	password := target.Password
-	if user == "" || password == "" {
-		return nil, fmt.Errorf("missing credentials")
-	}
-
 	source := strings.TrimSpace(target.Query["from"])
 	if source != "" {
 		normalized, ok := normalizePhone(source)
@@ -81,6 +77,8 @@ func NewBulkSMSTarget(target *ParsedURL) (*BulkSMSTarget, error) {
 		}
 	}
 
+	// Not refused here: upstream builds the object and reports this when the
+	// send is attempted. See the note in bark.go.
 	return &BulkSMSTarget{
 		user:     user,
 		password: password,
@@ -94,6 +92,10 @@ func NewBulkSMSTarget(target *ParsedURL) (*BulkSMSTarget, error) {
 }
 
 func (b *BulkSMSTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if b.user == "" || b.password == "" {
+		return RequestSpec{}, fmt.Errorf("missing credentials")
+	}
+
 	if len(b.targets) == 0 && len(b.groups) == 0 {
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
@@ -133,6 +135,10 @@ func (b *BulkSMSTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (b *BulkSMSTarget) Send(body, title string, notifyType NotifyType) error {
+	if b.user == "" || b.password == "" {
+		return fmt.Errorf("missing credentials")
+	}
+
 	// Upstream keeps going after a failed target; see sendOutcome.
 	var outcome sendOutcome
 	if len(b.targets) == 0 && len(b.groups) == 0 {
