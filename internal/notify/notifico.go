@@ -55,6 +55,12 @@ func NewNotificoTarget(target *ParsedURL) (*NotificoTarget, error) {
 		}
 	}
 
+	// A self-hosted URL still names its project by id, and upstream validates
+	// it the same way as the hosted form.
+	if selfHosted && projectID != "" && !notificoProjectID.MatchString(projectID) {
+		return nil, fmt.Errorf("invalid notifico project id: %q", projectID)
+	}
+
 	if raw := strings.TrimSpace(target.Query["project"]); raw != "" {
 		projectID = raw
 	}

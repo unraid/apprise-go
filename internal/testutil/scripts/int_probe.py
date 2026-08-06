@@ -114,8 +114,9 @@ def main() -> int:
                 if not isinstance(spec, dict) or spec.get("type") != "int":
                     continue
                 low, high = spec.get("min"), spec.get("max")
-                if low is None and high is None:
-                    continue
+                # An int argument with no declared bounds is still an int:
+                # telegram's ?topic= raises on "invalid" rather than ignoring
+                # it, and skipping unbounded arguments missed that entirely.
 
                 record = {
                     "schema": schema,

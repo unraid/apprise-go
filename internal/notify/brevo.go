@@ -73,7 +73,13 @@ func NewBrevoTarget(target *ParsedURL) (*BrevoTarget, error) {
 		}
 	}
 
+	// Upstream validates the reply-to address and raises rather than dropping
+	// it, so a typo here fails the URL instead of silently sending mail nobody
+	// can reply to.
 	replyTo := strings.TrimSpace(target.Query["reply"])
+	if replyTo != "" && !isEmailAddress(replyTo) {
+		return nil, fmt.Errorf("invalid reply-to address: %q", replyTo)
+	}
 
 	return &BrevoTarget{
 		apiKey:    apiKey,

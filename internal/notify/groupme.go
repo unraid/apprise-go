@@ -3,6 +3,7 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -13,6 +14,9 @@ type GroupMeTarget struct {
 	token string
 }
 
+// groupmeBotIDRe mirrors upstream's inline bot_id check.
+var groupmeBotIDRe = regexp.MustCompile(`(?i)^[a-z0-9]+$`)
+
 func NewGroupMeTarget(target *ParsedURL) (*GroupMeTarget, error) {
 	botID := strings.TrimSpace(target.Query["bot_id"])
 	if botID == "" {
@@ -20,6 +24,11 @@ func NewGroupMeTarget(target *ParsedURL) (*GroupMeTarget, error) {
 	}
 	if botID == "" {
 		return nil, fmt.Errorf("missing bot id")
+	}
+	// Upstream validates the shape inline rather than declaring a regex on the
+	// token, which is why the shared credential table does not cover it.
+	if !groupmeBotIDRe.MatchString(botID) {
+		return nil, fmt.Errorf("invalid groupme bot id: %q", botID)
 	}
 
 	// The access token is only needed for attachment uploads, so it stays

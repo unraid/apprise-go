@@ -1,27 +1,9 @@
 [
  {
-  "url": "apprise://localhost/!",
-  "schema": "apprise",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "apprise://localhost/%%20",
-  "schema": "apprise",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "bark://localhost",
   "schema": "bark",
   "go": "rejects",
   "upstream": "accepts"
- },
- {
-  "url": "brevo://abcd:user@example.com/newuser@example.com?reply=%20!",
-  "schema": "brevo",
-  "go": "accepts",
-  "upstream": "rejects"
  },
  {
   "url": "bulksms://",
@@ -54,28 +36,10 @@
   "upstream": "accepts"
  },
  {
-  "url": "groupme://not-a-valid-bot-id!",
-  "schema": "groupme",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "line://token",
   "schema": "line",
   "go": "rejects",
   "upstream": "accepts"
- },
- {
-  "url": "mailersend://abcd:user@example.com/newuser@example.com?reply=%20!",
-  "schema": "mailersend",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "mailersend://abcd@host",
-  "schema": "mailersend",
-  "go": "accepts",
-  "upstream": "rejects"
  },
  {
   "url": "mailgun://user@localhost.localdomain",
@@ -96,22 +60,10 @@
   "upstream": "accepts"
  },
  {
-  "url": "napi://client_id/client_secret/id/+15551231234/?type=*(",
-  "schema": "napi",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "ncloud://localhost",
   "schema": "ncloud",
   "go": "rejects",
   "upstream": "accepts"
- },
- {
-  "url": "notifico://example.com/abcd/ckhrjW8w672m6HG",
-  "schema": "notifico",
-  "go": "accepts",
-  "upstream": "rejects"
  },
  {
   "url": "ntfys://user:web@-_/topic1/topic2/?mode=private",
@@ -124,24 +76,6 @@
   "schema": "octopush",
   "go": "rejects",
   "upstream": "accepts"
- },
- {
-  "url": "pagerduty://myroutekey@myapikey/%20",
-  "schema": "pagerduty",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "pagerduty://myroutekey@myapikey/mysource/%20",
-  "schema": "pagerduty",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "postmark://abcd@host",
-  "schema": "postmark",
-  "go": "accepts",
-  "upstream": "rejects"
  },
  {
   "url": "pushy://apikey",
@@ -174,52 +108,16 @@
   "upstream": "rejects"
  },
  {
-  "url": "schan://a_bd_/",
-  "schema": "schan",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "serwersms://user:pass@SenderA",
   "schema": "serwersms",
   "go": "rejects",
   "upstream": "accepts"
  },
  {
-  "url": "ses://user@example.com/T1JJ3T3L2/A1BRTD4JD/TIiajkdnlazkcevi7FQ/us-west-2?reply=invalid-email",
-  "schema": "ses",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "smsc://login:password@notaphone",
   "schema": "smsc",
   "go": "rejects",
   "upstream": "accepts"
- },
- {
-  "url": "smseagle://%20@localhost",
-  "schema": "smseagle",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "strmlabs://IcIcArukDQtuC1is1X1UdKZjTg118Lag2vScOmso/?name=t",
-  "schema": "strmlabs",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "tgram://bottest@123456789:abcdefg_hijklmnop/id1/?topic=invalid",
-  "schema": "tgram",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "threema://user@secret",
-  "schema": "threema",
-  "go": "accepts",
-  "upstream": "rejects"
  },
  {
   "url": "viber://?token=tokenb",

@@ -25,13 +25,21 @@ type AppriseTarget struct {
 	headers map[string]string
 }
 
+// appriseTokenRe mirrors upstream's token regex.
+var appriseTokenRe = regexp.MustCompile(`(?i)^[A-Z0-9_-]{1,128}$`)
+
 func NewAppriseTarget(target *ParsedURL) (*AppriseTarget, error) {
 	segments := splitPath(target.Path)
 	if len(segments) == 0 {
 		return nil, fmt.Errorf("missing token")
 	}
 
+	// Upstream validates the token's shape and raises; a URL whose last path
+	// segment is punctuation names no configuration that can exist.
 	token := segments[len(segments)-1]
+	if !appriseTokenRe.MatchString(token) {
+		return nil, fmt.Errorf("invalid apprise api token: %q", token)
+	}
 	pathSegments := segments[:len(segments)-1]
 	pathPrefix := ""
 	if len(pathSegments) > 0 {

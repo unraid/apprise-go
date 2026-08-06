@@ -273,6 +273,17 @@ func isSimpleEmail(value string) bool {
 	return smtp2goEmailRegex.MatchString(value)
 }
 
+// isEmailAddress reports whether the value is an address upstream's is_email
+// accepts, including the "Display Name <addr@host>" form that appears in
+// reply-to and from arguments.
+func isEmailAddress(value string) bool {
+	value = strings.TrimSpace(value)
+	if open := strings.LastIndex(value, "<"); open != -1 && strings.HasSuffix(value, ">") {
+		value = strings.TrimSpace(value[open+1 : len(value)-1])
+	}
+	return isSimpleEmail(value)
+}
+
 func init() {
 	RegisterSchemaEntryOrdered(18, SchemaEntry{
 		"attachment_support": true,

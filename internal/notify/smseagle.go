@@ -30,9 +30,11 @@ func NewSMSEagleTarget(target *ParsedURL) (*SMSEagleTarget, error) {
 		return nil, fmt.Errorf("missing host")
 	}
 
-	token := target.User
-	if rawToken, ok := target.Query["token"]; ok && rawToken != "" {
-		token = rawToken
+	// Upstream strips the token before judging it, so an authority of only
+	// whitespace is missing rather than present-but-blank.
+	token := strings.TrimSpace(target.User)
+	if rawToken, ok := target.Query["token"]; ok && strings.TrimSpace(rawToken) != "" {
+		token = strings.TrimSpace(rawToken)
 	}
 	if token == "" || target.Password != "" {
 		if token == "" {

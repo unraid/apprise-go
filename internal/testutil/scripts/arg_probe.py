@@ -196,6 +196,16 @@ def main() -> int:
                     continue
 
                 regex = spec.get("regex")
+                if not regex:
+                    # ?type= on napi carries no regex of its own; it is an
+                    # alias for a token, and the format lives there.
+                    aliased = spec.get("alias_of")
+                    if aliased:
+                        token_spec = (
+                            getattr(entry, "template_tokens", None) or {}
+                        ).get(aliased)
+                        if isinstance(token_spec, dict):
+                            regex = token_spec.get("regex")
                 if not regex or not isinstance(regex, (list, tuple)):
                     continue
                 pattern = regex[0]
@@ -209,12 +219,31 @@ def main() -> int:
                     )
                     continue
 
-                if accepted(_with_arg(base, arg, "zz!!invalid!!zz")):
-                    continue
-
                 compiled = re.compile(
                     pattern, re.I if "i" in str(flags or "") else 0
                 )
+
+                # The probe value has to actually violate the pattern. A fixed
+                # string does not: "zz!!invalid!!zz" satisfies strmlabs'
+                # ^[^\s].{1,24}$ quite happily, so the argument looked
+                # unenforced when it is not. Search a small spread for one the
+                # pattern rejects.
+                violating = next(
+                    (
+                        candidate
+                        for candidate in (
+                            "zz!!invalid!!zz",
+                            " ",
+                            "!",
+                            "a" * 200,
+                            "1",
+                        )
+                        if not compiled.match(candidate)
+                    ),
+                    None,
+                )
+                if violating is None or accepted(_with_arg(base, arg, violating)):
+                    continue
                 if conflicts(schema, arg, lambda v: bool(compiled.match(v))):
                     print(
                         f"skipping {schema}.{arg}: would reject a URL upstream "

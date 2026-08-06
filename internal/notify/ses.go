@@ -88,6 +88,15 @@ func NewSESTarget(target *ParsedURL) (*SESTarget, error) {
 	if !isSimpleEmail(fromEmail) {
 		return nil, fmt.Errorf("invalid from email")
 	}
+	// Upstream validates the reply-to address and raises; see brevo.go.
+	// Split on commas only: a display-name address carries spaces of its own,
+	// so treating whitespace as a separator turns "No One <a@b.ca>" into three
+	// broken addresses.
+	for _, entry := range strings.Split(strings.TrimSpace(target.Query["reply"]), ",") {
+		if entry = strings.TrimSpace(entry); entry != "" && !isEmailAddress(entry) {
+			return nil, fmt.Errorf("invalid reply-to address: %q", entry)
+		}
+	}
 	if accessKey == "" {
 		return nil, fmt.Errorf("missing access key")
 	}

@@ -50,6 +50,10 @@ func NewPostmarkTarget(target *ParsedURL) (*PostmarkTarget, error) {
 		fromEmail = user + "@" + host
 	}
 
+	if !isSimpleEmail(fromEmail) {
+		return nil, fmt.Errorf("invalid from email: %q", fromEmail)
+	}
+
 	if to := strings.TrimSpace(target.Query["to"]); to != "" {
 		targets = append(targets, parseDelimitedList(to)...)
 	}

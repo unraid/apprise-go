@@ -131,7 +131,7 @@ func TestEmailProvidersEncodeAttachments(t *testing.T) {
 				`"mimetype":"application/pdf"`},
 		},
 		{
-			"mailersend", "mailersend://key@example.com/user@example.com",
+			"mailersend", "mailersend://key:sender@example.com/user@example.com",
 			[]string{`"attachments"`, `"content":"` + encoded + `"`, `"filename":"report.pdf"`},
 		},
 		{

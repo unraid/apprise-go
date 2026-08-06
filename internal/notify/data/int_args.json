@@ -1,4 +1,9 @@
 {
+ "burstsms": {
+  "validity": {
+   "rejects_nonnumeric": true
+  }
+ },
  "discord": {
   "flags": {
    "min": 0,
@@ -40,6 +45,21 @@
    "max": 604800000,
    "min": 20000,
    "rejects_nonnumeric": false
+  }
+ },
+ "notifiarr": {
+  "event": {
+   "rejects_nonnumeric": true
+  }
+ },
+ "sendpulse": {
+  "template": {
+   "rejects_nonnumeric": true
+  }
+ },
+ "tgram": {
+  "topic": {
+   "rejects_nonnumeric": true
   }
  },
  "vapid": {

@@ -36,6 +36,11 @@ func NewThreemaTarget(target *ParsedURL) (*ThreemaTarget, error) {
 	if user == "" {
 		return nil, fmt.Errorf("missing gateway id")
 	}
+	if len(user) != 8 {
+		// Upstream requires exactly eight characters; anything else is not a
+		// Gateway ID and the API will not accept it.
+		return nil, fmt.Errorf("threema gateway id must be 8 characters, got %d", len(user))
+	}
 	if secret == "" {
 		return nil, fmt.Errorf("missing secret")
 	}

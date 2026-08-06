@@ -36,6 +36,15 @@ func NewMailerSendTarget(target *ParsedURL) (*MailerSendTarget, error) {
 
 	// The sender is the password field at the host domain.
 	fromEmail := strings.TrimSpace(target.Password) + "@" + host
+	if !isSimpleEmail(fromEmail) {
+		return nil, fmt.Errorf("invalid from email: %q", fromEmail)
+	}
+
+	// Upstream validates the reply-to address and raises rather than dropping
+	// it; see the note in brevo.go.
+	if replyTo := strings.TrimSpace(target.Query["reply"]); replyTo != "" && !isEmailAddress(replyTo) {
+		return nil, fmt.Errorf("invalid reply-to address: %q", replyTo)
+	}
 
 	targets := splitPath(target.Path)
 	if to := strings.TrimSpace(target.Query["to"]); to != "" {
