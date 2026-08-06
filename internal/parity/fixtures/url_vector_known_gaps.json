@@ -42,18 +42,6 @@
   "upstream": "accepts"
  },
  {
-  "url": "mailgun://user@localhost.localdomain",
-  "schema": "mailgun",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "mastodon://access_token@hostname/-/%/",
-  "schema": "mastodon",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
   "url": "mmost://team@localhost/3ccdd113474722377935511fc85d3dd4?channel=$!garbag3^&mode=bot",
   "schema": "mmost",
   "go": "rejects",
@@ -64,12 +52,6 @@
   "schema": "ncloud",
   "go": "rejects",
   "upstream": "accepts"
- },
- {
-  "url": "ntfys://user:web@-_/topic1/topic2/?mode=private",
-  "schema": "ntfys",
-  "go": "accepts",
-  "upstream": "rejects"
  },
  {
   "url": "octopush://user@myaccount.com/apikey",
@@ -94,18 +76,6 @@
   "schema": "reddit",
   "go": "rejects",
   "upstream": "accepts"
- },
- {
-  "url": "rocket://user:pass@localhost",
-  "schema": "rocket",
-  "go": "accepts",
-  "upstream": "rejects"
- },
- {
-  "url": "rocket://user:pass@localhost/#/!/@",
-  "schema": "rocket",
-  "go": "accepts",
-  "upstream": "rejects"
  },
  {
   "url": "serwersms://user:pass@SenderA",

@@ -123,6 +123,13 @@ func NewRocketChatTarget(target *ParsedURL) (*RocketChatTarget, error) {
 	}
 	channels, rooms, users := splitRocketTargets(rawTargets)
 
+	// Webhook mode posts to the hook itself and needs no target, but the basic
+	// and token modes address a room, channel or user, and upstream refuses a
+	// URL that names none of them.
+	if mode != rocketModeWebhook && len(channels) == 0 && len(rooms) == 0 && len(users) == 0 {
+		return nil, fmt.Errorf("no rocket.chat room, channel or user specified")
+	}
+
 	targetEntry := &RocketChatTarget{
 		mode:     mode,
 		webhook:  webhook,
@@ -350,6 +357,13 @@ func (r *RocketChatTarget) apiURL(path string) string {
 	return fmt.Sprintf("%s://%s%s", scheme, host, path)
 }
 
+// Upstream's target patterns, matched in the same order.
+var (
+	rocketRoomRe    = regexp.MustCompile(`^[A-Za-z0-9]+$`)
+	rocketChannelRe = regexp.MustCompile(`^#([A-Za-z0-9_-]+)$`)
+	rocketUserRe    = regexp.MustCompile(`^@([A-Za-z0-9._-]+)$`)
+)
+
 func splitRocketTargets(entries []string) ([]string, []string, []string) {
 	if len(entries) == 0 {
 		return nil, nil, nil
@@ -362,21 +376,20 @@ func splitRocketTargets(entries []string) ([]string, []string, []string) {
 		if trimmed == "" {
 			continue
 		}
-		if strings.HasPrefix(trimmed, "#") {
-			name := strings.TrimPrefix(trimmed, "#")
-			if name != "" {
-				channels = append(channels, name)
-			}
+		// Upstream matches each entry against a pattern and drops whatever
+		// fits none of them. Treating every leftover as a room id accepts
+		// punctuation like "!" as somewhere to post.
+		if m := rocketChannelRe.FindStringSubmatch(trimmed); m != nil {
+			channels = append(channels, m[1])
 			continue
 		}
-		if strings.HasPrefix(trimmed, "@") {
-			name := strings.TrimPrefix(trimmed, "@")
-			if name != "" {
-				users = append(users, name)
-			}
+		if m := rocketUserRe.FindStringSubmatch(trimmed); m != nil {
+			users = append(users, m[1])
 			continue
 		}
-		rooms = append(rooms, trimmed)
+		if rocketRoomRe.MatchString(trimmed) {
+			rooms = append(rooms, trimmed)
+		}
 	}
 	return channels, rooms, users
 }

@@ -107,6 +107,13 @@ func NewMastodonTarget(target *ParsedURL) (*MastodonTarget, error) {
 
 	sensitive := parseBoolValue(target.Query["sensitive"], false)
 
+	// A URL with no path posts to the timeline, which is valid. One that names
+	// path entries and yields nothing usable from any of them is not: upstream
+	// reports it has no targets rather than posting to the timeline instead.
+	if len(splitPath(target.Path)) > 0 && len(targets) == 0 && len(hashtags) == 0 {
+		return nil, fmt.Errorf("no mastodon targets to notify")
+	}
+
 	return &MastodonTarget{
 		host:              host,
 		port:              target.Port,

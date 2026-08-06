@@ -45,7 +45,9 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 		pathEntries = pathEntries[1:]
 	}
 	if apiKey == "" {
-		return &MailgunTarget{disabled: true}, nil
+		// Upstream raises here rather than producing an inert target: a
+		// mailgun URL with no api key names a service it can never reach.
+		return nil, fmt.Errorf("missing mailgun api key")
 	}
 
 	if user == "" || host == "" {

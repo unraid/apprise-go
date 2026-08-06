@@ -58,6 +58,15 @@ func NewNtfyTarget(target *ParsedURL) (*NtfyTarget, error) {
 		}
 	}
 
+	// Private mode addresses a server the caller runs, so the host has to be a
+	// hostname. Cloud mode does not care -- there the authority is a topic, so
+	// the check would be wrong applied to the schema as a whole. It also has to
+	// come after the mode is settled: a URL with no topics falls back to cloud,
+	// and judging it while it still looked private rejected ntfy:// itself.
+	if mode == NtfyModePrivate && !isValidHostname(strings.TrimSpace(target.Host)) {
+		return nil, fmt.Errorf("invalid hostname %q for a private ntfy server", target.Host)
+	}
+
 	includeImage := true
 	if rawImage, ok := target.Query["image"]; ok {
 		includeImage = parseBool(rawImage, true)
