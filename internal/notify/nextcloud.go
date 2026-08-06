@@ -53,10 +53,6 @@ func NewNextcloudTarget(target *ParsedURL) (*NextcloudTarget, error) {
 		}
 	}
 
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
 	version := nextcloudDefaultVersion
 	// The range itself is enforced centrally from upstream's declared bounds;
 	// see applyIntArgs.
@@ -68,6 +64,11 @@ func NewNextcloudTarget(target *ParsedURL) (*NextcloudTarget, error) {
 
 	urlPrefix := strings.Trim(target.Query["url_prefix"], "/")
 
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &NextcloudTarget{
 		host:      host,
 		port:      target.Port,

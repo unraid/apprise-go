@@ -30,10 +30,6 @@ func NewPushyTarget(target *ParsedURL) (*PushyTarget, error) {
 	if rawTargets, ok := target.Query["to"]; ok && rawTargets != "" {
 		targets = append(targets, splitList(rawTargets)...)
 	}
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
 	selected := ""
 	for _, entry := range targets {
 		trimmed := strings.TrimSpace(entry)
@@ -69,6 +65,11 @@ func NewPushyTarget(target *ParsedURL) (*PushyTarget, error) {
 		}
 	}
 
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &PushyTarget{
 		apiKey: apiKey,
 		target: selected,
@@ -78,6 +79,10 @@ func NewPushyTarget(target *ParsedURL) (*PushyTarget, error) {
 }
 
 func (p *PushyTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if p.target == "" {
+		return RequestSpec{}, fmt.Errorf("missing targets")
+	}
+
 	payload := map[string]any{
 		"to": p.target,
 		"data": map[string]any{
@@ -129,6 +134,10 @@ func (p *PushyTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 }
 
 func (p *PushyTarget) Send(body, title string, notifyType NotifyType) error {
+	if p.target == "" {
+		return fmt.Errorf("missing targets")
+	}
+
 	spec, err := p.BuildRequest(body, title, notifyType)
 	if err != nil {
 		return err

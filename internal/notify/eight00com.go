@@ -50,10 +50,11 @@ func NewEight00comTarget(target *ParsedURL) (*Eight00comTarget, error) {
 			targets = append(targets, normalized)
 		}
 	}
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &Eight00comTarget{
 		token:   token,
 		source:  normalizedSource,
@@ -62,6 +63,10 @@ func NewEight00comTarget(target *ParsedURL) (*Eight00comTarget, error) {
 }
 
 func (e *Eight00comTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if len(e.targets) == 0 {
+		return RequestSpec{}, fmt.Errorf("missing targets")
+	}
+
 	specs, err := e.buildRequests(body, title, notifyType, nil)
 	if err != nil {
 		return RequestSpec{}, err
@@ -71,10 +76,18 @@ func (e *Eight00comTarget) BuildRequest(body, title string, notifyType NotifyTyp
 }
 
 func (e *Eight00comTarget) Send(body, title string, notifyType NotifyType) error {
+	if len(e.targets) == 0 {
+		return fmt.Errorf("missing targets")
+	}
+
 	return e.SendWithAttachments(body, title, notifyType, nil)
 }
 
 func (e *Eight00comTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	if len(e.targets) == 0 {
+		return fmt.Errorf("missing targets")
+	}
+
 	// Upstream keeps going after a failed target; see sendOutcome.
 	var outcome sendOutcome
 	specs, err := e.buildRequests(body, title, notifyType, attachments)

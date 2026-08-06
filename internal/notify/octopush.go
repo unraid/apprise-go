@@ -63,14 +63,14 @@ func NewOctopushTarget(target *ParsedURL) (*OctopushTarget, error) {
 			targets = append(targets, "+"+normalized)
 		}
 	}
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
-	// A user and password together mean the user names the sender.
+	// A user and password together mean the user names the sender. Upstream
+	// judges the value it was given rather than the trimmed one, so a sender
+	// of only whitespace is invalid rather than absent.
 	sender := strings.TrimSpace(target.Query["sender"])
 	if sender == "" && target.User != "" && target.Password != "" {
-		sender = strings.TrimSpace(target.User)
+		if sender = strings.TrimSpace(target.User); sender == "" {
+			return nil, fmt.Errorf("invalid octopush sender: %q", target.User)
+		}
 	}
 
 	mtype := "sms_premium"
@@ -83,6 +83,11 @@ func NewOctopushTarget(target *ParsedURL) (*OctopushTarget, error) {
 		purpose = candidate
 	}
 
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &OctopushTarget{
 		apiLogin: apiLogin,
 		apiKey:   apiKey,
@@ -96,6 +101,10 @@ func NewOctopushTarget(target *ParsedURL) (*OctopushTarget, error) {
 }
 
 func (o *OctopushTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if len(o.targets) == 0 {
+		return RequestSpec{}, fmt.Errorf("missing targets")
+	}
+
 	specs, err := o.buildRequests(body, title, notifyType)
 	if err != nil {
 		return RequestSpec{}, err
@@ -105,6 +114,10 @@ func (o *OctopushTarget) BuildRequest(body, title string, notifyType NotifyType)
 }
 
 func (o *OctopushTarget) Send(body, title string, notifyType NotifyType) error {
+	if len(o.targets) == 0 {
+		return fmt.Errorf("missing targets")
+	}
+
 	// Upstream keeps going after a failed target; see sendOutcome.
 	var outcome sendOutcome
 	specs, err := o.buildRequests(body, title, notifyType)

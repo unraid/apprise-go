@@ -61,10 +61,11 @@ func NewSerwerSMSTarget(target *ParsedURL) (*SerwerSMSTarget, error) {
 			phones = append(phones, normalized)
 		}
 	}
-	if len(phones) == 0 && len(groups) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &SerwerSMSTarget{
 		user:     user,
 		password: password,
@@ -75,6 +76,10 @@ func NewSerwerSMSTarget(target *ParsedURL) (*SerwerSMSTarget, error) {
 }
 
 func (s *SerwerSMSTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if len(s.phones) == 0 && len(s.groups) == 0 {
+		return RequestSpec{}, fmt.Errorf("missing targets")
+	}
+
 	specs, err := s.buildRequests(body, title, notifyType, nil)
 	if err != nil {
 		return RequestSpec{}, err
@@ -84,10 +89,18 @@ func (s *SerwerSMSTarget) BuildRequest(body, title string, notifyType NotifyType
 }
 
 func (s *SerwerSMSTarget) Send(body, title string, notifyType NotifyType) error {
+	if len(s.phones) == 0 && len(s.groups) == 0 {
+		return fmt.Errorf("missing targets")
+	}
+
 	return s.SendWithAttachments(body, title, notifyType, nil)
 }
 
 func (s *SerwerSMSTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	if len(s.phones) == 0 && len(s.groups) == 0 {
+		return fmt.Errorf("missing targets")
+	}
+
 	// Upstream keeps going after a failed target; see sendOutcome.
 	var outcome sendOutcome
 	specs, err := s.buildRequests(body, title, notifyType, attachments)

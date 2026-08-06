@@ -24,8 +24,11 @@ type FCMTarget struct {
 }
 
 func NewFCMTarget(target *ParsedURL) (*FCMTarget, error) {
+	// Upstream reads the api key from the host and nowhere else, so a host of
+	// only whitespace is an invalid key rather than a missing one to be
+	// filled in from the user field.
 	apiKey := strings.TrimSpace(target.Host)
-	if apiKey == "" {
+	if target.Host == "" {
 		apiKey = strings.TrimSpace(target.User)
 	}
 	// ?apikey= overrides whatever the host supplied, and is a complete
@@ -75,10 +78,6 @@ func NewFCMTarget(target *ParsedURL) (*FCMTarget, error) {
 	if toValue := strings.TrimSpace(target.Query["to"]); toValue != "" {
 		targets = append(targets, parseDelimitedList(toValue)...)
 	}
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
 	color := ""
 	hasColor := false
 	if raw, ok := target.Query["color"]; ok {
@@ -110,6 +109,11 @@ func NewFCMTarget(target *ParsedURL) (*FCMTarget, error) {
 		data[key] = value
 	}
 
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &FCMTarget{
 		apiKey:       apiKey,
 		project:      project,

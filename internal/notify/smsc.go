@@ -42,10 +42,11 @@ func NewSMSCTarget(target *ParsedURL) (*SMSCTarget, error) {
 			targets = append(targets, normalized)
 		}
 	}
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &SMSCTarget{
 		user:     user,
 		password: password,
@@ -56,6 +57,10 @@ func NewSMSCTarget(target *ParsedURL) (*SMSCTarget, error) {
 }
 
 func (s *SMSCTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if len(s.targets) == 0 {
+		return RequestSpec{}, fmt.Errorf("missing targets")
+	}
+
 	return s.buildRequest(body, title, notifyType, nil)
 }
 
@@ -109,10 +114,18 @@ func (s *SMSCTarget) buildRequest(body, title string, notifyType NotifyType, att
 }
 
 func (s *SMSCTarget) Send(body, title string, notifyType NotifyType) error {
+	if len(s.targets) == 0 {
+		return fmt.Errorf("missing targets")
+	}
+
 	return s.SendWithAttachments(body, title, notifyType, nil)
 }
 
 func (s *SMSCTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	if len(s.targets) == 0 {
+		return fmt.Errorf("missing targets")
+	}
+
 	spec, err := s.buildRequest(body, title, notifyType, attachments)
 	if err != nil {
 		return err

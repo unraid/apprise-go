@@ -84,10 +84,6 @@ func NewBarkTarget(target *ParsedURL) (*BarkTarget, error) {
 	if toValue, ok := target.Query["to"]; ok && toValue != "" {
 		targets = append(targets, parseList(toValue)...)
 	}
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
 	includeImage := parseBool(target.Query["image"], true)
 
 	sound := matchBarkSound(target.Query["sound"])
@@ -96,6 +92,11 @@ func NewBarkTarget(target *ParsedURL) (*BarkTarget, error) {
 	badge := parseIntInRange(target.Query["badge"], 0, 1<<31-1)
 	volume := parseIntInRange(target.Query["volume"], 0, 10)
 
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &BarkTarget{
 		targets:      targets,
 		host:         target.Host,

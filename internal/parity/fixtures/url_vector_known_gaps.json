@@ -1,11 +1,5 @@
 [
  {
-  "url": "bark://localhost",
-  "schema": "bark",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
   "url": "bulksms://",
   "schema": "bulksms",
   "go": "rejects",
@@ -24,38 +18,8 @@
   "upstream": "accepts"
  },
  {
-  "url": "eight00com://GOODTOKEN@9876543210/12",
-  "schema": "eight00com",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "fcm://apikey/",
-  "schema": "fcm",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "line://token",
-  "schema": "line",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
   "url": "mmost://team@localhost/3ccdd113474722377935511fc85d3dd4?channel=$!garbag3^&mode=bot",
   "schema": "mmost",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "ncloud://localhost",
-  "schema": "ncloud",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "octopush://user@myaccount.com/apikey",
-  "schema": "octopush",
   "go": "rejects",
   "upstream": "accepts"
  },
@@ -68,54 +32,6 @@
  {
   "url": "pushy://apikey/%20(",
   "schema": "pushy",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "reddit://user:password@app-id/app-secret",
-  "schema": "reddit",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "serwersms://user:pass@SenderA",
-  "schema": "serwersms",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "smsc://login:password@notaphone",
-  "schema": "smsc",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "viber://?token=tokenb",
-  "schema": "viber",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "viber://tokena",
-  "schema": "viber",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "wxpusher://?token=AT_abc1234",
-  "schema": "wxpusher",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "wxpusher://AT_appid/%20/%20/",
-  "schema": "wxpusher",
-  "go": "rejects",
-  "upstream": "accepts"
- },
- {
-  "url": "wxpusher://AT_appid/@/#/,/",
-  "schema": "wxpusher",
   "go": "rejects",
   "upstream": "accepts"
  }

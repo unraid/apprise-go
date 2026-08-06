@@ -63,15 +63,16 @@ func NewRedditTarget(target *ParsedURL) (*RedditTarget, error) {
 	if toValue := strings.TrimSpace(target.Query["to"]); toValue != "" {
 		subreddits = append(subreddits, parseDelimitedList(toValue)...)
 	}
-	if len(subreddits) == 0 {
-		return nil, fmt.Errorf("missing subreddits")
-	}
-
 	kind := strings.ToLower(strings.TrimSpace(target.Query["kind"]))
 	if kind == "" {
 		kind = "auto"
 	}
 
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &RedditTarget{
 		user:       user,
 		password:   password,
@@ -115,6 +116,10 @@ func (r *RedditTarget) BuildRequest(body, title string, notifyType NotifyType) (
 }
 
 func (r *RedditTarget) Send(body, title string, notifyType NotifyType) error {
+	if len(r.subreddits) == 0 {
+		return fmt.Errorf("missing subreddits")
+	}
+
 	// Upstream keeps going after a failed target; see sendOutcome.
 	var outcome sendOutcome
 	if r.token == "" {

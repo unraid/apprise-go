@@ -44,10 +44,11 @@ func NewViberTarget(target *ParsedURL) (*ViberTarget, error) {
 			targets = append(targets, entry)
 		}
 	}
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing receiver ids")
-	}
-
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &ViberTarget{
 		token:   token,
 		targets: targets,
@@ -57,6 +58,10 @@ func NewViberTarget(target *ParsedURL) (*ViberTarget, error) {
 }
 
 func (v *ViberTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if len(v.targets) == 0 {
+		return RequestSpec{}, fmt.Errorf("missing receiver ids")
+	}
+
 	specs, err := v.buildRequests(body, title, notifyType)
 	if err != nil {
 		return RequestSpec{}, err
@@ -66,6 +71,10 @@ func (v *ViberTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 }
 
 func (v *ViberTarget) Send(body, title string, notifyType NotifyType) error {
+	if len(v.targets) == 0 {
+		return fmt.Errorf("missing receiver ids")
+	}
+
 	// Upstream keeps going after a failed target; see sendOutcome.
 	var outcome sendOutcome
 	specs, err := v.buildRequests(body, title, notifyType)

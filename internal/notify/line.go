@@ -48,10 +48,11 @@ func NewLineTarget(target *ParsedURL) (*LineTarget, error) {
 		}
 	}
 
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &LineTarget{
 		token:        token,
 		targets:      targets,
