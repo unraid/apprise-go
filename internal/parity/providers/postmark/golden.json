@@ -1,0 +1,66 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "{\"From\": \"sender@example.com\", \"Subject\": \"apprise parity\", \"HtmlBody\": \"hello from python\", \"To\": \"target@example.com\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-postmark-server-token": "apikey123"
+        },
+        "method": "POST",
+        "url": "https://api.postmarkapp.com/email"
+      }
+    ]
+  },
+  {
+    "name": "from-query",
+    "requests": [
+      {
+        "body": "{\"From\": \"Apprise <sender@example.com>\", \"Subject\": \"<no subject>\", \"HtmlBody\": \"body\", \"To\": \"target@example.com\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-postmark-server-token": "apikey123"
+        },
+        "method": "POST",
+        "url": "https://api.postmarkapp.com/email"
+      }
+    ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "{\"From\": \"sender@example.com\", \"Subject\": \"title\", \"HtmlBody\": \"body\", \"Attachments\": [{\"Name\": \"report.pdf\", \"Content\": \"UERGREFUQQ==\", \"ContentType\": \"application/pdf\"}], \"To\": \"user@example.com\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-postmark-server-token": "token"
+        },
+        "method": "POST",
+        "url": "https://api.postmarkapp.com/email"
+      }
+    ]
+  },
+  {
+    "name": "body-format-markdown",
+    "requests": [
+      {
+        "body": "{\"From\": \"sender@example.com\", \"Subject\": \"over\", \"HtmlBody\": \"<p><strong>bold</strong> and <a href=\\\"https://example.com\\\">link</a> plus <code>code</code>.</p>\", \"To\": \"target@example.com\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-postmark-server-token": "apikey123"
+        },
+        "method": "POST",
+        "url": "https://api.postmarkapp.com/email"
+      }
+    ]
+  }
+]

@@ -30,5 +30,55 @@
         "url": "https://api.pushbullet.com/v2/pushes"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "{\"file_name\": \"pixel.png\", \"file_type\": \"image/png\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushbullet.com/v2/upload-request"
+      },
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"file\"; filename=\"pixel.png\"\r\n\r\n\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "body_b64": "LS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJmaWxlIjsgZmlsZW5hbWU9InBpeGVsLnBuZyINCg0KiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWS0tDQo=",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://upload.pushbullet.com/upload-legacy/abc"
+      },
+      {
+        "body": "{\"type\": \"note\", \"title\": \"title\", \"body\": \"body\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushbullet.com/v2/pushes"
+      },
+      {
+        "body": "{\"type\": \"file\", \"file_name\": \"pixel.png\", \"file_type\": \"image/png\", \"file_url\": \"https://dl.pushb.com/abc/pixel.png\", \"image_url\": \"https://dl.pushb.com/abc/pixel.png\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushbullet.com/v2/pushes"
+      }
+    ]
   }
 ]

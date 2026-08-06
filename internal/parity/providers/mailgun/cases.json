@@ -12,5 +12,33 @@
     "body": "hello",
     "title": "subject",
     "type": "warning"
+  },
+  {
+    "name": "attachment",
+    "url": "mailgun://sender@example.com/apikey/user@example.com",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf"
+    ]
+  },
+  {
+    "name": "attachment-ordered-extras",
+    "url": "mailgun://user@example.com/apikey/target@example.com?:zulu=z&:alpha=a&:mike=m",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
+  },
+  {
+    "name": "body-format-markdown",
+    "url": "mailgun://sender@domain.com/apikey/recipient@domain.com",
+    "body": "**bold** and [link](https://example.com) plus `code`.",
+    "title": "over",
+    "type": "info",
+    "body_format": "markdown"
   }
 ]

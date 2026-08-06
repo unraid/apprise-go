@@ -8,12 +8,14 @@ import (
 )
 
 var xmlMethods = map[string]struct{}{
-	"POST":   {},
-	"GET":    {},
-	"DELETE": {},
-	"PUT":    {},
-	"HEAD":   {},
-	"PATCH":  {},
+	"POST":    {},
+	"GET":     {},
+	"DELETE":  {},
+	"PUT":     {},
+	"HEAD":    {},
+	"PATCH":   {},
+	"UPDATE":  {},
+	"OPTIONS": {},
 }
 
 const (
@@ -97,7 +99,7 @@ func (x *XMLTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (x *XMLTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
-	spec, err := x.BuildRequestWithAttachments(body, title, notifyType, attachments)
+	spec, err := x.buildRequest(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -106,10 +108,10 @@ func (x *XMLTarget) SendWithAttachments(body, title string, notifyType NotifyTyp
 }
 
 func (x *XMLTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	return x.BuildRequestWithAttachments(body, title, notifyType, nil)
+	return x.buildRequest(body, title, notifyType, nil)
 }
 
-func (x *XMLTarget) BuildRequestWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
+func (x *XMLTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
 	payloadBase := []struct {
 		key   string
 		value string
@@ -140,7 +142,7 @@ func (x *XMLTarget) BuildRequestWithAttachments(body, title string, notifyType N
 
 	payload := strings.ReplaceAll(xmlTemplate, "{{XSD_URL}}", xsdAttr)
 	payload = strings.ReplaceAll(payload, "{{CORE}}", strings.Join(entries, ""))
-	payload = strings.ReplaceAll(payload, "{{ATTACHMENTS}}", buildXMLAttachments(attachments))
+	payload = strings.ReplaceAll(payload, "{{ATTACHMENTS}}", attachmentsCustomXMLStyle(attachments))
 
 	scheme := "http"
 	if strings.ToLower(x.target.Scheme) == "xmls" {
@@ -183,26 +185,6 @@ func (x *XMLTarget) BuildRequestWithAttachments(body, title string, notifyType N
 		Headers: headers,
 		Body:    payload,
 	}, nil
-}
-
-func buildXMLAttachments(attachments []Attachment) string {
-	if len(attachments) == 0 {
-		return ""
-	}
-	entries := make([]string, 0, len(attachments))
-	for i, attachment := range attachments {
-		filename := attachment.Name
-		if strings.TrimSpace(filename) == "" {
-			filename = fmt.Sprintf("file%03d.dat", i+1)
-		}
-		entries = append(entries, fmt.Sprintf(
-			"<Attachment filename=\"%s\" mimetype=\"%s\">%s</Attachment>",
-			escapeXML(filename),
-			escapeXML(attachment.MIMEType),
-			attachment.Base64(),
-		))
-	}
-	return "<Attachments format=\"base64\">" + strings.Join(entries, "") + "</Attachments>"
 }
 
 func sanitizeXMLKey(value string) string {

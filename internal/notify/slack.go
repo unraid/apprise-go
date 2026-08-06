@@ -6,13 +6,23 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 const (
-	slackModeWebhook = "hook"
-	slackModeGov     = "gov-hook"
-	slackModeBot     = "bot"
+	slackModeWebhook  = "hook"
+	slackModeGov      = "gov-hook"
+	slackModeBot      = "bot"
+	slackModeWorkflow = "workflow"
+	slackModeTrigger  = "trigger"
+)
+
+// Workflow Builder posts to a fixed endpoint built from path segments rather
+// than to a channel.
+const (
+	slackWorkflowURL = "https://hooks.slack.com/workflows"
+	slackTriggerURL  = "https://hooks.slack.com/triggers"
 )
 
 var slackListDelims = regexp.MustCompile(`[ \t\r\n,#\\/]+`)
@@ -30,12 +40,36 @@ type SlackTarget struct {
 	includeTimestamp bool
 	useBlocks        bool
 	targets          []string
+	workflowPath     []string
+	templatePath     string
+	templateTokens   map[string]string
+
+	// notifyFormat decides whether the payload claims markdown. Slack
+	// renders the text differently depending on it, so ?format=text is not
+	// cosmetic.
+	notifyFormat string
 }
 
+// Slack's token formats, matching upstream's template_tokens regexes. The
+// first two webhook tokens are alphanumeric uppercase, the third also accepts
+// lowercase, and a bot token carries the xox[abp]- prefix (optionally behind
+// the xoxe. refresh prefix).
+var (
+	slackTokenABRe     = regexp.MustCompile(`(?i)^[A-Z0-9]+$`)
+	slackTokenCRe      = regexp.MustCompile(`(?i)^[A-Za-z0-9]+$`)
+	slackAccessTokenRe = regexp.MustCompile(`(?i)^(?:xoxe\.)?xox[abp]-[A-Z0-9-]+$`)
+)
+
 func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
+	// The host is only one of the places a token can come from -- ?token=
+	// replaces it outright -- so whether a credential exists is decided after
+	// both have been read, not here.
 	token := strings.TrimSpace(target.Host)
-	if token == "" {
-		return nil, fmt.Errorf("missing token")
+
+	notifyFormat := strings.ToLower(strings.TrimSpace(target.Query["format"]))
+	if notifyFormat == "" {
+		// Slack is markdown-native upstream.
+		notifyFormat = "markdown"
 	}
 
 	mode := strings.ToLower(strings.TrimSpace(target.Query["mode"]))
@@ -47,6 +81,38 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 	}
 
 	entries := splitPath(target.Path)
+
+	// Workflow Builder consumes every path segment; nothing here is a token
+	// or a channel, so this branch has to come before either is read.
+	if mode == slackModeWorkflow || mode == slackModeTrigger {
+		workflowPath := append([]string{token}, entries...)
+
+		// A workflow URL carries four segments and a trigger three; with the
+		// mode named, the count has to match it exactly.
+		expected := 4
+		if mode == slackModeTrigger {
+			expected = 3
+		}
+		if len(workflowPath) != expected {
+			return nil, fmt.Errorf("a slack %s url requires exactly %d path segments, got %d",
+				mode, expected, len(workflowPath))
+		}
+
+		templateTokens := map[string]string{}
+		for key, value := range target.QueryPayload {
+			templateTokens[key] = value
+		}
+
+		return &SlackTarget{
+			notifyFormat:   notifyFormat,
+			mode:           mode,
+			username:       strings.TrimSpace(target.User),
+			workflowPath:   workflowPath,
+			templatePath:   strings.TrimSpace(target.Query["template"]),
+			templateTokens: templateTokens,
+		}, nil
+	}
+
 	tokenA := token
 	tokenB := ""
 	tokenC := ""
@@ -104,14 +170,32 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 	if mode == "" {
 		mode = slackModeWebhook
 	}
-	if mode == slackModeBot && accessToken == "" {
-		return nil, fmt.Errorf("missing bot token")
+	// Upstream validates the tokens it ended up with, not the ones the host
+	// happened to supply, so ?token= alone is a complete credential and a
+	// malformed token is rejected wherever it came from.
+	if mode == slackModeBot {
+		if !slackAccessTokenRe.MatchString(accessToken) {
+			return nil, fmt.Errorf("invalid slack oauth access token: %q", accessToken)
+		}
+	} else {
+		for i, token := range []string{tokenA, tokenB, tokenC} {
+			re := slackTokenABRe
+			if i == 2 {
+				re = slackTokenCRe
+			}
+			if !re.MatchString(token) {
+				return nil, fmt.Errorf("invalid slack token %d: %q", i+1, token)
+			}
+		}
 	}
-	if mode != slackModeBot && (tokenB == "" || tokenC == "") {
-		return nil, fmt.Errorf("missing webhook credentials")
+
+	templateTokens := map[string]string{}
+	for key, value := range target.QueryPayload {
+		templateTokens[key] = value
 	}
 
 	return &SlackTarget{
+		notifyFormat:     notifyFormat,
 		tokenA:           tokenA,
 		tokenB:           tokenB,
 		tokenC:           tokenC,
@@ -123,10 +207,186 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 		includeTimestamp: includeTimestamp,
 		useBlocks:        useBlocks,
 		targets:          targets,
+		templatePath:     strings.TrimSpace(target.Query["template"]),
+		templateTokens:   templateTokens,
+	}, nil
+}
+
+// isWorkflow reports whether this target posts to Workflow Builder, which has
+// no channels and a completely different payload.
+func (s *SlackTarget) isWorkflow() bool {
+	return s.mode == slackModeWorkflow || s.mode == slackModeTrigger
+}
+
+func (s *SlackTarget) workflowSpec(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	base := slackWorkflowURL
+	if s.mode == slackModeTrigger {
+		base = slackTriggerURL
+	}
+
+	var payload map[string]any
+	if s.templatePath != "" {
+		rendered, err := renderNotifyTemplate(s.templatePath, s.templateTokens, body, title, notifyType, "72x72")
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		payload = rendered
+	} else {
+		// The workflow has to accept this variable; there is no channel or
+		// block structure to attach anything else to.
+		text := body
+		if title != "" {
+			text = title + ": " + body
+		}
+		payload = map[string]any{"text": text}
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return RequestSpec{}, err
+	}
+
+	return RequestSpec{
+		Method: "POST",
+		URL:    base + "/" + strings.Join(s.workflowPath, "/"),
+		Headers: map[string]string{
+			"User-Agent":   "Apprise",
+			"Accept":       "application/json",
+			"Content-Type": "application/json; charset=utf-8",
+		},
+		Body: string(data),
 	}, nil
 }
 
 func (s *SlackTarget) Send(body, title string, notifyType NotifyType) error {
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments posts the message, then uploads each file through
+// Slack's external upload flow: ask for an upload URL, PUT the bytes there,
+// then complete the upload against each channel.
+func (s *SlackTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// The channels a file is completed against come from what the message
+	// posts report back, not from what was configured: Slack answers with the
+	// resolved channel id, and the upload has to name that.
+	channels, err := s.sendMessagesCollectingChannels(body, title, notifyType)
+	if err != nil {
+		return err
+	}
+
+	// Only a bot token can upload, and there is nowhere to put a file until
+	// a message has told us which channel it landed in.
+	if len(attachments) == 0 || s.mode != slackModeBot || len(channels) == 0 {
+		return nil
+	}
+
+	for index, attachment := range attachments {
+		if err := s.uploadAttachment(attachment, index, channels); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// uploadAttachment runs the three step external upload for one file.
+func (s *SlackTarget) uploadAttachment(attachment Attachment, index int, channels []string) error {
+	name := attachment.FileName(index, ".dat")
+
+	query := url.Values{}
+	query.Set("filename", name)
+	query.Set("length", strconv.Itoa(len(attachment.Data)))
+
+	var upload struct {
+		FileID    string `json:"file_id"`
+		UploadURL string `json:"upload_url"`
+	}
+	if err := doJSONRequest(RequestSpec{
+		Method: "GET",
+		URL:    "https://slack.com/api/files.getUploadURLExternal?" + query.Encode(),
+		// Upstream sends the same headers for every call, so this GET
+		// carries a content type despite having no body.
+		Headers: map[string]string{
+			"User-Agent":    "Apprise",
+			"Accept":        "application/json",
+			"Authorization": "Bearer " + s.accessToken,
+			"Content-Type":  "application/json; charset=utf-8",
+		},
+		// Upstream posts an empty JSON object here rather than nothing.
+		Body: "{}",
+	}, &upload); err != nil {
+		return err
+	}
+	if upload.FileID == "" || upload.UploadURL == "" {
+		return fmt.Errorf("slack did not return an upload url")
+	}
+
+	// Slack is handed a filename and a handle with no type, so the part
+	// carries no content type of its own.
+	uploadBody, contentType, err := singleFileAttachmentBody(
+		formFields{}, "file",
+		Attachment{Name: name, Data: attachment.Data}, false)
+	if err != nil {
+		return err
+	}
+
+	if err := SendRequest(RequestSpec{
+		Method: "POST",
+		URL:    upload.UploadURL,
+		Headers: map[string]string{
+			"User-Agent":    "Apprise",
+			"Accept":        "application/json",
+			"Authorization": "Bearer " + s.accessToken,
+			"Content-Type":  contentType,
+		},
+		Body: uploadBody,
+	}); err != nil {
+		return err
+	}
+
+	// The file exists once uploaded but is not visible until it is completed
+	// against a channel.
+	for _, channel := range channels {
+		data, err := json.Marshal(map[string]any{
+			"files": []any{
+				map[string]any{"id": upload.FileID, "title": attachment.Name},
+			},
+			"channel_id": channel,
+		})
+		if err != nil {
+			return err
+		}
+
+		if err := SendRequest(RequestSpec{
+			Method: "POST",
+			URL:    "https://slack.com/api/files.completeUploadExternal",
+			Headers: map[string]string{
+				"User-Agent":    "Apprise",
+				"Accept":        "application/json",
+				"Authorization": "Bearer " + s.accessToken,
+				"Content-Type":  "application/json; charset=utf-8",
+			},
+			Body: string(data),
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *SlackTarget) sendMessagesCollectingChannels(body, title string, notifyType NotifyType) ([]string, error) {
+	if s.isWorkflow() {
+		spec, err := s.workflowSpec(body, title, notifyType)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, SendRequest(spec)
+	}
+
+	posted := []string{}
+
 	channels := s.targets
 	if len(channels) == 0 {
 		channels = []string{""}
@@ -135,7 +395,7 @@ func (s *SlackTarget) Send(body, title string, notifyType NotifyType) error {
 	for _, rawChannel := range channels {
 		payload, err := s.buildPayload(body, title, notifyType)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		channel := strings.TrimSpace(rawChannel)
@@ -165,14 +425,30 @@ func (s *SlackTarget) Send(body, title string, notifyType NotifyType) error {
 
 		spec, err := s.buildRequestSpec(payload)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
+
+		// Only the bot API answers with JSON; a webhook replies with the
+		// literal text "ok", which is not decodable and carries no channel.
+		if s.mode != slackModeBot {
+			if err := SendRequest(spec); err != nil {
+				return nil, err
+			}
+			continue
+		}
+
+		var response struct {
+			Channel string `json:"channel"`
+		}
+		if err := doJSONRequest(spec, &response); err != nil {
+			return nil, err
+		}
+		if response.Channel != "" {
+			posted = append(posted, response.Channel)
 		}
 	}
 
-	return nil
+	return posted, nil
 }
 
 func (s *SlackTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
@@ -206,13 +482,10 @@ func (s *SlackTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 }
 
 func (s *SlackTarget) buildPayload(body, title string, notifyType NotifyType) (map[string]any, error) {
-	username := s.username
-	if username == "" {
-		username = "Apprise"
-	}
-
-	payload := map[string]any{
-		"username": username,
+	// Upstream only names the poster when the URL supplies a user.
+	payload := map[string]any{}
+	if s.username != "" {
+		payload["username"] = s.username
 	}
 
 	imageURL := ""
@@ -225,7 +498,7 @@ func (s *SlackTarget) buildPayload(body, title string, notifyType NotifyType) (m
 			"type": "section",
 			"text": map[string]any{
 				"type": "mrkdwn",
-				"text": body,
+				"text": commonMarkToSlack(body),
 			},
 		}
 		blocks := []any{blockText}
@@ -271,10 +544,13 @@ func (s *SlackTarget) buildPayload(body, title string, notifyType NotifyType) (m
 			},
 		}
 	} else {
-		payload["mrkdwn"] = true
+		// Upstream reports whether the body is markdown rather than always
+		// claiming it is; ?format=html or text turns this off, and Slack
+		// renders the text differently as a result.
+		payload["mrkdwn"] = s.notifyFormat == "markdown"
 		attachment := map[string]any{
 			"title": title,
-			"text":  body,
+			"text":  commonMarkToSlack(body),
 			"color": appriseColor(notifyType),
 		}
 		if imageURL != "" {
@@ -335,6 +611,10 @@ func slackNormalizeMode(mode string) string {
 		return slackModeBot
 	case strings.HasPrefix(lower, "hook"):
 		return slackModeWebhook
+	case strings.HasPrefix(lower, "workflow"):
+		return slackModeWorkflow
+	case strings.HasPrefix(lower, "trigger"):
+		return slackModeTrigger
 	default:
 		return ""
 	}

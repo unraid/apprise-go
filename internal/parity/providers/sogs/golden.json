@@ -1,0 +1,125 @@
+[
+  {
+    "name": "single-room",
+    "requests": [
+      {
+        "body": "{\"data\": \"CiMKIWFwcHJpc2UgcGFyaXR5DQpoZWxsbyBmcm9tIHB5dGhvboA=\", \"signature\": \"8SOaRmy0etoWavp5tAgNSw0kSHeGmL7tKZRiVzhnE7YG8ONZ1ZSh50Al8milWnYT3YOe4+OYILJnufgNYlZtBQ==\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-sogs-nonce": "<volatile>",
+          "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
+        },
+        "method": "POST",
+        "url": "https://sogs.example.com/room/general/message"
+      }
+    ]
+  },
+  {
+    "name": "multiple-rooms",
+    "requests": [
+      {
+        "body": "{\"data\": \"CgYKBGJvZHmA\", \"signature\": \"qqG7HIOQJgzOCPaAgeJJVdEhRBI0V1mUoNNBt8L+mN7JlfcyDzU0S1ln8Txpo+4X1puKwooXNJxa7xvSHUDoAA==\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-sogs-nonce": "<volatile>",
+          "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
+        },
+        "method": "POST",
+        "url": "https://sogs.example.com/room/general/message"
+      },
+      {
+        "body": "{\"data\": \"CgYKBGJvZHmA\", \"signature\": \"qqG7HIOQJgzOCPaAgeJJVdEhRBI0V1mUoNNBt8L+mN7JlfcyDzU0S1ln8Txpo+4X1puKwooXNJxa7xvSHUDoAA==\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-sogs-nonce": "<volatile>",
+          "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
+        },
+        "method": "POST",
+        "url": "https://sogs.example.com/room/lounge/message"
+      }
+    ]
+  },
+  {
+    "name": "insecure-session-scheme-with-port",
+    "requests": [
+      {
+        "body": "{\"data\": \"CgkKB3QNCmJvZHmA\", \"signature\": \"RNckjb2S4R7WTrRv0bJLlBHMDoosrrUdjsu8d/jjGIL8qCL/CH9ho8fCwo2555GBAhBLU0J2N/jwxUReWslNCA==\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-sogs-nonce": "<volatile>",
+          "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
+        },
+        "method": "POST",
+        "url": "http://sogs.example.com:8080/room/general/message"
+      }
+    ]
+  },
+  {
+    "name": "secure-sessions-scheme",
+    "requests": [
+      {
+        "body": "{\"data\": \"CgkKB3QNCmJvZHmA\", \"signature\": \"RNckjb2S4R7WTrRv0bJLlBHMDoosrrUdjsu8d/jjGIL8qCL/CH9ho8fCwo2555GBAhBLU0J2N/jwxUReWslNCA==\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-sogs-nonce": "<volatile>",
+          "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
+        },
+        "method": "POST",
+        "url": "https://sogs.example.com/room/general/message"
+      }
+    ]
+  },
+  {
+    "name": "keys-and-rooms-from-query",
+    "requests": [
+      {
+        "body": "{\"data\": \"CgkKB3QNCmJvZHmA\", \"signature\": \"RNckjb2S4R7WTrRv0bJLlBHMDoosrrUdjsu8d/jjGIL8qCL/CH9ho8fCwo2555GBAhBLU0J2N/jwxUReWslNCA==\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-sogs-nonce": "<volatile>",
+          "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
+        },
+        "method": "POST",
+        "url": "https://sogs.example.com/room/general/message"
+      },
+      {
+        "body": "{\"data\": \"CgkKB3QNCmJvZHmA\", \"signature\": \"RNckjb2S4R7WTrRv0bJLlBHMDoosrrUdjsu8d/jjGIL8qCL/CH9ho8fCwo2555GBAhBLU0J2N/jwxUReWslNCA==\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-sogs-nonce": "<volatile>",
+          "x-sogs-pubkey": "008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+          "x-sogs-signature": "<volatile>",
+          "x-sogs-timestamp": "<volatile>"
+        },
+        "method": "POST",
+        "url": "https://sogs.example.com/room/lounge/message"
+      }
+    ]
+  }
+]

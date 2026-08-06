@@ -73,7 +73,13 @@ func NewBrevoTarget(target *ParsedURL) (*BrevoTarget, error) {
 		}
 	}
 
+	// Upstream validates the reply-to address and raises rather than dropping
+	// it, so a typo here fails the URL instead of silently sending mail nobody
+	// can reply to.
 	replyTo := strings.TrimSpace(target.Query["reply"])
+	if replyTo != "" && !isEmailAddress(replyTo) {
+		return nil, fmt.Errorf("invalid reply-to address: %q", replyTo)
+	}
 
 	return &BrevoTarget{
 		apiKey:    apiKey,
@@ -90,7 +96,7 @@ func (b *BrevoTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
 
-	payload := b.buildPayload(body, title, b.targets[0])
+	payload := b.buildPayload(body, title, b.targets[0], nil)
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
@@ -112,12 +118,18 @@ func (b *BrevoTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 }
 
 func (b *BrevoTarget) Send(body, title string, notifyType NotifyType) error {
+	return b.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (b *BrevoTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(b.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
 
 	for _, target := range b.targets {
-		payload := b.buildPayload(body, title, target)
+		payload := b.buildPayload(body, title, target, attachments)
 		data, err := json.Marshal(payload)
 		if err != nil {
 			return err
@@ -134,17 +146,15 @@ func (b *BrevoTarget) Send(body, title string, notifyType NotifyType) error {
 			},
 			Body: string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
-func (b *BrevoTarget) buildPayload(body, title, target string) map[string]any {
+func (b *BrevoTarget) buildPayload(body, title, target string, attachments []Attachment) map[string]any {
 	subject := title
 	if strings.TrimSpace(subject) == "" {
 		subject = brevoDefaultSubject
@@ -159,7 +169,9 @@ func (b *BrevoTarget) buildPayload(body, title, target string) map[string]any {
 		},
 		"subject":     subject,
 		"htmlContent": body,
-		"textContent": body,
+		// The plain-text alternative is the body with its markup stripped,
+		// not the same HTML sent twice.
+		"textContent": htmlToText(body),
 	}
 
 	cc := filterEmailSet(b.cc, b.bcc, target)
@@ -176,6 +188,10 @@ func (b *BrevoTarget) buildPayload(body, title, target string) map[string]any {
 		payload["replyTo"] = map[string]string{
 			"email": b.replyTo,
 		}
+	}
+
+	if len(attachments) > 0 {
+		payload["attachment"] = attachmentsBrevoStyle(attachments)
 	}
 
 	return payload
@@ -206,7 +222,7 @@ func init() {
 					"type":     "list:string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -247,7 +263,7 @@ func init() {
 					"type":     "string",
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

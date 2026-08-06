@@ -89,6 +89,21 @@ func init() {
 					"type":     "choice:string",
 					"values":   []string{"html", "markdown", "text"},
 				},
+				"batch": map[string]any{
+					"default":  true,
+					"map_to":   "batch",
+					"name":     "Batch Attachments",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"template": map[string]any{
+					"map_to":   "template",
+					"name":     "Template Path",
+					"private":  true,
+					"required": false,
+					"type":     "string",
+				},
 				"href": map[string]any{
 					"map_to":   "href",
 					"name":     "URL",
@@ -173,7 +188,16 @@ func init() {
 					"type":     "bool",
 				},
 			},
-			"kwargs": map[string]any{},
+			"kwargs": map[string]any{
+				"tokens": map[string]any{
+					"map_to":   "tokens",
+					"name":     "Template Tokens",
+					"prefix":   ":",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+			},
 			"templates": []string{
 				"{schema}://{webhook_id}/{webhook_token}",
 				"{schema}://{botname}@{webhook_id}/{webhook_token}",

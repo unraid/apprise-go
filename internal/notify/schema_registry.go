@@ -59,10 +59,86 @@ func SchemaJSON() ([]byte, error) {
 	return data, nil
 }
 
+// baseSchemaArgs are the arguments upstream defines on NotifyBase and merges
+// into every plugin that inherits its template_args. They are applied here
+// rather than repeated in each provider's schema entry.
+var baseSchemaArgs = map[string]map[string]any{
+	"optional": {
+		"default":  false,
+		"map_to":   "optional",
+		"name":     "Optional Service",
+		"private":  false,
+		"required": false,
+		"type":     "bool",
+	},
+	"redirect": {
+		"default":  true,
+		"map_to":   "redirect",
+		"name":     "Follow Redirects",
+		"private":  false,
+		"required": false,
+		"type":     "bool",
+	},
+	"retry": {
+		"default":  0,
+		"map_to":   "retry",
+		"max":      10,
+		"min":      0,
+		"name":     "Service Retry",
+		"private":  false,
+		"required": false,
+		"type":     "int",
+	},
+	"wait": {
+		"default":  0,
+		"map_to":   "wait",
+		"max":      20,
+		"min":      0,
+		"name":     "Inter-Retry Wait",
+		"private":  false,
+		"required": false,
+		"type":     "float",
+	},
+}
+
+// applyBaseSchemaArgs fills in the inherited arguments an entry does not define
+// itself. Entries that replace the upstream base set outright — identified by
+// the absence of the always-inherited "verify" argument, as vapid does — are
+// left untouched.
+func applyBaseSchemaArgs(entry SchemaEntry) {
+	details, ok := entry["details"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	args, ok := details["args"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	if _, inherits := args["verify"]; !inherits {
+		return
+	}
+
+	for name, definition := range baseSchemaArgs {
+		if _, exists := args[name]; exists {
+			continue
+		}
+
+		injected := make(map[string]any, len(definition))
+		for key, value := range definition {
+			injected[key] = value
+		}
+		args[name] = injected
+	}
+}
+
 func (r *schemaRegistry) register(order int, entry SchemaEntry) {
 	if entry == nil {
 		return
 	}
+
+	applyBaseSchemaArgs(entry)
 
 	r.mu.Lock()
 	defer r.mu.Unlock()

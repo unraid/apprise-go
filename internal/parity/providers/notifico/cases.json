@@ -12,5 +12,12 @@
     "body": "body",
     "title": "",
     "type": "warning"
+  },
+  {
+    "name": "self-hosted",
+    "url": "notificos://user:pass@notifico.example.com/1234/abcdefhook",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]

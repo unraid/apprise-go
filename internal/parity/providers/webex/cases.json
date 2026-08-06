@@ -12,5 +12,72 @@
     "body": "body",
     "title": "title",
     "type": "success"
+  },
+  {
+    "name": "bot-single-room",
+    "url": "wxteams://botaccesstoken123/Y2lzY29zcGFyazovL3VzL1JPT00vYWJj",
+    "body": "hello",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "bot-multiple-rooms",
+    "url": "wxteams://botaccesstoken123/room1/room2",
+    "body": "body",
+    "title": "",
+    "type": "warning"
+  },
+  {
+    "name": "bot-to-alias",
+    "url": "wxteams://botaccesstoken123?to=room1/room2",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "bot-text-format",
+    "url": "wxteams://botaccesstoken123/room1?format=text",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "explicit-webhook-mode",
+    "url": "wxteams://cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc?mode=webhook",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "webhook-text-format",
+    "url": "wxteams://dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd?format=text",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "attachment",
+    "url": "wxteams://botaccesstoken123/Y2lzY29zcGFyazovL3VzL1JPT00vYWJj",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
+  },
+  {
+    "name": "overflow-split-dynamic",
+    "url": "wxteams://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?overflow=split&mode=webhook",
+    "body": "word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word",
+    "title": "over",
+    "type": "info"
+  },
+  {
+    "name": "body-format-html",
+    "url": "wxteams://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "body": "<b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>.",
+    "title": "over",
+    "type": "info",
+    "body_format": "html"
   }
 ]

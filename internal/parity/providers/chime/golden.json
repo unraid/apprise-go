@@ -1,0 +1,47 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "{\"Content\": \"apprise parity\\r\\nhello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.chime.aws/incomingwebhooks/8b799e6d-0a2b-4f31-9c1e-4f2b3a5d6e7f?token=abcDEF123token"
+      }
+    ]
+  },
+  {
+    "name": "token-query",
+    "requests": [
+      {
+        "body": "{\"Content\": \"body only\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.chime.aws/incomingwebhooks/8b799e6d-0a2b-4f31-9c1e-4f2b3a5d6e7f?token=abcDEF123token"
+      }
+    ]
+  },
+  {
+    "name": "body-format-html",
+    "requests": [
+      {
+        "body": "{\"Content\": \"# over\\n**bold** and [link](<https://example.com>) plus `code`.\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.chime.aws/incomingwebhooks/8b799e6d-0a2b-4f31-9c1e-4f2b3a5d6e7f?token=abcDEF123token"
+      }
+    ]
+  }
+]

@@ -8,10 +8,18 @@ import (
 	"strings"
 )
 
-const twitterTweetURL = "https://api.twitter.com/1.1/statuses/update.json"
-const twitterWhoamiURL = "https://api.twitter.com/1.1/account/verify_credentials.json"
-const twitterLookupURL = "https://api.twitter.com/1.1/users/lookup.json"
-const twitterDMURL = "https://api.twitter.com/1.1/direct_messages/events/new.json"
+// X API v2 endpoints; v1.1 was retired upstream in 1.12.0.
+const twitterTweetURL = "https://api.twitter.com/2/tweets"
+
+// Media is uploaded first and the tweet references the ids it gets back.
+const twitterMediaURL = "https://api.x.com/2/media/upload"
+
+// Twitter batches up to four still images into one tweet; a gif has to stand
+// alone, which breaks a run of images into separate tweets around it.
+const twitterImageBatchSize = 4
+const twitterWhoamiURL = "https://api.twitter.com/2/users/me"
+const twitterLookupURL = "https://api.twitter.com/2/users/by"
+const twitterDMURLTemplate = "https://api.twitter.com/2/dm_conversations/with/%s/messages"
 
 type TwitterTarget struct {
 	consumerKey    string
@@ -20,6 +28,7 @@ type TwitterTarget struct {
 	accessSecret   string
 	mode           string
 	targets        []string
+	batch          bool
 }
 
 func NewTwitterTarget(target *ParsedURL) (*TwitterTarget, error) {
@@ -73,6 +82,7 @@ func NewTwitterTarget(target *ParsedURL) (*TwitterTarget, error) {
 		accessSecret:   accessSecret,
 		mode:           strings.ToLower(mode),
 		targets:        targets,
+		batch:          parseBoolWithDefault(target.Query["batch"], true),
 	}, nil
 }
 
@@ -84,28 +94,180 @@ func (t *TwitterTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (t *TwitterTarget) Send(body, title string, notifyType NotifyType) error {
-	if t.mode == "tweet" {
+	return t.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (t *TwitterTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
+	_ = notifyType
+
+	if t.mode == "dm" {
+		return t.sendDM(body, title)
+	}
+	if t.mode != "tweet" {
+		return fmt.Errorf("unsupported mode")
+	}
+
+	batches, err := t.uploadMedia(attachments)
+	if err != nil {
+		return err
+	}
+
+	if len(batches) == 0 {
 		spec, err := t.tweetRequest(body, title)
 		if err != nil {
 			return err
 		}
+
 		return SendRequest(spec)
 	}
-	if t.mode == "dm" {
-		return t.sendDM(body, title)
+
+	message := mergeTitleBody(title, body)
+	for index, mediaIDs := range batches {
+		text := message
+		// Only the first tweet carries the message; the rest are numbered so
+		// a reader can tell they belong together.
+		if index > 0 || message == "" {
+			text = fmt.Sprintf("%02d/%02d", index+1, len(batches))
+		}
+
+		spec, err := t.tweetRequestWithMedia(text, mediaIDs)
+		if err != nil {
+			return err
+		}
+		outcome.record(SendRequest(spec))
 	}
-	return fmt.Errorf("unsupported mode")
+
+	return outcome.err()
+}
+
+// uploadMedia uploads each image and groups the ids into the tweets they will
+// be posted in.
+func (t *TwitterTarget) uploadMedia(attachments []Attachment) ([][]string, error) {
+	batchSize := 1
+	if t.batch {
+		batchSize = twitterImageBatchSize
+	}
+
+	batches := [][]string{}
+	current := []string{}
+
+	for index, attachment := range attachments {
+		// Images only; anything else is ignored rather than refused.
+		if !strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
+			continue
+		}
+
+		mediaID, err := t.uploadOne(attachment, index)
+		if err != nil {
+			return nil, err
+		}
+
+		// Only PNG and JPEG batch; a gif stands alone and splits the run.
+		if !twitterBatchablePattern.MatchString(attachment.MIMEType) {
+			if len(current) > 0 {
+				batches = append(batches, current)
+				current = nil
+			}
+			batches = append(batches, []string{mediaID})
+			continue
+		}
+
+		current = append(current, mediaID)
+		if len(current) >= batchSize {
+			batches = append(batches, current)
+			current = nil
+		}
+	}
+
+	if len(current) > 0 {
+		batches = append(batches, current)
+	}
+
+	return batches, nil
+}
+
+var twitterBatchablePattern = regexp.MustCompile(`(?i)^image/(png|jpe?g)`)
+
+// uploadOne posts a single image and returns the id a tweet references.
+func (t *TwitterTarget) uploadOne(attachment Attachment, index int) (string, error) {
+	category := "tweet_image"
+	if t.mode == "dm" {
+		category = "dm_image"
+	}
+
+	fields := formFields{}
+	fields.Set("media_category", category)
+
+	// Twitter is handed a filename and a handle with no type, so the part
+	// carries no content type of its own.
+	requestBody, contentType, err := singleFileAttachmentBody(
+		fields, "media",
+		Attachment{
+			Name: attachment.FileName(index, ".dat"),
+			Data: attachment.Data,
+		}, false)
+	if err != nil {
+		return "", err
+	}
+
+	auth, err := buildOAuth1Header(
+		"POST",
+		twitterMediaURL,
+		nil,
+		t.consumerKey, t.consumerSecret, t.accessKey, t.accessSecret,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	var response struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := doJSONRequest(RequestSpec{
+		Method: "POST",
+		URL:    twitterMediaURL,
+		Headers: map[string]string{
+			"User-Agent":    "Apprise",
+			"Content-Type":  contentType,
+			"Authorization": auth,
+		},
+		Body: requestBody,
+	}, &response); err != nil {
+		return "", err
+	}
+	if response.Data.ID == "" {
+		return "", fmt.Errorf("twitter media upload returned no id")
+	}
+
+	return response.Data.ID, nil
 }
 
 func (t *TwitterTarget) tweetRequest(body, title string) (RequestSpec, error) {
-	message := mergeTitleBody(title, body)
-	payload := url.Values{}
-	payload.Set("status", message)
+	return t.tweetRequestWithMedia(mergeTitleBody(title, body), nil)
+}
+
+// tweetRequestWithMedia posts already prepared text, optionally referencing
+// media that has been uploaded.
+func (t *TwitterTarget) tweetRequestWithMedia(message string, mediaIDs []string) (RequestSpec, error) {
+	payload := map[string]any{"text": message}
+	if len(mediaIDs) > 0 {
+		// The ids are nested rather than sitting at the top level.
+		payload["media"] = map[string]any{"media_ids": mediaIDs}
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return RequestSpec{}, err
+	}
 
 	auth, err := buildOAuth1Header(
 		"POST",
 		twitterTweetURL,
-		payload,
+		nil,
 		t.consumerKey,
 		t.consumerSecret,
 		t.accessKey,
@@ -121,39 +283,25 @@ func (t *TwitterTarget) tweetRequest(body, title string) (RequestSpec, error) {
 		Headers: map[string]string{
 			"User-Agent":    "Apprise",
 			"Accept":        "*/*",
-			"Content-Type":  "application/x-www-form-urlencoded",
+			"Content-Type":  "application/json",
 			"Authorization": auth,
 		},
-		Body: payload.Encode(),
+		Body: string(data),
 	}, nil
 }
 
+// twitterUser is the v2 user representation returned under a data envelope.
+type twitterUser struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+}
+
 type twitterWhoamiResponse struct {
-	ScreenName string      `json:"screen_name"`
-	ID         json.Number `json:"id"`
-	IDStr      string      `json:"id_str"`
+	Data twitterUser `json:"data"`
 }
 
-type twitterDMRequest struct {
-	Event twitterDMEvent `json:"event"`
-}
-
-type twitterDMEvent struct {
-	Type          string               `json:"type"`
-	MessageCreate twitterDMMessageBody `json:"message_create"`
-}
-
-type twitterDMMessageBody struct {
-	Target      twitterDMTarget `json:"target"`
-	MessageData twitterDMText   `json:"message_data"`
-}
-
-type twitterDMTarget struct {
-	RecipientID string `json:"recipient_id"`
-}
-
-type twitterDMText struct {
-	Text string `json:"text"`
+type twitterLookupResponse struct {
+	Data []twitterUser `json:"data"`
 }
 
 var twitterUserPattern = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
@@ -190,34 +338,27 @@ func uniqueStrings(values []string) []string {
 	return out
 }
 
-type twitterLookupEntry struct {
-	ScreenName string      `json:"screen_name"`
-	ID         json.Number `json:"id"`
-	IDStr      string      `json:"id_str"`
-}
-
 type twitterRecipient struct {
 	ScreenName string
 	ID         string
 }
 
 func (t *TwitterTarget) sendDM(body, title string) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	message := mergeTitleBody(title, body)
 	recipients := t.resolveRecipients()
 	if len(recipients) == 0 {
-		return nil
+		// Upstream reports failure here rather than success: a direct message
+		// with nobody to send it to has not been delivered, whether the
+		// recipient list was empty to begin with or the lookup that would have
+		// filled it failed.
+		return fmt.Errorf("no twitter direct message recipients")
 	}
 
 	for _, recipient := range recipients {
-		payload := twitterDMRequest{
-			Event: twitterDMEvent{
-				Type: "message_create",
-				MessageCreate: twitterDMMessageBody{
-					Target:      twitterDMTarget{RecipientID: recipient.ID},
-					MessageData: twitterDMText{Text: message},
-				},
-			},
-		}
+		dmURL := fmt.Sprintf(twitterDMURLTemplate, recipient.ID)
+		payload := map[string]string{"text": message}
 		data, err := json.Marshal(payload)
 		if err != nil {
 			return err
@@ -225,7 +366,7 @@ func (t *TwitterTarget) sendDM(body, title string) error {
 
 		auth, err := buildOAuth1Header(
 			"POST",
-			twitterDMURL,
+			dmURL,
 			nil,
 			t.consumerKey,
 			t.consumerSecret,
@@ -238,7 +379,7 @@ func (t *TwitterTarget) sendDM(body, title string) error {
 
 		spec := RequestSpec{
 			Method: "POST",
-			URL:    twitterDMURL,
+			URL:    dmURL,
 			Headers: map[string]string{
 				"User-Agent":    "Apprise",
 				"Accept":        "*/*",
@@ -248,12 +389,10 @@ func (t *TwitterTarget) sendDM(body, title string) error {
 			Body: string(data),
 		}
 
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (t *TwitterTarget) resolveRecipients() []twitterRecipient {
@@ -291,14 +430,10 @@ func (t *TwitterTarget) resolveWhoami() []twitterRecipient {
 	if err := doJSONRequest(spec, &response); err != nil {
 		return nil
 	}
-	id := response.IDStr
-	if id == "" {
-		id = response.ID.String()
-	}
-	if id == "" || response.ScreenName == "" {
+	if response.Data.ID == "" || response.Data.Username == "" {
 		return nil
 	}
-	return []twitterRecipient{{ScreenName: response.ScreenName, ID: id}}
+	return []twitterRecipient{{ScreenName: response.Data.Username, ID: response.Data.ID}}
 }
 
 func (t *TwitterTarget) lookupUsers(targets []string) []twitterRecipient {
@@ -313,15 +448,12 @@ func (t *TwitterTarget) lookupUsers(targets []string) []twitterRecipient {
 		if end > len(names) {
 			end = len(names)
 		}
-		payload := url.Values{}
-		for _, name := range names[i:end] {
-			payload.Add("screen_name", name)
-		}
+		lookupURL := twitterLookupURL + "?usernames=" + url.QueryEscape(strings.Join(names[i:end], ","))
 
 		auth, err := buildOAuth1Header(
-			"POST",
-			twitterLookupURL,
-			payload,
+			"GET",
+			lookupURL,
+			nil,
 			t.consumerKey,
 			t.consumerSecret,
 			t.accessKey,
@@ -332,33 +464,24 @@ func (t *TwitterTarget) lookupUsers(targets []string) []twitterRecipient {
 		}
 
 		spec := RequestSpec{
-			Method: "POST",
-			URL:    twitterLookupURL,
+			Method: "GET",
+			URL:    lookupURL,
 			Headers: map[string]string{
 				"User-Agent":    "Apprise",
 				"Accept":        "*/*",
-				"Content-Type":  "application/x-www-form-urlencoded",
 				"Authorization": auth,
 			},
-			Body: payload.Encode(),
 		}
 
-		var response []twitterLookupEntry
+		var response twitterLookupResponse
 		if err := doJSONRequest(spec, &response); err != nil {
 			continue
 		}
-		for _, entry := range response {
-			if entry.ScreenName == "" {
+		for _, entry := range response.Data {
+			if entry.Username == "" || entry.ID == "" {
 				continue
 			}
-			id := entry.IDStr
-			if id == "" {
-				id = entry.ID.String()
-			}
-			if id == "" {
-				continue
-			}
-			results[entry.ScreenName] = id
+			results[entry.Username] = entry.ID
 		}
 	}
 
@@ -394,7 +517,7 @@ func init() {
 					"type":     "bool",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -437,7 +560,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

@@ -2,11 +2,11 @@ package notify
 
 import (
 	"crypto/tls"
-	"encoding/base64"
 	"fmt"
 	"net"
 	"net/mail"
 	"net/smtp"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -39,6 +39,15 @@ type MailtoTarget struct {
 	headers      map[string]string
 	notifyFormat string
 	verifyTLS    bool
+
+	// location renders the Date header, which is the only place ?tz= is
+	// observable: upstream passes its timezone through to the message and
+	// falls back to the machine's when none is given.
+	location *time.Location
+
+	// inline embeds image attachments in the body rather than leaving them
+	// as downloads, which turns the message into multipart/related.
+	inline bool
 }
 
 type mailtoMessage struct {
@@ -67,6 +76,24 @@ func NewMailtoTarget(target *ParsedURL) (*MailtoTarget, error) {
 	}
 	if _, ok := mailtoModePorts[mode]; !ok {
 		return nil, fmt.Errorf("invalid secure mode")
+	}
+
+	// PGP signing and encryption are not implemented here. Accepting the
+	// request and sending plaintext would be worse than refusing it: someone
+	// who asked for encryption would believe they had it.
+	if pgpMode := strings.ToLower(strings.TrimSpace(target.Query["pgp"])); pgpMode != "" {
+		switch {
+		case strings.HasPrefix("no", pgpMode):
+		case strings.HasPrefix("sign", pgpMode), strings.HasPrefix("encrypt", pgpMode):
+			return nil, fmt.Errorf("pgp %s is not supported", pgpMode)
+		default:
+			return nil, fmt.Errorf("invalid pgp mode: %s", target.Query["pgp"])
+		}
+	}
+	// wkd=yes implies encryption upstream, so it is refused for the same
+	// reason.
+	if parseBoolWithDefault(target.Query["wkd"], false) {
+		return nil, fmt.Errorf("pgp web key directory is not supported")
 	}
 
 	port := target.Port
@@ -108,14 +135,13 @@ func NewMailtoTarget(target *ParsedURL) (*MailtoTarget, error) {
 	bcc := parseMailtoEmailList([]string{target.Query["bcc"]})
 	replyTo := parseMailtoEmailList([]string{target.Query["reply"]})
 
+	// An unrecognized ?format= falls back to the plugin default rather than
+	// failing; see the note in telegram.go.
 	format := normalizeNotifyFormat(target.Query["format"])
-	if format == "" {
-		format = "html"
-	}
 	switch format {
 	case "html", "markdown", "text":
 	default:
-		return nil, fmt.Errorf("invalid format")
+		format = "html"
 	}
 
 	verifyTLS := true
@@ -146,6 +172,8 @@ func NewMailtoTarget(target *ParsedURL) (*MailtoTarget, error) {
 		headers:      headers,
 		notifyFormat: format,
 		verifyTLS:    verifyTLS,
+		inline:       parseBoolWithDefault(target.Query["inline"], false),
+		location:     parseTimezone(target.Query["tz"]),
 	}, nil
 }
 
@@ -208,7 +236,7 @@ func (m *MailtoTarget) Send(body, title string, notifyType NotifyType) error {
 	return m.SendWithAttachments(body, title, notifyType, nil)
 }
 
-func (m *MailtoTarget) SendWithAttachments(body, title string, _ NotifyType, attachments []Attachment) error {
+func (m *MailtoTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	client, err := m.connect()
 	if err != nil {
 		return err
@@ -217,7 +245,7 @@ func (m *MailtoTarget) SendWithAttachments(body, title string, _ NotifyType, att
 		_ = client.Quit()
 	}()
 
-	messages, err := m.buildMessagesWithAttachments(body, title, attachments)
+	messages, err := m.buildMessages(body, title, attachments)
 	if err != nil {
 		return err
 	}
@@ -308,7 +336,7 @@ func (m *MailtoTarget) authenticate(client *smtp.Client) (*smtp.Client, error) {
 	return client, nil
 }
 
-func (m *MailtoTarget) buildMessagesWithAttachments(body, title string, attachments []Attachment) ([]mailtoMessage, error) {
+func (m *MailtoTarget) buildMessages(body, title string, attachments []Attachment) ([]mailtoMessage, error) {
 	if len(m.targets) == 0 {
 		return nil, fmt.Errorf("missing targets")
 	}
@@ -331,15 +359,13 @@ func (m *MailtoTarget) buildMessagesWithAttachments(body, title string, attachme
 		bcc := filterEmailList(m.bcc, nil, target)
 		reply := filterEmailList(m.replyTo, nil, target)
 
-		contentTypeHeader, transferHeader, messageBody := buildMailtoBody(body, format)
-		if len(attachments) > 0 {
-			contentTypeHeader, transferHeader, messageBody = buildMailtoMixedBody(contentTypeHeader, transferHeader, messageBody, attachments)
-		}
+		contentTypeHeader, transferHeader, messageBody := buildMailtoBody(
+			body, format, m.inline, attachments)
 		headers := []string{
 			fmt.Sprintf("Subject: %s", subject),
 			fmt.Sprintf("From: %s", fromHeader),
 			fmt.Sprintf("To: %s", formatMIMEAddress("", target)),
-			fmt.Sprintf("Date: %s", time.Now().Format(time.RFC1123Z)),
+			fmt.Sprintf("Date: %s", m.now().Format(time.RFC1123Z)),
 			fmt.Sprintf("Message-ID: %s", mailtoMessageID(m.smtpHost)),
 			"MIME-Version: 1.0",
 			fmt.Sprintf("Content-Type: %s", contentTypeHeader),
@@ -423,7 +449,138 @@ func normalizeCRLF(value string) string {
 	return strings.ReplaceAll(value, "\n", "\r\n")
 }
 
-func buildMailtoBody(body, format string) (string, string, string) {
+// buildMailtoBody returns the message's content type, transfer encoding and
+// body. Attachments wrap whatever the body would otherwise have been in one
+// more multipart layer, so the text keeps its own structure inside it.
+func buildMailtoBody(body, format string, inline bool, attachments []Attachment) (string, string, string) {
+	// Inline mode rewrites the body before it is encoded, appending an anchor
+	// per image and deciding whether the message is related or mixed.
+	cidRefs := map[string]struct{}{}
+	if inline && len(attachments) > 0 {
+		body, cidRefs = applyMailtoInline(body, format, attachments)
+	}
+
+	contentType, transfer, encoded := buildMailtoContentBody(body, format)
+	if len(attachments) == 0 {
+		return contentType, transfer, encoded
+	}
+
+	// A message carrying an inline image is related rather than mixed: the
+	// parts are one document, not a document plus downloads.
+	subtype := "mixed"
+	if len(cidRefs) > 0 {
+		subtype = "related"
+	}
+
+	boundary := mailtoBoundary()
+	var builder strings.Builder
+	builder.WriteString("--" + boundary + "\r\n")
+
+	// The text's own headers travel with it, one layer down.
+	builder.WriteString("Content-Type: " + contentType + "\r\n")
+	builder.WriteString("MIME-Version: 1.0\r\n")
+	if transfer != "" {
+		builder.WriteString("Content-Transfer-Encoding: " + transfer + "\r\n")
+	}
+	builder.WriteString("\r\n" + encoded + "\r\n")
+
+	for index, attachment := range attachments {
+		name := attachment.FileName(index, ".dat")
+		mimeType := attachment.MIMEType
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+
+		builder.WriteString("--" + boundary + "\r\n")
+		builder.WriteString("Content-Transfer-Encoding: base64\r\n")
+		builder.WriteString("MIME-Version: 1.0\r\n")
+		builder.WriteString("Content-Type: " + mimeType + "\r\n")
+
+		if _, embedded := cidRefs[name]; embedded {
+			fmt.Fprintf(&builder,
+				"Content-Disposition: inline; filename=%q\r\n", name)
+			// Spaces are escaped so the id still matches the cid: URI in
+			// the body, which cannot carry a raw space.
+			fmt.Fprintf(&builder, "Content-ID: <%s>\r\n",
+				strings.ReplaceAll(name, " ", "%20"))
+		} else {
+			fmt.Fprintf(&builder,
+				"Content-Disposition: attachment; filename=%q\r\n", name)
+		}
+
+		builder.WriteString("\r\n")
+		builder.WriteString(normalizeCRLF(wrapBase64(attachment.Base64(), 76)))
+	}
+
+	builder.WriteString("\r\n--" + boundary + "--\r\n")
+
+	return fmt.Sprintf("multipart/%s; boundary=%q", subtype, boundary), "", builder.String()
+}
+
+// applyMailtoInline rewrites the body so images are referenced from it, and
+// reports which filenames ended up embedded.
+//
+// A cid: URI the caller already wrote is honored for any attachment type —
+// it can only resolve inside the same message, so writing one is a deliberate
+// act. Images not already referenced get an anchor appended.
+func applyMailtoInline(body, format string, attachments []Attachment) (string, map[string]struct{}) {
+	names := make([]string, len(attachments))
+	nameSet := map[string]struct{}{}
+	for index, attachment := range attachments {
+		names[index] = attachment.FileName(index, ".dat")
+		nameSet[names[index]] = struct{}{}
+	}
+
+	if format != "html" {
+		// Plain text cannot embed anything, so images are named instead.
+		var listed []string
+		for index, attachment := range attachments {
+			if strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
+				listed = append(listed, names[index])
+			}
+		}
+		if len(listed) > 0 {
+			for _, name := range listed {
+				body += "\n[Image: " + name + "]"
+			}
+		}
+
+		return body, nil
+	}
+
+	refs := map[string]struct{}{}
+	for _, match := range mailtoCIDPattern.FindAllStringSubmatch(body, -1) {
+		ref := strings.ReplaceAll(match[1], "%20", " ")
+		// A reference with no matching file cannot resolve, so it is left
+		// out rather than making the message related for nothing.
+		if _, ok := nameSet[ref]; ok {
+			refs[ref] = struct{}{}
+		}
+	}
+
+	for index, attachment := range attachments {
+		if !strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
+			continue
+		}
+		if _, ok := refs[names[index]]; ok {
+			continue
+		}
+		refs[names[index]] = struct{}{}
+		body += fmt.Sprintf(`<br/><img src="cid:%s">`,
+			strings.ReplaceAll(names[index], " ", "%20"))
+	}
+
+	return body, refs
+}
+
+// mailtoCIDPattern finds the filenames a body already references inline.
+var mailtoCIDPattern = regexp.MustCompile(`cid:([^\s"'>)]+)`)
+
+func mailtoBoundary() string {
+	return fmt.Sprintf("===============%d==", time.Now().UnixNano())
+}
+
+func buildMailtoContentBody(body, format string) (string, string, string) {
 	if format == "html" {
 		plain := htmlToText(body)
 		html := body
@@ -474,57 +631,6 @@ func buildMultipartAlternative(boundary, plain, html string) string {
 	return strings.Join(lines, "\r\n")
 }
 
-func buildMailtoMixedBody(contentTypeHeader, transferHeader, messageBody string, attachments []Attachment) (string, string, string) {
-	boundary := fmt.Sprintf("===============%d==", time.Now().UnixNano())
-	lines := []string{
-		"--" + boundary,
-		fmt.Sprintf("Content-Type: %s", contentTypeHeader),
-		"MIME-Version: 1.0",
-	}
-	if transferHeader != "" {
-		lines = append(lines, fmt.Sprintf("Content-Transfer-Encoding: %s", transferHeader))
-	}
-	lines = append(lines, "", messageBody)
-
-	for i, attachment := range attachments {
-		filename := attachment.Name
-		if strings.TrimSpace(filename) == "" {
-			filename = fmt.Sprintf("file%03d.dat", i+1)
-		}
-		lines = append(lines,
-			"--"+boundary,
-			fmt.Sprintf("Content-Type: %s", attachment.MIMEType),
-			"MIME-Version: 1.0",
-			"Content-Transfer-Encoding: base64",
-			fmt.Sprintf("Content-Disposition: attachment; filename=\"%s\"", escapeMailtoHeaderParam(filename)),
-			"",
-			wrapBase64(base64.StdEncoding.EncodeToString(attachment.Data)),
-		)
-	}
-	lines = append(lines, "--"+boundary+"--", "")
-	return fmt.Sprintf("multipart/mixed; boundary=\"%s\"", boundary), "", strings.Join(lines, "\r\n")
-}
-
-func escapeMailtoHeaderParam(value string) string {
-	value = strings.ReplaceAll(value, "\\", "\\\\")
-	return strings.ReplaceAll(value, "\"", "\\\"")
-}
-
-func wrapBase64(value string) string {
-	if len(value) <= 76 {
-		return value
-	}
-	lines := make([]string, 0, (len(value)/76)+1)
-	for len(value) > 76 {
-		lines = append(lines, value[:76])
-		value = value[76:]
-	}
-	if value != "" {
-		lines = append(lines, value)
-	}
-	return strings.Join(lines, "\r\n")
-}
-
 func sendSMTPMessage(client *smtp.Client, from string, to []string, body string) error {
 	if err := client.Mail(from); err != nil {
 		return err
@@ -543,4 +649,14 @@ func sendSMTPMessage(client *smtp.Client, from string, to []string, body string)
 		return err
 	}
 	return writer.Close()
+}
+
+// now is the current time in the target's timezone, which is what the Date
+// header carries.
+func (m *MailtoTarget) now() time.Time {
+	if m.location == nil {
+		return time.Now()
+	}
+
+	return time.Now().In(m.location)
 }

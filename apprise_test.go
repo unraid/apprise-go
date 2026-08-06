@@ -40,7 +40,8 @@ func TestAppriseSendJSONTargetWithAttachmentMatchesPython(t *testing.T) {
 	body := "hello"
 	title := "Greeting"
 
-	pythonRequests := testutil.CapturePythonRequestsWithAttachments(t, targetURL, body, title, []string{attachment})
+	pythonRequests := testutil.CapturePythonRequestsWithAttachments(
+		t, targetURL, body, title, notify.NotifyInfo, []string{attachment})
 	goRequests := testutil.CaptureGoRequests(t, func() error {
 		client := New()
 		if err := client.Add(targetURL); err != nil {

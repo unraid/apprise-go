@@ -50,5 +50,161 @@
         "url": "https://graph.microsoft.com/v1.0/users/sender@example.com/sendMail"
       }
     ]
+  },
+  {
+    "name": "savesent-off",
+    "requests": [
+      {
+        "body": "grant_type=client_credentials&client_id=client123&client_secret=secret123&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://login.microsoftonline.com/tenant123/oauth2/v2.0/token"
+      },
+      {
+        "body": "{\"message\": {\"subject\": \"t\", \"body\": {\"contentType\": \"HTML\", \"content\": \"hello\"}, \"from\": {\"emailAddress\": {\"address\": \"sender@example.com\", \"name\": \"Apprise\"}}, \"toRecipients\": [{\"emailAddress\": {\"address\": \"target@example.com\"}}]}, \"saveToSentItems\": \"false\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/sender@example.com/sendMail"
+      }
+    ]
+  },
+  {
+    "name": "reply-to",
+    "requests": [
+      {
+        "body": "grant_type=client_credentials&client_id=client123&client_secret=secret123&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://login.microsoftonline.com/tenant123/oauth2/v2.0/token"
+      },
+      {
+        "body": "{\"message\": {\"subject\": \"t\", \"body\": {\"contentType\": \"HTML\", \"content\": \"hello\"}, \"from\": {\"emailAddress\": {\"address\": \"sender@example.com\", \"name\": \"Apprise\"}}, \"replyTo\": [{\"emailAddress\": {\"address\": \"reply@example.com\"}}], \"toRecipients\": [{\"emailAddress\": {\"address\": \"target@example.com\"}}]}, \"saveToSentItems\": \"true\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/sender@example.com/sendMail"
+      }
+    ]
+  },
+  {
+    "name": "personal-mode-auto-detected",
+    "requests": [
+      {
+        "body": "grant_type=refresh_token&client_id=client123&refresh_token=refreshtoken123&scope=https%3A%2F%2Fgraph.microsoft.com%2FMail.Send+offline_access",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://login.microsoftonline.com/consumers/oauth2/v2.0/token"
+      },
+      {
+        "body": "{\"message\": {\"subject\": \"t\", \"body\": {\"contentType\": \"HTML\", \"content\": \"hello\"}, \"from\": {\"emailAddress\": {\"address\": \"sender@outlook.com\", \"name\": \"Apprise\"}}, \"toRecipients\": [{\"emailAddress\": {\"address\": \"target@example.com\"}}]}, \"saveToSentItems\": \"true\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/me/sendMail"
+      }
+    ]
+  },
+  {
+    "name": "personal-mode-explicit",
+    "requests": [
+      {
+        "body": "grant_type=refresh_token&client_id=client123&refresh_token=refreshtoken123&scope=https%3A%2F%2Fgraph.microsoft.com%2FMail.Send+offline_access",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://login.microsoftonline.com/consumers/oauth2/v2.0/token"
+      },
+      {
+        "body": "{\"message\": {\"subject\": \"t\", \"body\": {\"contentType\": \"HTML\", \"content\": \"hello\"}, \"from\": {\"emailAddress\": {\"address\": \"sender@example.com\", \"name\": \"Apprise\"}}, \"toRecipients\": [{\"emailAddress\": {\"address\": \"target@example.com\"}}]}, \"saveToSentItems\": \"true\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/me/sendMail"
+      }
+    ]
+  },
+  {
+    "name": "org-mode-explicit-on-consumer-domain",
+    "requests": [
+      {
+        "body": "grant_type=client_credentials&client_id=client123&client_secret=secret123&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://login.microsoftonline.com/tenant123/oauth2/v2.0/token"
+      },
+      {
+        "body": "{\"message\": {\"subject\": \"t\", \"body\": {\"contentType\": \"HTML\", \"content\": \"hello\"}, \"from\": {\"emailAddress\": {\"address\": \"sender@outlook.com\", \"name\": \"Apprise\"}}, \"toRecipients\": [{\"emailAddress\": {\"address\": \"target@example.com\"}}]}, \"saveToSentItems\": \"true\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/sender@outlook.com/sendMail"
+      }
+    ]
+  },
+  {
+    "name": "attachment-inline",
+    "requests": [
+      {
+        "body": "grant_type=client_credentials&client_id=client123&client_secret=secret123&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://login.microsoftonline.com/tenant123/oauth2/v2.0/token"
+      },
+      {
+        "body": "{\"message\": {\"subject\": \"title\", \"body\": {\"contentType\": \"HTML\", \"content\": \"body\"}, \"from\": {\"emailAddress\": {\"address\": \"sender@example.com\", \"name\": \"Apprise\"}}, \"attachments\": [{\"@odata.type\": \"#microsoft.graph.fileAttachment\", \"name\": \"pixel.png\", \"contentType\": \"attachment.mimetype\", \"contentBytes\": \"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\"}, {\"@odata.type\": \"#microsoft.graph.fileAttachment\", \"name\": \"notes.txt\", \"contentType\": \"attachment.mimetype\", \"contentBytes\": \"cGxhaW4gdGV4dCBhdHRhY2htZW50Cg==\"}], \"toRecipients\": [{\"emailAddress\": {\"address\": \"target@example.com\"}}]}, \"saveToSentItems\": \"true\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://graph.microsoft.com/v1.0/users/sender@example.com/sendMail"
+      }
+    ]
   }
 ]

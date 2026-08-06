@@ -3,7 +3,9 @@ package notify
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Sender interface {
@@ -39,6 +41,21 @@ func NewTarget(parsed *ParsedURL) (Sender, error) {
 	if !ok {
 		return nil, &UnsupportedSchemaError{Schema: parsed.Scheme}
 	}
+	if err := applyChoiceArgs(parsed); err != nil {
+		return nil, err
+	}
+	if err := applyIntArgs(parsed); err != nil {
+		return nil, err
+	}
+	if err := applyTokenFormats(parsed); err != nil {
+		return nil, err
+	}
+	if err := applyHostRequirements(parsed); err != nil {
+		return nil, err
+	}
+	if err := applyArgRules(parsed); err != nil {
+		return nil, err
+	}
 	return builder(parsed)
 }
 
@@ -61,7 +78,123 @@ func SendTargetURLWithAttachments(rawURL, body, title, inputFormat string, notif
 	if err != nil {
 		return err
 	}
-	return DispatchSend(target, sendBody, title, notifyType, attachments)
+	return DispatchSendWithInput(
+		target, parsed, sendBody, title, inputFormat, notifyType, attachments)
+}
+
+// DispatchSendWithOverflow applies the service's overflow rules before
+// sending, which is what upstream's base class does ahead of every send.
+//
+// A body longer than the service accepts becomes several notifications under
+// ?overflow=split, or a shortened one under ?overflow=truncate. The default is
+// upstream — leave the content alone — so a caller who has not asked for
+// either gets exactly what they always did.
+func DispatchSendWithOverflow(
+	target Sender,
+	parsed *ParsedURL,
+	body, title string,
+	notifyType NotifyType,
+	attachments []Attachment,
+) error {
+	return DispatchSendWithInput(target, parsed, body, title, "", notifyType, attachments)
+}
+
+// DispatchSendWithInput is DispatchSendWithOverflow with the format the caller
+// declared the body was in, which decides how a folded title is rendered.
+func DispatchSendWithInput(
+	target Sender,
+	parsed *ParsedURL,
+	body, title, inputFormat string,
+	notifyType NotifyType,
+	attachments []Attachment,
+) error {
+	mode := ""
+	format := ""
+	emojis := false
+	if parsed != nil {
+		mode = parsed.Query["overflow"]
+		format = parsed.Query["format"]
+		emojis = parseBoolWithDefault(parsed.Query["emojis"], false)
+	}
+
+	// Codes are swapped before anything is measured, so a body that only
+	// overflows once its emoji are expanded splits the same way upstream's
+	// does.
+	if emojis {
+		body = ApplyEmojis(body)
+		title = ApplyEmojis(title)
+	}
+
+	// The transport settings for this send: how long to wait for a
+	// connection and for a reply, and whether to follow redirects.
+	options := defaultHTTPOptions()
+	if parsed != nil {
+		if seconds, err := strconv.ParseFloat(strings.TrimSpace(parsed.Query["cto"]), 64); err == nil && seconds > 0 {
+			options.connectTimeout = time.Duration(seconds * float64(time.Second))
+		}
+		if seconds, err := strconv.ParseFloat(strings.TrimSpace(parsed.Query["rto"]), 64); err == nil && seconds > 0 {
+			options.readTimeout = time.Duration(seconds * float64(time.Second))
+		}
+		options.followRedirect = parseBoolWithDefault(parsed.Query["redirect"], true)
+	}
+	defer withHTTPOptions(options)()
+
+	optional := false
+	if parsed != nil {
+		optional = parseBoolWithDefault(parsed.Query["optional"], false)
+	}
+
+	// ?retry= re-sends after a failure and ?wait= is how long to pause first.
+	// Both live in the orchestration layer upstream too, not in a plugin.
+	retries := 0
+	wait := time.Duration(0)
+	if parsed != nil {
+		if value, err := strconv.Atoi(strings.TrimSpace(parsed.Query["retry"])); err == nil && value > 0 {
+			retries = value
+		}
+		if seconds, err := strconv.ParseFloat(strings.TrimSpace(parsed.Query["wait"]), 64); err == nil && seconds > 0 {
+			wait = time.Duration(seconds * float64(time.Second))
+		}
+	}
+
+	parts := ApplyOverflowForURLWithInput(parsed, mode, format, inputFormat, title, body)
+
+	// A split message is still one notification. Upstream sends every part and
+	// reports failure at the end, so abandoning the rest after one part is
+	// rejected delivers a truncated message and reports the same failure a
+	// complete send would have -- the reader gets half a sentence and nothing
+	// says why.
+	var outcome sendOutcome
+	for index, part := range parts {
+		// Attachments ride with the first part only; upstream does not repeat
+		// them across a split.
+		carried := attachments
+		if index > 0 {
+			carried = nil
+		}
+
+		var err error
+		for attempt := 0; attempt <= retries; attempt++ {
+			if attempt > 0 && wait > 0 {
+				time.Sleep(wait)
+			}
+
+			err = DispatchSend(target, part.Body, part.Title, notifyType, carried)
+			if err == nil {
+				break
+			}
+		}
+		if err != nil && optional {
+			// ?optional=yes absorbs a failure once every attempt has been
+			// made, so a service the caller does not depend on cannot fail
+			// the notification. It does not skip retries — upstream runs
+			// them all and only reinterprets the final result.
+			continue
+		}
+		outcome.record(err)
+	}
+
+	return outcome.err()
 }
 
 func DispatchSend(target Sender, body, title string, notifyType NotifyType, attachments []Attachment) error {
@@ -235,6 +368,13 @@ var targetBuilders = map[string]buildTargetFunc{
 	"elks": func(parsed *ParsedURL) (Sender, error) {
 		return NewFortySixElksTarget(parsed)
 	},
+	// Jellyfin kept Emby's endpoints, so it shares the target.
+	"jellyfin": func(parsed *ParsedURL) (Sender, error) {
+		return NewEmbyTarget(parsed)
+	},
+	"jellyfins": func(parsed *ParsedURL) (Sender, error) {
+		return NewEmbyTarget(parsed)
+	},
 	"emby": func(parsed *ParsedURL) (Sender, error) {
 		return NewEmbyTarget(parsed)
 	},
@@ -385,9 +525,6 @@ var targetBuilders = map[string]buildTargetFunc{
 	"msgbird": func(parsed *ParsedURL) (Sender, error) {
 		return NewMessageBirdTarget(parsed)
 	},
-	"msteams": func(parsed *ParsedURL) (Sender, error) {
-		return NewMSTeamsTarget(parsed)
-	},
 	"napi": func(parsed *ParsedURL) (Sender, error) {
 		return NewNotificationAPITarget(parsed)
 	},
@@ -418,6 +555,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"notificationapi": func(parsed *ParsedURL) (Sender, error) {
 		return NewNotificationAPITarget(parsed)
 	},
+	"notificos": func(parsed *ParsedURL) (Sender, error) {
+		return NewNotificoTarget(parsed)
+	},
 	"notifico": func(parsed *ParsedURL) (Sender, error) {
 		return NewNotificoTarget(parsed)
 	},
@@ -435,6 +575,42 @@ var targetBuilders = map[string]buildTargetFunc{
 	},
 	"opsgenie": func(parsed *ParsedURL) (Sender, error) {
 		return NewOpsgenieTarget(parsed)
+	},
+	"wechat": func(parsed *ParsedURL) (Sender, error) {
+		return NewWeChatTarget(parsed)
+	},
+	"ringc": func(parsed *ParsedURL) (Sender, error) {
+		return NewRingCentralTarget(parsed)
+	},
+	"session": func(parsed *ParsedURL) (Sender, error) {
+		return NewSOGSTarget(parsed)
+	},
+	"sessions": func(parsed *ParsedURL) (Sender, error) {
+		return NewSOGSTarget(parsed)
+	},
+	"sogs": func(parsed *ParsedURL) (Sender, error) {
+		return NewSOGSTarget(parsed)
+	},
+	"fluxer": func(parsed *ParsedURL) (Sender, error) {
+		return NewFluxerTarget(parsed)
+	},
+	"fluxers": func(parsed *ParsedURL) (Sender, error) {
+		return NewFluxerTarget(parsed)
+	},
+	"irc": func(parsed *ParsedURL) (Sender, error) {
+		return NewIRCTarget(parsed)
+	},
+	"ircs": func(parsed *ParsedURL) (Sender, error) {
+		return NewIRCTarget(parsed)
+	},
+	"xmpp": func(parsed *ParsedURL) (Sender, error) {
+		return NewXMPPTarget(parsed)
+	},
+	"xmpps": func(parsed *ParsedURL) (Sender, error) {
+		return NewXMPPTarget(parsed)
+	},
+	"jira": func(parsed *ParsedURL) (Sender, error) {
+		return NewJiraTarget(parsed)
 	},
 	"pagerduty": func(parsed *ParsedURL) (Sender, error) {
 		return NewPagerDutyTarget(parsed)
@@ -459,9 +635,6 @@ var targetBuilders = map[string]buildTargetFunc{
 	},
 	"plivo": func(parsed *ParsedURL) (Sender, error) {
 		return NewPlivoTarget(parsed)
-	},
-	"popcorn": func(parsed *ParsedURL) (Sender, error) {
-		return NewPopcornTarget(parsed)
 	},
 	"pover": func(parsed *ParsedURL) (Sender, error) {
 		return NewPushoverTarget(parsed)
@@ -489,6 +662,10 @@ var targetBuilders = map[string]buildTargetFunc{
 	},
 	"pushme": func(parsed *ParsedURL) (Sender, error) {
 		return NewPushMeTarget(parsed)
+	},
+	// wecom:// is a pushplus alias that pins the channel to WeCom.
+	"wecom": func(parsed *ParsedURL) (Sender, error) {
+		return NewPushplusTarget(parsed)
 	},
 	"pushplus": func(parsed *ParsedURL) (Sender, error) {
 		return NewPushplusTarget(parsed)
@@ -552,6 +729,69 @@ var targetBuilders = map[string]buildTargetFunc{
 	},
 	"sinch": func(parsed *ParsedURL) (Sender, error) {
 		return NewSinchTarget(parsed)
+	},
+	"evolution": func(parsed *ParsedURL) (Sender, error) {
+		return NewEvolutionTarget(parsed)
+	},
+	"evolutions": func(parsed *ParsedURL) (Sender, error) {
+		return NewEvolutionTarget(parsed)
+	},
+	"serwersms": func(parsed *ParsedURL) (Sender, error) {
+		return NewSerwerSMSTarget(parsed)
+	},
+	"octopush": func(parsed *ParsedURL) (Sender, error) {
+		return NewOctopushTarget(parsed)
+	},
+	"eight00com": func(parsed *ParsedURL) (Sender, error) {
+		return NewEight00comTarget(parsed)
+	},
+	"exotel": func(parsed *ParsedURL) (Sender, error) {
+		return NewExotelTarget(parsed)
+	},
+	"smsc": func(parsed *ParsedURL) (Sender, error) {
+		return NewSMSCTarget(parsed)
+	},
+	"notifyre": func(parsed *ParsedURL) (Sender, error) {
+		return NewNotifyreTarget(parsed)
+	},
+	"mailersend": func(parsed *ParsedURL) (Sender, error) {
+		return NewMailerSendTarget(parsed)
+	},
+	"postmark": func(parsed *ParsedURL) (Sender, error) {
+		return NewPostmarkTarget(parsed)
+	},
+	"humhub": func(parsed *ParsedURL) (Sender, error) {
+		return NewHumHubTarget(parsed)
+	},
+	"humhubs": func(parsed *ParsedURL) (Sender, error) {
+		return NewHumHubTarget(parsed)
+	},
+	"pushward": func(parsed *ParsedURL) (Sender, error) {
+		return NewPushWardTarget(parsed)
+	},
+	"groupme": func(parsed *ParsedURL) (Sender, error) {
+		return NewGroupMeTarget(parsed)
+	},
+	"zoom": func(parsed *ParsedURL) (Sender, error) {
+		return NewZoomTarget(parsed)
+	},
+	"viber": func(parsed *ParsedURL) (Sender, error) {
+		return NewViberTarget(parsed)
+	},
+	"chime": func(parsed *ParsedURL) (Sender, error) {
+		return NewChimeTarget(parsed)
+	},
+	"flowtriq": func(parsed *ParsedURL) (Sender, error) {
+		return NewFlowtriqTarget(parsed)
+	},
+	"flowtriqs": func(parsed *ParsedURL) (Sender, error) {
+		return NewFlowtriqTarget(parsed)
+	},
+	"kook": func(parsed *ParsedURL) (Sender, error) {
+		return NewKookTarget(parsed)
+	},
+	"stackfield": func(parsed *ParsedURL) (Sender, error) {
+		return NewStackfieldTarget(parsed)
 	},
 	"slack": func(parsed *ParsedURL) (Sender, error) {
 		return NewSlackTarget(parsed)

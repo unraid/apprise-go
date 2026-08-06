@@ -8,7 +8,7 @@
           "accept": "*/*",
           "authorization": "Basic YXBwaWQ6YXBwc2VjcmV0",
           "content-type": "application/x-www-form-urlencoded",
-          "user-agent": "Apprise v1.9.7"
+          "user-agent": "Apprise v1.12.0"
         },
         "method": "POST",
         "url": "https://www.reddit.com/api/v1/access_token"
@@ -19,10 +19,26 @@
           "accept": "*/*",
           "authorization": "Bearer token",
           "content-type": "application/x-www-form-urlencoded",
-          "user-agent": "Apprise v1.9.7"
+          "user-agent": "Apprise v1.12.0"
         },
         "method": "POST",
         "url": "https://oauth.reddit.com/api/submit"
+      }
+    ]
+  },
+  {
+    "name": "body-format-html",
+    "requests": [
+      {
+        "body": "grant_type=password&username=user&password=pass",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic YXBwaWQ6YXBwc2VjcmV0",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise v1.12.0"
+        },
+        "method": "POST",
+        "url": "https://www.reddit.com/api/v1/access_token"
       }
     ]
   }

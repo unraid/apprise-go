@@ -25,7 +25,7 @@ func init() {
 					"type":     "list:string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -49,6 +49,32 @@ func init() {
 					"type":     "choice:string",
 					"values":   []string{"html", "markdown", "text"},
 				},
+				"mode": map[string]any{
+					"default":  "org",
+					"map_to":   "mode",
+					"name":     "Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"org", "personal"},
+				},
+				"reply_to": map[string]any{
+					"delim":    []string{",", " "},
+					"group":    []any{},
+					"map_to":   "reply_to",
+					"name":     "Reply To",
+					"private":  false,
+					"required": false,
+					"type":     "list:string",
+				},
+				"savesent": map[string]any{
+					"default":  true,
+					"map_to":   "savesent",
+					"name":     "Save to Sent Items",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
 				"oauth_id": map[string]any{
 					"alias_of": "client_id",
 				},
@@ -65,7 +91,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -102,7 +128,7 @@ func init() {
 				},
 			},
 			"kwargs":    map[string]any{},
-			"templates": []string{"{schema}://{source}/{tenant}/{client_id}/{secret}", "{schema}://{source}/{tenant}/{client_id}/{secret}/{targets}"},
+			"templates": []string{"{schema}://{source}/{tenant}/{client_id}/{secret}", "{schema}://{source}/{tenant}/{client_id}/{secret}/{targets}", "{schema}://{source}/{client_id}/{secret}", "{schema}://{source}/{client_id}/{secret}/{targets}"},
 			"tokens": map[string]any{
 				"client_id": map[string]any{
 					"map_to":   "client_id",

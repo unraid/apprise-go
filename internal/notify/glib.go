@@ -7,7 +7,7 @@ func init() {
 		"details": map[string]any{
 			"args": map[string]any{
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -52,7 +52,7 @@ func init() {
 					"alias_of": "urgency",
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -130,7 +130,7 @@ func init() {
 			"packages_required":    []any{},
 		},
 		"secure_protocols": nil,
-		"service_name":     "DBus Notification",
+		"service_name":     "GLib Notification",
 		"service_url":      "https://lazka.github.io/pgi-docs/Gio-2.0/classes/DBusProxy.html",
 		"setup_url":        "https://appriseit.com/services/dbus/",
 	})

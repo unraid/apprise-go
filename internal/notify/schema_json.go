@@ -49,7 +49,7 @@ func init() {
 					"private":  false,
 					"required": false,
 					"type":     "choice:string",
-					"values":   []string{"POST", "GET", "DELETE", "PUT", "HEAD", "PATCH"},
+					"values":   []string{"POST", "GET", "DELETE", "PUT", "HEAD", "PATCH", "UPDATE", "OPTIONS"},
 				},
 				"overflow": map[string]any{
 					"default":  "upstream",

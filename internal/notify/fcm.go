@@ -24,9 +24,17 @@ type FCMTarget struct {
 }
 
 func NewFCMTarget(target *ParsedURL) (*FCMTarget, error) {
+	// Upstream reads the api key from the host and nowhere else, so a host of
+	// only whitespace is an invalid key rather than a missing one to be
+	// filled in from the user field.
 	apiKey := strings.TrimSpace(target.Host)
-	if apiKey == "" {
+	if target.Host == "" {
 		apiKey = strings.TrimSpace(target.User)
+	}
+	// ?apikey= overrides whatever the host supplied, and is a complete
+	// credential on its own -- fcm://?apikey=...&to=... carries no host at all.
+	if override := strings.TrimSpace(target.Query["apikey"]); override != "" {
+		apiKey = override
 	}
 	project := strings.TrimSpace(target.Query["project"])
 	if project == "" {
@@ -70,10 +78,6 @@ func NewFCMTarget(target *ParsedURL) (*FCMTarget, error) {
 	if toValue := strings.TrimSpace(target.Query["to"]); toValue != "" {
 		targets = append(targets, parseDelimitedList(toValue)...)
 	}
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
 	color := ""
 	hasColor := false
 	if raw, ok := target.Query["color"]; ok {
@@ -105,6 +109,11 @@ func NewFCMTarget(target *ParsedURL) (*FCMTarget, error) {
 		data[key] = value
 	}
 
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &FCMTarget{
 		apiKey:       apiKey,
 		project:      project,
@@ -140,6 +149,8 @@ func (f *FCMTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 }
 
 func (f *FCMTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(f.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -153,11 +164,9 @@ func (f *FCMTarget) Send(body, title string, notifyType NotifyType) error {
 			if err != nil {
 				return err
 			}
-			if err := SendRequest(spec); err != nil {
-				return err
-			}
+			outcome.record(SendRequest(spec))
 		}
-		return nil
+		return outcome.err()
 	}
 
 	for _, recipient := range f.targets {
@@ -165,12 +174,10 @@ func (f *FCMTarget) Send(body, title string, notifyType NotifyType) error {
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (f *FCMTarget) buildSpec(body, title string, notifyType NotifyType, recipient string) (RequestSpec, error) {
@@ -328,7 +335,7 @@ func init() {
 					"type":     "string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -394,7 +401,7 @@ func init() {
 					"values":   []string{"min", "low", "normal", "high", "max"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

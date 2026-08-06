@@ -62,5 +62,145 @@
         "url": "https://mastodon.local/api/v1/statuses"
       }
     ]
+  },
+  {
+    "name": "ping-mentions-and-hashtags",
+    "requests": [
+      {
+        "body": "{\"status\": \"t\\r\\nhello #apprise @alice\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "ping-deduped-against-body",
+    "requests": [
+      {
+        "body": "{\"status\": \"hey @alice how are you\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "path-hashtag-target",
+    "requests": [
+      {
+        "body": "{\"status\": \"t\\r\\nhello #apprise\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "path-user-target-not-direct",
+    "requests": [
+      {
+        "body": "{\"status\": \"t\\r\\nhello @alice\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "markdown-scans-body",
+    "requests": [
+      {
+        "body": "{\"status\": \"hello @bob and #tagged @bob #tagged #apprise\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "numeric-hashtag-rejected",
+    "requests": [
+      {
+        "body": "{\"status\": \"t\\r\\nhello #real\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "attachment-image",
+    "requests": [
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"description\"\r\n\r\npixel.png\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"file\"; filename=\"pixel.png\"\r\nContent-Type: application/octet-stream\r\n\r\n\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "body_b64": "LS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJkZXNjcmlwdGlvbiINCg0KcGl4ZWwucG5nDQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZDQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9ImZpbGUiOyBmaWxlbmFtZT0icGl4ZWwucG5nIg0KQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi9vY3RldC1zdHJlYW0NCg0KiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWS0tDQo=",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/media"
+      },
+      {
+        "body": "{\"status\": \"title\\r\\nbody\", \"sensitive\": false, \"media_ids\": [\"110001\"]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
+  },
+  {
+    "name": "attachment-unsupported-type",
+    "requests": [
+      {
+        "body": "{\"status\": \"title\\r\\nbody\", \"sensitive\": false}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://mastodon.local/api/v1/statuses"
+      }
+    ]
   }
 ]

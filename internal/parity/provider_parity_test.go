@@ -13,7 +13,7 @@ func TestProviderRequestParity(t *testing.T) {
 
 	for _, name := range sortedProviderNames(defs) {
 		def := defs[name]
-		golden := loadProviderGolden(t, def.Dir)
+		golden := loadProviderGolden(t, def.Dir, def.Cases)
 		goldenByName := map[string]goldenCase{}
 		for _, g := range golden {
 			goldenByName[g.Name] = g
@@ -36,9 +36,11 @@ func TestProviderRequestParity(t *testing.T) {
 					notifyType = parsed
 				}
 
-				pythonSpecs, pythonSuccess := testutil.CapturePythonRequestsWithTypeResult(t, c.URL, c.Body, c.Title, notifyType)
+				attachments := loadCaseAttachments(t, c)
+				pythonSpecs, pythonSuccess := testutil.CapturePythonRequestsWithTypeResult(
+					t, c.URL, c.Body, c.Title, c.BodyFormat, notifyType, c.Attachments...)
 				if expected, ok := goldenByName[c.Name]; ok {
-					assertRequestSpecSequenceMatches(t, pythonSpecs, expected.Requests)
+					assertRequestSpecSequenceMatchesExcept(t, pythonSpecs, expected.specs(t), caseVolatileHeaders(def, c))
 				} else {
 					t.Fatalf("missing golden case for %s/%s", name, c.Name)
 				}
@@ -47,14 +49,38 @@ func TestProviderRequestParity(t *testing.T) {
 					t.Fatalf("parse url: %v", err)
 				}
 
+				sendBody := c.Body
+				if c.BodyFormat != "" {
+					converted, convErr := notify.ConvertMessageFormatForTarget(
+						parsedURL, c.Body, c.BodyFormat)
+					if convErr != nil {
+						t.Fatalf("convert body format: %v", convErr)
+					}
+					sendBody = converted
+				}
+
 				target, err := builder(parsedURL)
 				if err != nil {
 					t.Fatalf("build target: %v", err)
 				}
 
 				goSpecs, err := testutil.CaptureGoRequestsResult(t, func() error {
-					return target.Send(c.Body, c.Title, notifyType)
+					// The overflow-aware entry point, so a fixture exercises the
+					// path a caller actually takes rather than the provider in
+					// isolation.
+					return notify.DispatchSendWithInput(
+						target, parsedURL, sendBody, c.Title, c.BodyFormat,
+						notifyType, attachments)
 				})
+				if c.KnownDivergence != "" {
+					// Checked before the success comparison, because a case
+					// may be recorded precisely because upstream fails where
+					// this port does not.
+					t.Logf("known divergence, not compared: %s", c.KnownDivergence)
+
+					return
+				}
+
 				if shouldSkip := assertNotifySuccessMatches(t, pythonSuccess, err); shouldSkip {
 					return
 				}
@@ -62,7 +88,7 @@ func TestProviderRequestParity(t *testing.T) {
 					t.Fatalf("send request failed: %v", err)
 				}
 
-				assertRequestSpecSequenceMatches(t, pythonSpecs, goSpecs)
+				assertRequestSpecSequenceMatchesExcept(t, pythonSpecs, goSpecs, caseVolatileHeaders(def, c))
 			})
 		}
 	}

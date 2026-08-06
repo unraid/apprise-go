@@ -13,11 +13,12 @@ import (
 const awsContentType = "application/x-www-form-urlencoded; charset=utf-8"
 
 type awsSigV4 struct {
-	accessKey string
-	secretKey string
-	region    string
-	service   string
-	host      string
+	accessKey    string
+	secretKey    string
+	sessionToken string
+	region       string
+	service      string
+	host         string
 }
 
 func (a awsSigV4) headers(payload string, now time.Time) map[string]string {
@@ -29,6 +30,11 @@ func (a awsSigV4) headers(payload string, now time.Time) map[string]string {
 		{key: "content-type", value: awsContentType},
 		{key: "host", value: a.host},
 		{key: "x-amz-date", value: amzDate},
+	}
+	// x-amz-security-token sorts after x-amz-date, so appending keeps the
+	// canonical header list ordered.
+	if a.sessionToken != "" {
+		signedHeaders = append(signedHeaders, headerPair{key: "x-amz-security-token", value: a.sessionToken})
 	}
 
 	var canonicalHeaders strings.Builder
@@ -64,13 +70,18 @@ func (a awsSigV4) headers(payload string, now time.Time) map[string]string {
 		signature,
 	)
 
-	return map[string]string{
+	headers := map[string]string{
 		"User-Agent":     "Apprise",
 		"Content-Type":   awsContentType,
 		"Content-Length": strconv.Itoa(len(payload)),
 		"X-Amz-Date":     amzDate,
 		"Authorization":  authorization,
 	}
+	if a.sessionToken != "" {
+		headers["X-Amz-Security-Token"] = a.sessionToken
+	}
+
+	return headers
 }
 
 func awsSignature(secret, date, region, service, payload string) string {

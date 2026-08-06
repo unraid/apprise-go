@@ -81,21 +81,49 @@ func init() {
 					"type":     "choice:string",
 					"values":   []string{"split", "truncate", "upstream"},
 				},
-				"pgp": map[string]any{
+				"inline": map[string]any{
 					"default":  false,
-					"map_to":   "use_pgp",
-					"name":     "PGP Encryption",
+					"map_to":   "inline",
+					"name":     "Inline Attachments",
 					"private":  false,
 					"required": false,
 					"type":     "bool",
 				},
+				"pgp": map[string]any{
+					"default":  "no",
+					"map_to":   "pgp_mode",
+					"name":     "PGP Security Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"no", "sign", "encrypt"},
+				},
 				"pgpkey": map[string]any{
+					"alias_of": "pgppub",
+				},
+				"pgpprv": map[string]any{
+					"default":  "",
+					"map_to":   "pgp_privkey",
+					"name":     "PGP Private Key Path",
+					"private":  true,
+					"required": false,
+					"type":     "string",
+				},
+				"pgppub": map[string]any{
 					"default":  "",
 					"map_to":   "pgp_key",
 					"name":     "PGP Public Key Path",
 					"private":  true,
 					"required": false,
 					"type":     "string",
+				},
+				"wkd": map[string]any{
+					"default":  false,
+					"map_to":   "use_wkd",
+					"name":     "Web Key Directory",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
 				},
 				"reply": map[string]any{
 					"delim":    []string{",", " "},
@@ -107,7 +135,7 @@ func init() {
 					"type":     "list:string",
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -163,7 +191,8 @@ func init() {
 					"type":     "string",
 				},
 			},
-			"templates": []string{"{schema}://{host}", "{schema}://{host}:{port}", "{schema}://{host}/{targets}", "{schema}://{host}:{port}/{targets}", "{schema}://{user}@{host}", "{schema}://{user}@{host}:{port}", "{schema}://{user}@{host}/{targets}", "{schema}://{user}@{host}:{port}/{targets}", "{schema}://{user}:{password}@{host}", "{schema}://{user}:{password}@{host}:{port}", "{schema}://{user}:{password}@{host}/{targets}", "{schema}://{user}:{password}@{host}:{port}/{targets}"},
+			// The {user}@{host}/{targets} entry really is listed twice upstream.
+			"templates": []string{"{schema}://{host}", "{schema}://{host}:{port}", "{schema}://{host}:{port}/{targets}", "{schema}://{host}/{targets}", "{schema}://{user}@{host}", "{schema}://{user}@{host}/{targets}", "{schema}://{user}@{host}:{port}", "{schema}://{user}@{host}/{targets}", "{schema}://{user}@{host}:{port}/{targets}", "{schema}://{user}:{password}@{host}", "{schema}://{user}:{password}@{host}/{targets}", "{schema}://{user}:{password}@{host}:{port}", "{schema}://{user}:{password}@{host}:{port}/{targets}"},
 			"tokens": map[string]any{
 				"host": map[string]any{
 					"map_to":   "host",

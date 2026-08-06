@@ -3,7 +3,147 @@
     "name": "webhook_basic",
     "requests": [
       {
-        "body": "{\"username\": \"Apprise\", \"mrkdwn\": true, \"attachments\": [{\"title\": \"apprise parity\", \"text\": \"hello from python\", \"color\": \"#3AA3E3\"}]}",
+        "body": "{\"mrkdwn\": true, \"attachments\": [{\"title\": \"apprise parity\", \"text\": \"hello from python\", \"color\": \"#3AA3E3\"}]}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/T1JJ3T3L2/A1BRTD4JD/TIAJKDNL0AZKC0XRIDEVI7"
+      }
+    ]
+  },
+  {
+    "name": "workflow-mode",
+    "requests": [
+      {
+        "body": "{\"text\": \"the title: body\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.slack.com/workflows/T111/F222/X333/Y444"
+      }
+    ]
+  },
+  {
+    "name": "trigger-mode",
+    "requests": [
+      {
+        "body": "{\"text\": \"the title: body\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.slack.com/triggers/T111/X333/Y444"
+      }
+    ]
+  },
+  {
+    "name": "workflow-no-title",
+    "requests": [
+      {
+        "body": "{\"text\": \"body only\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.slack.com/workflows/T111/F222/X333/Y444"
+      }
+    ]
+  },
+  {
+    "name": "workflow-template",
+    "requests": [
+      {
+        "body": "{\"text\": \"the title / body\", \"blocks\": [{\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"body\"}}, {\"type\": \"context\", \"elements\": [{\"type\": \"mrkdwn\", \"text\": \"success hi\"}]}]}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.slack.com/workflows/T111/F222/X333/Y444"
+      }
+    ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "{\"mrkdwn\": true, \"attachments\": [{\"title\": \"title\", \"text\": \"body\", \"color\": \"#3AA3E3\", \"footer_icon\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-72x72.png\", \"footer\": \"Apprise\", \"ts\": 1704067200.0}], \"icon_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-72x72.png\", \"channel\": \"#general\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer xoxb-token",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage"
+      },
+      {
+        "body": "{}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer xoxb-token",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "GET",
+        "url": "https://slack.com/api/files.getUploadURLExternal?filename=pixel.png&length=70"
+      },
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"file\"; filename=\"pixel.png\"\r\n\r\n\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "body_b64": "LS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJmaWxlIjsgZmlsZW5hbWU9InBpeGVsLnBuZyINCg0KiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWS0tDQo=",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer xoxb-token",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://files.slack.com/upload/v1/ABC123"
+      },
+      {
+        "body": "{\"files\": [{\"id\": \"F123ABC456\", \"title\": \"pixel.png\"}], \"channel_id\": \"C123456\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer xoxb-token",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://slack.com/api/files.completeUploadExternal"
+      }
+    ]
+  },
+  {
+    "name": "overflow-split-html",
+    "requests": [
+      {
+        "body": "{\"mrkdwn\": false, \"attachments\": [{\"title\": \"over\", \"text\": \"<b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>.\", \"color\": \"#3AA3E3\"}]}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/T1JJ3T3L2/A1BRTD4JD/TIAJKDNL0AZKC0XRIDEVI7"
+      }
+    ]
+  },
+  {
+    "name": "override-html-input",
+    "requests": [
+      {
+        "body": "{\"mrkdwn\": true, \"attachments\": [{\"title\": \"over\", \"text\": \"*bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`. *bold* and <https://example.com|link> plus `code`.\", \"color\": \"#3AA3E3\"}]}",
         "headers": {
           "accept": "application/json",
           "content-type": "application/json; charset=utf-8",

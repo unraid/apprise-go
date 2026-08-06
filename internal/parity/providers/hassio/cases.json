@@ -10,5 +10,59 @@
     "url": "hassios://user:pass@homeassistant.local/token456?nid=apprise_id",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "service-target",
+    "url": "hassio://homeassistant.local/eyjhbgcioi.eyjpc3mioi.abc123/mobile_app_pixel_8",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "service-target-explicit-domain",
+    "url": "hassio://homeassistant.local/eyjhbgcioi.eyjpc3mioi.abc123/notify.mobile_app_pixel_8",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "service-target-subjects",
+    "url": "hassio://homeassistant.local/eyjhbgcioi.eyjpc3mioi.abc123/notify_group:alice,bob",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "service-target-subjects-batched",
+    "url": "hassio://homeassistant.local/eyjhbgcioi.eyjpc3mioi.abc123/notify_group:alice,bob?batch=yes",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "service-targets-multiple",
+    "url": "hassio://homeassistant.local/eyjhbgcioi.eyjpc3mioi.abc123/notify.phone1/media_player.living_room",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "service-target-prefix",
+    "url": "hassio://homeassistant.local/eyjhbgcioi.eyjpc3mioi.abc123/mobile_app_pixel_8?prefix=/ha",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "query-token-with-target",
+    "url": "hassio://homeassistant.local/mobile_app_pixel_8?token=eyjhbgcioi.eyjpc3mioi.abc123",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "to-target",
+    "url": "hassio://homeassistant.local/eyjhbgcioi.eyjpc3mioi.abc123?to=notify.mobile_app_pixel_8",
+    "body": "hello from python",
+    "title": "apprise parity"
+  },
+  {
+    "name": "secure-service-target",
+    "url": "hassios://my.secure.server/eyjhbgcioi.eyjpc3mioi.abc123/notify.mobile_app_myphone",
+    "body": "hello from python",
+    "title": "apprise parity"
   }
 ]

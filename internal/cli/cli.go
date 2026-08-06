@@ -272,12 +272,6 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
-	attachments, err := notify.ParseAttachments(opts.attachments)
-	if err != nil {
-		fmt.Fprintf(stderr, "attachment error: %s\n", err)
-		return 2
-	}
-
 	// TODO: Wire these options into CLI behavior once the runtime supports them.
 	_ = opts.disableAsync
 	_ = opts.pluginPaths
@@ -288,10 +282,24 @@ func Run(args []string, stdout, stderr io.Writer) int {
 	_ = opts.verbose
 	_ = opts.interpretEscapes
 	_ = opts.interpretEmojis
-	_ = opts.storageMode
-	_ = opts.storagePath
 	_ = opts.storagePruneDays
-	_ = opts.storageUIDLength
+
+	// storage-mode memory keeps everything in process, which is also what an
+	// empty path means; anything else persists under the storage path.
+	storagePath := opts.storagePath
+	if strings.EqualFold(strings.TrimSpace(opts.storageMode), "memory") {
+		storagePath = ""
+	}
+	notify.ConfigureStorage(storagePath, opts.storageUIDLength, nil)
+
+	// Read every attachment before anything is sent, so a missing file fails
+	// the run rather than reaching some targets and not others.
+	attachments, err := notify.ParseAttachments(opts.attachments)
+	if err != nil {
+		fmt.Fprintf(stderr, "attachment error: %s\n", err)
+
+		return 2
+	}
 
 	failed := false
 	for _, entry := range tagged {
@@ -320,8 +328,8 @@ func Run(args []string, stdout, stderr io.Writer) int {
 			continue
 		}
 
-		err = notify.DispatchSend(target, sendBody, title, nt, attachments)
-		if err != nil {
+		if err := notify.DispatchSendWithOverflow(
+			target, parsed, sendBody, title, nt, attachments); err != nil {
 			fmt.Fprintf(stderr, "%s notify error: %s\n", notify.TargetSchemaName(parsed.Scheme), err)
 			failed = true
 		}

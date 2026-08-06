@@ -2,6 +2,7 @@ package notify
 
 import (
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -25,6 +26,28 @@ func parseDelimitedList(raw string) []string {
 	}
 
 	return values
+}
+
+// sortedUniqueTargets applies the deduplication and sorting upstream's
+// parse_list performs, so the order a provider sends its targets in follows
+// from the set rather than from how the URL happened to be written.
+func sortedUniqueTargets(entries []string) []string {
+	unique := map[string]struct{}{}
+	for _, entry := range entries {
+		trimmed := strings.TrimSpace(entry)
+		if trimmed == "" {
+			continue
+		}
+		unique[trimmed] = struct{}{}
+	}
+
+	normalized := make([]string, 0, len(unique))
+	for entry := range unique {
+		normalized = append(normalized, entry)
+	}
+	sort.Strings(normalized)
+
+	return normalized
 }
 
 func normalizePhone(raw string) (string, bool) {

@@ -60,4 +60,6 @@ func isIgnoredSchema(schema string) bool {
 
 // Non-HTTP providers are excluded from schema coverage for the initial release.
 // Keep in sync with PROCESS.md.
-var ignoredSchemas = map[string]struct{}{}
+// ignoredSchemas defers to the port's own declaration of what it does
+// not implement, so the reasoning lives in one place.
+var ignoredSchemas = notify.UnsupportedSchemas

@@ -78,6 +78,8 @@ func (c *ClickSendTarget) BuildRequest(body, title string, notifyType NotifyType
 }
 
 func (c *ClickSendTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(c.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -97,14 +99,12 @@ func (c *ClickSendTarget) Send(body, title string, notifyType NotifyType) error 
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (c *ClickSendTarget) buildRequest(targets []string, message string) (RequestSpec, error) {
@@ -161,7 +161,7 @@ func init() {
 					"type":     "bool",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -198,7 +198,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

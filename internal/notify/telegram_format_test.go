@@ -189,13 +189,20 @@ func TestTelegramTextFormatUsesHTMLParseMode(t *testing.T) {
 	assertTelegramFormatParity(t, "tgram://123456:abcdef/7890/?format=text", "<b>plain</b>", "Title", "text")
 }
 
-func TestTelegramRejectsInvalidFormat(t *testing.T) {
+// TestTelegramUnknownFormatFallsBack pins upstream's behavior for a ?format=
+// value that is not one of the three it knows.
+//
+// This test previously asserted the opposite -- that the URL was rejected --
+// which is not what upstream does. Its base class maps the values it
+// recognizes and leaves notify_format at the plugin default for anything else,
+// so a typo changes the rendering and never fails the send.
+func TestTelegramUnknownFormatFallsBack(t *testing.T) {
 	parsed, err := notify.ParseURL("tgram://123456:abcdef/7890/?format=bad")
 	if err != nil {
 		t.Fatalf("parse url: %v", err)
 	}
-	if _, err := notify.NewTelegramTarget(parsed); err == nil {
-		t.Fatalf("expected invalid format error")
+	if _, err := notify.NewTelegramTarget(parsed); err != nil {
+		t.Fatalf("unknown format should fall back to the default, got: %v", err)
 	}
 }
 

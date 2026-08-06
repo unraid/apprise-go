@@ -30,5 +30,54 @@
         "url": "https://api.eu.mailgun.net/v3/domain.com/messages"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"o:skip-verification\"\r\n\r\nFalse\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"from\"\r\n\r\nApprise <sender@example.com>\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"subject\"\r\n\r\ntitle\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"html\"\r\n\r\nbody\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"to\"\r\n\r\nuser@example.com\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"attachment[0]\"; filename=\"report.pdf\"\r\n\r\nPDFDATA\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic YXBpOmFwaWtleQ==",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.mailgun.net/v3/example.com/messages"
+      }
+    ]
+  },
+  {
+    "name": "attachment-ordered-extras",
+    "requests": [
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"o:skip-verification\"\r\n\r\nFalse\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"from\"\r\n\r\nApprise <user@example.com>\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"subject\"\r\n\r\ntitle\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"html\"\r\n\r\nbody\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"to\"\r\n\r\ntarget@example.com\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"v:zulu\"\r\n\r\nz\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"v:alpha\"\r\n\r\na\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"v:mike\"\r\n\r\nm\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"attachment[0]\"; filename=\"pixel.png\"\r\n\r\n\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "body_b64": "LS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJvOnNraXAtdmVyaWZpY2F0aW9uIg0KDQpGYWxzZQ0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJmcm9tIg0KDQpBcHByaXNlIDx1c2VyQGV4YW1wbGUuY29tPg0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJzdWJqZWN0Ig0KDQp0aXRsZQ0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJodG1sIg0KDQpib2R5DQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZDQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InRvIg0KDQp0YXJnZXRAZXhhbXBsZS5jb20NCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0idjp6dWx1Ig0KDQp6DQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZDQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InY6YWxwaGEiDQoNCmENCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0idjptaWtlIg0KDQptDQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZDQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9ImF0dGFjaG1lbnRbMF0iOyBmaWxlbmFtZT0icGl4ZWwucG5nIg0KDQqJUE5HDQoaCgAAAA1JSERSAAAAAQAAAAEIBgAAAB8VxIkAAAANSURBVHjaY/zPwFAPAASFAYCEqYwhAAAAAElFTkSuQmCCDQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZLS0NCg==",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic YXBpOmFwaWtleQ==",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.mailgun.net/v3/example.com/messages"
+      }
+    ]
+  },
+  {
+    "name": "body-format-markdown",
+    "requests": [
+      {
+        "body": "o%3Askip-verification=False&from=Apprise+%3Csender%40domain.com%3E&subject=over&html=%3Cp%3E%3Cstrong%3Ebold%3C%2Fstrong%3E+and+%3Ca+href%3D%22https%3A%2F%2Fexample.com%22%3Elink%3C%2Fa%3E+plus+%3Ccode%3Ecode%3C%2Fcode%3E.%3C%2Fp%3E&to=recipient%40domain.com",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Basic YXBpOmFwaWtleQ==",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.mailgun.net/v3/domain.com/messages"
+      }
+    ]
   }
 ]

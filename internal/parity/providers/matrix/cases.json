@@ -10,5 +10,37 @@
     "url": "matrixs://0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     "body": "hello from python",
     "title": "apprise parity"
+  },
+  {
+    "name": "e2ee-disabled",
+    "url": "matrixs://user:pass@matrix.example.com/%23room:example.com?e2ee=no",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "hookshot-mode",
+    "url": "matrixs://token@matrix.example.com?mode=hookshot",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "hookshot-custom-path",
+    "url": "matrixs://token@matrix.example.com?mode=hookshot&path=%2Fcustom%2Fhook",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "attachment-image-and-file",
+    "url": "matrixs://user:pass@matrix.example.com/%23room:example.com?e2ee=no",
+    "body": "body",
+    "title": "t",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png",
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ]
   }
 ]

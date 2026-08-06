@@ -3,6 +3,7 @@ package notify
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -24,6 +25,13 @@ type ParsedURL struct {
 	QueryAdd     map[string]string
 	QueryDel     map[string]string
 	QueryPayload map[string]string
+
+	// The prefixed query maps carry no order, but the URL they came from
+	// did, and upstream emits these fields in the order they were written.
+	// A map cannot be walked in that order, so the keys are kept alongside.
+	QueryAddOrder     []string
+	QueryDelOrder     []string
+	QueryPayloadOrder []string
 }
 
 func ParseURL(raw string) (*ParsedURL, error) {
@@ -44,6 +52,9 @@ func ParseURL(raw string) (*ParsedURL, error) {
 	if strings.EqualFold(schemeCandidate, "tgram") {
 		sanitized = sanitizeTelegramAuthority(sanitized)
 	}
+	if strings.EqualFold(schemeCandidate, "rocket") || strings.EqualFold(schemeCandidate, "rockets") {
+		sanitized = sanitizeRocketAuthority(sanitized)
+	}
 
 	authority := urlAuthority(sanitized)
 	useFirstAt := strings.Count(authority, "@") > 1
@@ -56,7 +67,14 @@ func ParseURL(raw string) (*ParsedURL, error) {
 
 	u, err := url.Parse(sanitized)
 	if err != nil {
-		if strings.Contains(err.Error(), "invalid port") {
+		// Go's parser rejects a malformed percent-escape outright; Python's
+		// urlsplit does not decode at all, so upstream carries the raw bytes
+		// through and unquotes later with errors ignored. A URL like
+		// tgram://token/%$/ or an encoded @ in a host reaches upstream intact
+		// and is rejected -- or accepted -- on its merits rather than by the
+		// parser, so the manual split has to handle these too.
+		if strings.Contains(err.Error(), "invalid port") ||
+			strings.Contains(err.Error(), "invalid URL escape") {
 			parsed, parseErr := parseLenientURL(sanitized, schemeCandidate, useFirstAt)
 			if parseErr == nil {
 				return parsed, nil
@@ -129,7 +147,7 @@ func ParseURL(raw string) (*ParsedURL, error) {
 
 	qsd := parseQSD(u.RawQuery, false, true)
 
-	return &ParsedURL{
+	result := &ParsedURL{
 		Raw:          raw,
 		Scheme:       strings.ToLower(u.Scheme),
 		Host:         host,
@@ -144,7 +162,74 @@ func ParseURL(raw string) (*ParsedURL, error) {
 		QueryAdd:     qsd.add,
 		QueryDel:     qsd.del,
 		QueryPayload: qsd.payload,
-	}, nil
+
+		QueryAddOrder:     qsd.addOrder,
+		QueryDelOrder:     qsd.delOrder,
+		QueryPayloadOrder: qsd.payloadOrder,
+	}
+	applyUserPassOverrides(result)
+	return result, nil
+}
+
+// rocketAuthorityRe matches a Rocket.Chat webhook embedded in the authority,
+// the form rocket://webhook_a/webhook_b@host or
+// rocket://user:webhook_a/webhook_b@host. The slash makes it illegal as
+// userinfo, so no standard parser keeps it in one piece.
+var rocketAuthorityRe = regexp.MustCompile(`(?is)^(?P<schema>[^:]+://)((?P<user>[^:/]+):)?(?P<webhook>[a-z0-9]+(?:/|%2F)[a-z0-9]+)@(?P<url>.+)$`)
+
+// sanitizeRocketAuthority lifts an embedded webhook out of the authority and
+// leaves it as ?webhook=, so what follows is an ordinary URL.
+//
+// Upstream does this rewrite in the plugin's parse_url before handing the
+// result to the base parser. Doing it here instead means every later step --
+// including the shared host and credential checks -- sees the same URL the
+// plugin will, rather than an authority of "user:webhook_a" that is not a
+// hostname and never claimed to be.
+func sanitizeRocketAuthority(raw string) string {
+	m := rocketAuthorityRe.FindStringSubmatch(raw)
+	if m == nil {
+		return raw
+	}
+
+	webhook := m[rocketAuthorityRe.SubexpIndex("webhook")]
+	rest := m[rocketAuthorityRe.SubexpIndex("url")]
+	if strings.Contains(rest, "webhook=") {
+		// An explicit ?webhook= wins; leave the URL alone rather than
+		// producing two of them.
+		return raw
+	}
+
+	rebuilt := m[rocketAuthorityRe.SubexpIndex("schema")]
+	if user := m[rocketAuthorityRe.SubexpIndex("user")]; user != "" {
+		rebuilt += user + "@"
+	}
+	rebuilt += rest
+
+	separator := "?"
+	if strings.Contains(rebuilt, "?") {
+		separator = "&"
+	}
+	return rebuilt + separator + "webhook=" + url.QueryEscape(webhook)
+}
+
+// applyUserPassOverrides applies the ?user= and ?pass= query arguments.
+//
+// Upstream does this in NotifyBase.parse_url, so it holds for every schema
+// rather than being a per-plugin convenience: a URL can carry its credentials
+// entirely in the query string and no plugin has to know about it. They
+// override the userinfo outright when both are present.
+func applyUserPassOverrides(parsed *ParsedURL) {
+	if parsed == nil {
+		return
+	}
+	if value, ok := parsed.Query["user"]; ok {
+		parsed.User = value
+		parsed.HasUser = true
+	}
+	if value, ok := parsed.Query["pass"]; ok {
+		parsed.Password = value
+		parsed.HasPassword = true
+	}
 }
 
 func parseLenientURL(raw string, scheme string, splitFirstAt bool) (*ParsedURL, error) {
@@ -192,22 +277,48 @@ func parseLenientURL(raw string, scheme string, splitFirstAt bool) (*ParsedURL, 
 
 	qsd := parseQSD(query, false, true)
 
-	return &ParsedURL{
+	// url.Parse decodes these components, so the manual split has to as well
+	// or the same URL means different things depending on which path parsed
+	// it -- and a host of "%20%20" would reach a provider as two literal
+	// escapes instead of the whitespace upstream sees and rejects.
+	loweredScheme := strings.ToLower(scheme)
+
+	// Telegram carries its bot token as "id:secret" in the authority, which
+	// looks exactly like userinfo. url.Parse's path applies this fix-up after
+	// sanitizeTelegramAuthority; the manual split has to do the same or the
+	// token arrives as a user and a password and no longer matches its own
+	// format.
+	if loweredScheme == "tgram" && strings.EqualFold(host, telegramAuthorityHost) && user != "" {
+		host = user
+		if password != "" {
+			host += ":" + password
+		}
+		user, password = "", ""
+		hasUser, hasPassword = false, false
+	}
+
+	result := &ParsedURL{
 		Raw:          raw,
-		Scheme:       strings.ToLower(scheme),
-		Host:         host,
+		Scheme:       loweredScheme,
+		Host:         lenientUnquote(host),
 		Port:         0,
 		HasPort:      false,
-		User:         user,
+		User:         lenientUnquote(user),
 		HasUser:      hasUser,
-		Password:     password,
+		Password:     lenientUnquote(password),
 		HasPassword:  hasPassword,
-		Path:         path,
+		Path:         lenientUnquote(path),
 		Query:        qsd.qsd,
 		QueryAdd:     qsd.add,
 		QueryDel:     qsd.del,
 		QueryPayload: qsd.payload,
-	}, nil
+
+		QueryAddOrder:     qsd.addOrder,
+		QueryDelOrder:     qsd.delOrder,
+		QueryPayloadOrder: qsd.payloadOrder,
+	}
+	applyUserPassOverrides(result)
+	return result, nil
 }
 
 func urlAuthority(raw string) string {
@@ -229,6 +340,10 @@ type qsdResult struct {
 	add     map[string]string
 	del     map[string]string
 	payload map[string]string
+
+	addOrder     []string
+	delOrder     []string
+	payloadOrder []string
 }
 
 func parseQSD(raw string, plusToSpace bool, sanitize bool) qsdResult {
@@ -275,13 +390,24 @@ func parseQSD(raw string, plusToSpace bool, sanitize bool) qsdResult {
 		}
 		result.qsd[storeKey] = val
 
+		// A repeated key keeps its first position, matching the maps, where
+		// the later value simply overwrites the earlier one.
 		if strings.HasPrefix(key, "+") && len(key) > 1 {
+			if _, seen := result.add[key[1:]]; !seen {
+				result.addOrder = append(result.addOrder, key[1:])
+			}
 			result.add[key[1:]] = val
 		}
 		if strings.HasPrefix(key, "-") && len(key) > 1 {
+			if _, seen := result.del[key[1:]]; !seen {
+				result.delOrder = append(result.delOrder, key[1:])
+			}
 			result.del[key[1:]] = val
 		}
 		if strings.HasPrefix(key, ":") && len(key) > 1 {
+			if _, seen := result.payload[key[1:]]; !seen {
+				result.payloadOrder = append(result.payloadOrder, key[1:])
+			}
 			result.payload[key[1:]] = val
 		}
 	}
@@ -346,4 +472,45 @@ func sanitizeTelegramAuthority(raw string) string {
 	}
 
 	return scheme + "://" + tokenParts[0] + ":" + tokenParts[1] + "@" + telegramAuthorityHost + suffix
+}
+
+// lenientUnquote decodes percent-escapes the way Python's urllib.parse.unquote
+// does: a well-formed %XX becomes its byte, and anything else is left exactly
+// as written rather than failing the parse. Go's url.Parse rejects a malformed
+// escape outright, but upstream never sees that error -- urlsplit does not
+// decode at all -- so a URL carrying a stray % reaches the provider intact and
+// is judged on its contents.
+func lenientUnquote(value string) string {
+	if !strings.Contains(value, "%") {
+		return value
+	}
+
+	var out strings.Builder
+	out.Grow(len(value))
+	for i := 0; i < len(value); {
+		if value[i] == '%' && i+2 < len(value) {
+			hi, hiOK := unhex(value[i+1])
+			lo, loOK := unhex(value[i+2])
+			if hiOK && loOK {
+				out.WriteByte(hi<<4 | lo)
+				i += 3
+				continue
+			}
+		}
+		out.WriteByte(value[i])
+		i++
+	}
+	return out.String()
+}
+
+func unhex(c byte) (byte, bool) {
+	switch {
+	case c >= '0' && c <= '9':
+		return c - '0', true
+	case c >= 'a' && c <= 'f':
+		return c - 'a' + 10, true
+	case c >= 'A' && c <= 'F':
+		return c - 'A' + 10, true
+	}
+	return 0, false
 }

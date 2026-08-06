@@ -1,0 +1,30 @@
+[
+  {
+    "name": "default",
+    "url": "pushward://hlk_apikey1234567890",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "warning-level",
+    "url": "pushward://hlk_apikey1234567890",
+    "body": "body",
+    "title": "title",
+    "type": "warning"
+  },
+  {
+    "name": "explicit-level",
+    "url": "pushward://hlk_apikey1234567890?level=critical&volume=0.5",
+    "body": "body",
+    "title": "title",
+    "type": "info"
+  },
+  {
+    "name": "per-type-override",
+    "url": "pushward://hlk_apikey1234567890?info=passive&image=no",
+    "body": "body",
+    "title": "title",
+    "type": "info"
+  }
+]

@@ -2,12 +2,6 @@ name: sync-upstream-version
 
 on:
   workflow_dispatch:
-    inputs:
-      allow_sync:
-        description: Allow updating UpstreamVersion
-        type: boolean
-        required: false
-        default: false
   schedule:
     - cron: "0 12 * * 1"
 
@@ -17,7 +11,9 @@ permissions:
 
 jobs:
   sync:
-    if: vars.ALLOW_UPSTREAM_VERSION_SYNC == 'true' || inputs.allow_sync == 'true'
+    # Runs by default. Set the repository variable DISABLE_UPSTREAM_VERSION_SYNC
+    # to 'true' to stop it.
+    if: vars.DISABLE_UPSTREAM_VERSION_SYNC != 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,11 +30,20 @@ jobs:
             exit 1
           fi
           version="${tag#v}"
+          pinned="$(sed -n 's/^var UpstreamVersion = "\([^"]*\)"/\1/p' internal/version/version.go)"
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
+          if [ "$version" = "$pinned" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Already pinned to $pinned." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Update UpstreamVersion
+        if: steps.upstream.outputs.changed == 'true'
         env:
           UPSTREAM_VERSION: ${{ steps.upstream.outputs.version }}
         run: |
@@ -58,14 +63,67 @@ jobs:
             path.write_text(updated)
           PY
 
+      # The bump alone only moves a constant. Measuring the gap it opens is the
+      # point: without this the PR looks trivial and the work stays invisible
+      # until someone reads a red parity run.
+      - name: Check out the new upstream release
+        if: steps.upstream.outputs.changed == 'true'
+        env:
+          UPSTREAM_TAG: ${{ steps.upstream.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git -C .. clone --depth 1 --branch "$UPSTREAM_TAG" https://github.com/caronc/apprise apprise
+
+      - name: Set up Go
+        if: steps.upstream.outputs.changed == 'true'
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Python
+        if: steps.upstream.outputs.changed == 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install parity dependencies
+        if: steps.upstream.outputs.changed == 'true'
+        run: bash scripts/ci/setup_parity_env.sh
+
+      # The report is written whether or not the suite passes, so a red run
+      # still names the providers and schemas that need porting.
+      - name: Measure the gap the new release opens
+        if: steps.upstream.outputs.changed == 'true'
+        continue-on-error: true
+        run: bash scripts/ci/run_parity_tests.sh
+
+      - name: Publish gap summary
+        if: steps.upstream.outputs.changed == 'true'
+        run: cat reports/parity_report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Compose pull request body
+        if: steps.upstream.outputs.changed == 'true'
+        env:
+          UPSTREAM_TAG: ${{ steps.upstream.outputs.tag }}
+          PINNED: ${{ steps.upstream.outputs.pinned }}
+        run: |
+          {
+            echo "Syncs \`internal/version.UpstreamVersion\` from \`$PINNED\` to upstream \`$UPSTREAM_TAG\`."
+            echo
+            echo "Moving the pin does not port anything: it points the parity suite at the new"
+            echo "release so the work becomes visible. The gap measured against this release is"
+            echo "below. Parity CI on this PR will be red until every row is closed."
+            echo
+            sed -n '/## Summary/,$p' reports/parity_report.md
+          } > reports/pr_body.md
+
       - name: Create pull request
+        if: steps.upstream.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
           branch: chore/sync-upstream-version
           delete-branch: true
           commit-message: "chore: sync upstream apprise version to ${{ steps.upstream.outputs.tag }}"
           title: "chore: sync upstream apprise version to ${{ steps.upstream.outputs.tag }}"
-          body: |
-            Syncs `internal/version.UpstreamVersion` to the latest upstream release.
-
-            Upstream release: `${{ steps.upstream.outputs.tag }}`
+          body-path: reports/pr_body.md
+          add-paths: internal/version/version.go

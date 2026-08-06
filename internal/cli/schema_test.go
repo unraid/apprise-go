@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
+	"github.com/unraid/apprise-go/internal/notify"
 	"github.com/unraid/apprise-go/internal/testutil"
 )
 
@@ -34,9 +36,88 @@ func TestSchemaMatchesPython(t *testing.T) {
 		t.Fatalf("decode go schema: %v", err)
 	}
 
+	// The port declares some schemas as known gaps; everything else is
+	// compared, keyed by schema since the two sides order entries differently.
+	want = normalizeSchemaForComparison(want)
+	got = normalizeSchemaForComparison(got)
+
 	if !reflect.DeepEqual(want, got) {
 		wantJSON, _ := json.MarshalIndent(want, "", "  ")
 		gotJSON, _ := json.MarshalIndent(got, "", "  ")
 		t.Fatalf("schema mismatch:\nwant:\n%s\n\ngot:\n%s", wantJSON, gotJSON)
 	}
+}
+
+// normalizeSchemaForComparison drops the entries for schemas this port does
+// not implement, and keys the rest by schema so ordering differences between
+// the two sides do not register as drift.
+func normalizeSchemaForComparison(value any) any {
+	root, ok := value.(map[string]any)
+	if !ok {
+		return value
+	}
+
+	entries, ok := root["schemas"].([]any)
+	if !ok {
+		return value
+	}
+
+	// Keyed by schema rather than compared as a list: the two sides order
+	// their entries differently, and that ordering carries no meaning.
+	kept := map[string]any{}
+	for _, raw := range entries {
+		entry, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		if schemaEntryIsKnownGap(entry) {
+			continue
+		}
+
+		kept[schemaEntryKey(entry)] = entry
+	}
+
+	out := map[string]any{}
+	for key, inner := range root {
+		out[key] = inner
+	}
+	out["schemas"] = kept
+
+	return out
+}
+
+// schemaEntryKey names an entry by its first declared protocol, which is
+// stable across both sides where list position is not.
+func schemaEntryKey(entry map[string]any) string {
+	names := []string{}
+	for _, key := range []string{"protocols", "secure_protocols"} {
+		values, ok := entry[key].([]any)
+		if !ok {
+			continue
+		}
+		for _, raw := range values {
+			if schema, ok := raw.(string); ok {
+				names = append(names, schema)
+			}
+		}
+	}
+	sort.Strings(names)
+
+	return strings.Join(names, ",")
+}
+
+func schemaEntryIsKnownGap(entry map[string]any) bool {
+	for _, key := range []string{"protocols", "secure_protocols"} {
+		values, ok := entry[key].([]any)
+		if !ok {
+			continue
+		}
+		for _, raw := range values {
+			if schema, ok := raw.(string); ok && notify.IsKnownGapSchema(schema) {
+				return true
+			}
+		}
+	}
+
+	return false
 }

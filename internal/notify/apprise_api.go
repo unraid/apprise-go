@@ -1,12 +1,9 @@
 package notify
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"mime/multipart"
-	"net/textproto"
 	"net/url"
 	"regexp"
 	"sort"
@@ -28,13 +25,21 @@ type AppriseTarget struct {
 	headers map[string]string
 }
 
+// appriseTokenRe mirrors upstream's token regex.
+var appriseTokenRe = regexp.MustCompile(`(?i)^[A-Z0-9_-]{1,128}$`)
+
 func NewAppriseTarget(target *ParsedURL) (*AppriseTarget, error) {
 	segments := splitPath(target.Path)
 	if len(segments) == 0 {
 		return nil, fmt.Errorf("missing token")
 	}
 
+	// Upstream validates the token's shape and raises; a URL whose last path
+	// segment is punctuation names no configuration that can exist.
 	token := segments[len(segments)-1]
+	if !appriseTokenRe.MatchString(token) {
+		return nil, fmt.Errorf("invalid apprise api token: %q", token)
+	}
 	pathSegments := segments[:len(segments)-1]
 	pathPrefix := ""
 	if len(pathSegments) > 0 {
@@ -71,10 +76,10 @@ func NewAppriseTarget(target *ParsedURL) (*AppriseTarget, error) {
 }
 
 func (a *AppriseTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	return a.BuildRequestWithAttachments(body, title, notifyType, nil)
+	return a.buildRequest(body, title, notifyType, nil)
 }
 
-func (a *AppriseTarget) BuildRequestWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
+func (a *AppriseTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
 	scheme := "http"
 	if strings.ToLower(a.target.Scheme) == "apprises" {
 		scheme = "https"
@@ -105,7 +110,7 @@ func (a *AppriseTarget) BuildRequestWithAttachments(body, title string, notifyTy
 	}
 
 	if a.method == appriseMethodForm {
-		values := url.Values{}
+		values := formFields{}
 		values.Set("title", title)
 		values.Set("body", body)
 		values.Set("type", string(notifyType))
@@ -115,16 +120,18 @@ func (a *AppriseTarget) BuildRequestWithAttachments(body, title string, notifyTy
 		}
 
 		if len(attachments) > 0 {
-			payload, contentType, err := buildAppriseMultipart(values, attachments)
+			// Form mode uploads the files, numbered fileNN.
+			requestBody, contentType, err := appriseAPIFormAttachmentBody(values, attachments)
 			if err != nil {
 				return RequestSpec{}, err
 			}
 			headers["Content-Type"] = contentType
+
 			return RequestSpec{
 				Method:  "POST",
 				URL:     u.String(),
 				Headers: headers,
-				Body:    payload,
+				Body:    requestBody,
 			}, nil
 		}
 
@@ -147,7 +154,8 @@ func (a *AppriseTarget) BuildRequestWithAttachments(body, title string, notifyTy
 		payload["tag"] = a.tags
 	}
 	if len(attachments) > 0 {
-		payload["attachments"] = attachmentPayloads(attachments)
+		// JSON mode carries the files base64 encoded in the body.
+		payload["attachments"] = attachmentsCustomJSONStyle(attachments)
 	}
 
 	data, err := json.Marshal(payload)
@@ -169,40 +177,12 @@ func (a *AppriseTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (a *AppriseTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
-	spec, err := a.BuildRequestWithAttachments(body, title, notifyType, attachments)
+	spec, err := a.buildRequest(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
 
 	return SendRequest(spec)
-}
-
-func buildAppriseMultipart(values url.Values, attachments []Attachment) (string, string, error) {
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	for key, entries := range values {
-		for _, value := range entries {
-			if err := writer.WriteField(key, value); err != nil {
-				return "", "", err
-			}
-		}
-	}
-	for i, attachment := range attachments {
-		header := textproto.MIMEHeader{}
-		header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file%02d"; filename="%s"`, i+1, escapeMultipartParam(attachment.Name)))
-		header.Set("Content-Type", attachment.MIMEType)
-		part, err := writer.CreatePart(header)
-		if err != nil {
-			return "", "", err
-		}
-		if _, err := part.Write(attachment.Data); err != nil {
-			return "", "", err
-		}
-	}
-	if err := writer.Close(); err != nil {
-		return "", "", err
-	}
-	return body.String(), writer.FormDataContentType(), nil
 }
 
 func splitPath(pathValue string) []string {

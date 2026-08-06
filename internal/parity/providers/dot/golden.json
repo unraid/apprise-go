@@ -3,7 +3,7 @@
     "name": "text-basic",
     "requests": [
       {
-        "body": "{\"refreshNow\": false, \"deviceId\": \"device123\", \"title\": \"title\", \"message\": \"body\", \"signature\": \"Sig\", \"icon\": \"ICON\", \"link\": \"https://example.com\"}",
+        "body": "{\"refreshNow\": false, \"title\": \"title\", \"message\": \"body\", \"signature\": \"Sig\", \"icon\": \"ICON\", \"link\": \"https://example.com\"}",
         "headers": {
           "accept": "*/*",
           "authorization": "Bearer apikey",
@@ -11,7 +11,7 @@
           "user-agent": "Apprise"
         },
         "method": "POST",
-        "url": "https://dot.mindreset.tech/api/open/text"
+        "url": "https://dot.mindreset.tech/api/authV2/open/device/device123/text"
       }
     ]
   },
@@ -19,7 +19,7 @@
     "name": "image-mode",
     "requests": [
       {
-        "body": "{\"refreshNow\": true, \"deviceId\": \"device123\", \"image\": \"IMGDATA\", \"border\": 1, \"ditherType\": \"ORDERED\", \"ditherKernel\": \"ATKINSON\"}",
+        "body": "{\"image\": \"IMGDATA\", \"refreshNow\": true, \"border\": 1, \"ditherType\": \"ORDERED\", \"ditherKernel\": \"ATKINSON\"}",
         "headers": {
           "accept": "*/*",
           "authorization": "Bearer apikey",
@@ -27,7 +27,50 @@
           "user-agent": "Apprise"
         },
         "method": "POST",
-        "url": "https://dot.mindreset.tech/api/open/image"
+        "url": "https://dot.mindreset.tech/api/authV2/open/device/device123/image"
+      }
+    ]
+  },
+  {
+    "name": "task-key",
+    "requests": [
+      {
+        "body": "{\"refreshNow\": true, \"title\": \"title\", \"message\": \"body\", \"taskKey\": \"abc123\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://dot.mindreset.tech/api/authV2/open/device/device123/text"
+      }
+    ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "{\"refreshNow\": false, \"title\": \"title\", \"message\": \"body\", \"signature\": \"Sig\", \"icon\": \"ICON\", \"link\": \"https://example.com\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://dot.mindreset.tech/api/authV2/open/device/device123/text"
+      },
+      {
+        "body": "{\"image\": \"iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==\", \"refreshNow\": false, \"link\": \"https://example.com\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://dot.mindreset.tech/api/authV2/open/device/device123/image"
       }
     ]
   }

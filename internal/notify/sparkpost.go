@@ -151,7 +151,7 @@ func (s *SparkPostTarget) BuildRequest(body, title string, notifyType NotifyType
 		batchSize = 2000
 	}
 
-	payload := s.buildPayload(body, title, notifyType, s.targets[:minInt(len(s.targets), batchSize)])
+	payload := s.buildPayload(body, title, notifyType, s.targets[:minInt(len(s.targets), batchSize)], nil)
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
@@ -171,6 +171,12 @@ func (s *SparkPostTarget) BuildRequest(body, title string, notifyType NotifyType
 }
 
 func (s *SparkPostTarget) Send(body, title string, notifyType NotifyType) error {
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (s *SparkPostTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(s.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -186,7 +192,7 @@ func (s *SparkPostTarget) Send(body, title string, notifyType NotifyType) error 
 			end = len(s.targets)
 		}
 
-		payload := s.buildPayload(body, title, notifyType, s.targets[index:end])
+		payload := s.buildPayload(body, title, notifyType, s.targets[index:end], attachments)
 		data, err := json.Marshal(payload)
 		if err != nil {
 			return err
@@ -203,15 +209,13 @@ func (s *SparkPostTarget) Send(body, title string, notifyType NotifyType) error 
 			},
 			Body: string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
-func (s *SparkPostTarget) buildPayload(body, title string, notifyType NotifyType, recipients []emailEntry) map[string]any {
+func (s *SparkPostTarget) buildPayload(body, title string, notifyType NotifyType, recipients []emailEntry, attachments []Attachment) map[string]any {
 	subject := strings.TrimSpace(title)
 	if subject == "" {
 		subject = sparkpostDefaultSubject
@@ -297,6 +301,13 @@ func (s *SparkPostTarget) buildPayload(body, title string, notifyType NotifyType
 
 	_ = notifyType
 
+	if len(attachments) > 0 {
+		// SparkPost nests these under content rather than at the top level.
+		if content, ok := payload["content"].(map[string]any); ok {
+			content["attachments"] = attachmentsSparkPostStyle(attachments)
+		}
+	}
+
 	return payload
 }
 
@@ -360,7 +371,7 @@ func init() {
 					"type":     "list:string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -410,7 +421,7 @@ func init() {
 					"values":   []string{"us", "eu"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -464,7 +475,7 @@ func init() {
 					"type":     "string",
 				},
 			},
-			"templates": []string{"{schema}://{user}@{host}:{apikey}/", "{schema}://{user}@{host}:{apikey}/{targets}"},
+			"templates": []string{"{schema}://{user}@{host}/{apikey}/", "{schema}://{user}@{host}/{apikey}/{targets}"},
 			"tokens": map[string]any{
 				"apikey": map[string]any{
 					"map_to":   "apikey",

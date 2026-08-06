@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/unraid/apprise-go/internal/notify"
 	"github.com/unraid/apprise-go/internal/testutil"
 )
 
@@ -32,7 +33,16 @@ func loadSchemaCases(t *testing.T) []schemaCase {
 		t.Fatalf("decode schema cases: %v (stdout: %s)", err, strings.TrimSpace(stdout))
 	}
 
-	return cases
+	// A schema the port declares it does not implement has nothing to compare.
+	filtered := cases[:0]
+	for _, entry := range cases {
+		if notify.IsKnownGapSchema(entry.Schema) {
+			continue
+		}
+		filtered = append(filtered, entry)
+	}
+
+	return filtered
 }
 
 func normalizeValues(values map[string]any) map[string]any {

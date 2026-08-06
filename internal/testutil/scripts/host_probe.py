@@ -1,0 +1,248 @@
+#!/usr/bin/env python3
+"""Probe which schemas require the URL to carry a real hostname.
+
+Upstream's NotifyBase.parse_url verifies the host by default and returns None
+when it is empty or not a valid hostname, which is why json:// and
+mailgun://:@/ are rejected outright. Plugins whose URL has no host -- the ones
+where the authority is an api key or a phone number -- opt out with
+verify_host=False.
+
+Whether a given plugin opted out is not visible in the schema metadata, so it is
+asked of upstream directly: each schema is offered a URL with no host and one
+with a syntactically invalid host, and what upstream does with them is recorded.
+
+Emits JSON: {schema: {"rejects_empty": bool, "rejects_invalid": bool}, ...}
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import os
+import sys
+
+INVALID_HOST = "-_"
+
+
+def _with_port(url: str, port: str) -> str | None:
+    """Set the authority's port, replacing one if already present."""
+    try:
+        schema, rest = url.split("://", 1)
+    except ValueError:
+        return None
+
+    tail = ""
+    for idx, ch in enumerate(rest):
+        if ch in "/?#":
+            tail = rest[idx:]
+            rest = rest[:idx]
+            break
+
+    userinfo, at, host = rest.rpartition("@")
+    if not host:
+        return None
+    # An IPv6 literal keeps its brackets; its colons are not a port separator.
+    if not host.startswith("[") and ":" in host:
+        host = host.rsplit(":", 1)[0]
+    return f"{schema}://{userinfo}{at}{host}:{port}{tail}"
+
+
+def _replace_host(url: str, value: str) -> str | None:
+    try:
+        schema, rest = url.split("://", 1)
+    except ValueError:
+        return None
+
+    tail = ""
+    for idx, ch in enumerate(rest):
+        if ch in "/?#":
+            tail = rest[idx:]
+            rest = rest[:idx]
+            break
+
+    userinfo, at, _ = rest.rpartition("@")
+    return f"{schema}://{userinfo}{at}{value}{tail}"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--apprise-root", required=True)
+    parser.add_argument("--cases-root", required=True)
+    args = parser.parse_args()
+
+    logging.disable(logging.CRITICAL)
+    sys.path.insert(0, args.apprise_root)
+
+    from apprise import Apprise
+    from apprise.plugins import NotifyBase, N_MGR
+
+    # Which schemas leave upstream's host verification switched on.
+    #
+    # parse_url verifies the host unless the plugin passes verify_host=False,
+    # and that opt-out is the only reliable signal. The templates are not:
+    # schan declares {token} in the host position and still has its authority
+    # checked as a hostname, while dot declares one too and opts out, so
+    # dot://apikey@device_id keeps its underscore. Reading the call is exact
+    # where inferring from templates is guesswork.
+    import inspect as _inspect
+
+    hostname_schemas: set[str] = set()
+    ambiguous: set[str] = set()
+    for entry in N_MGR.plugins():
+        protocols = []
+        for attr in ("protocol", "secure_protocol"):
+            value = getattr(entry, attr, None)
+            if isinstance(value, str):
+                protocols.append(value)
+            elif isinstance(value, (list, tuple)):
+                protocols.extend(v for v in value if isinstance(v, str))
+
+        parse = getattr(entry, "parse_url", None)
+        try:
+            source = _inspect.getsource(parse) if parse else ""
+        except (OSError, TypeError):
+            source = ""
+        if "verify_host=False" not in source:
+            hostname_schemas.update(p.lower() for p in protocols)
+
+    base_for: dict[str, str] = {}
+    for name in sorted(os.listdir(args.cases_root)):
+        path = os.path.join(args.cases_root, name, "cases.json")
+        if not os.path.isfile(path):
+            continue
+        with open(path, encoding="utf-8") as handle:
+            try:
+                cases = json.load(handle)
+            except json.JSONDecodeError:
+                continue
+        for case in cases:
+            url = case.get("url", "")
+            if "://" in url:
+                base_for.setdefault(url.split("://", 1)[0].lower(), url)
+
+    def accepted(url: str) -> bool:
+        try:
+            return isinstance(
+                Apprise.instantiate(url, suppress_exceptions=False), NotifyBase
+            )
+        except Exception:
+            return False
+
+    # Upstream's own test URLs, as a corpus of shapes known to be valid.
+    # Templates are documentation and do not cover every accepted form:
+    # sendpulse declares {host} in both of its templates and still accepts
+    # sendpulse://client_id/cs1/?user=..., where the authority is a client id.
+    # Any rule that would reject a URL upstream accepts is dropped.
+    from apprise.utils.parse import is_hostname, parse_url as _parse_url
+    import ast as _ast
+
+    accepted_by_schema: dict[str, list[str]] = {}
+    tests_dir = os.path.join(args.apprise_root, "tests")
+    if os.path.isdir(tests_dir):
+        for name in sorted(os.listdir(tests_dir)):
+            if not (name.startswith("test_plugin_") and name.endswith(".py")):
+                continue
+            try:
+                with open(os.path.join(tests_dir, name), encoding="utf-8") as handle:
+                    tree = _ast.parse(handle.read())
+            except (OSError, SyntaxError):
+                continue
+            for node in _ast.walk(tree):
+                if not isinstance(node, _ast.Assign):
+                    continue
+                if "apprise_url_tests" not in [
+                    t.id for t in node.targets if isinstance(t, _ast.Name)
+                ]:
+                    continue
+                if not isinstance(node.value, (_ast.Tuple, _ast.List)):
+                    continue
+                for element in node.value.elts:
+                    if not isinstance(element, (_ast.Tuple, _ast.List)) or not element.elts:
+                        continue
+                    first = element.elts[0]
+                    if not (
+                        isinstance(first, _ast.Constant)
+                        and isinstance(first.value, str)
+                        and "://" in first.value
+                    ):
+                        continue
+                    if accepted(first.value):
+                        accepted_by_schema.setdefault(
+                            first.value.split("://", 1)[0].lower(), []
+                        ).append(first.value)
+
+    def hostname_rule_conflicts(schema: str) -> bool:
+        for candidate in accepted_by_schema.get(schema, []):
+            parsed = _parse_url(candidate, verify_host=False)
+            if not parsed:
+                continue
+            host = (parsed.get("host") or "").strip()
+            if host and not is_hostname(host):
+                return True
+        return False
+
+    out: dict[str, dict[str, bool]] = {}
+    for schema, base in sorted(base_for.items()):
+        if not accepted(base):
+            continue
+
+        invalid = _replace_host(base, INVALID_HOST)
+        if invalid is None:
+            continue
+
+        # The bare form, rather than the base URL with its host removed: a
+        # base URL keeps its path and credentials, and upstream may accept it
+        # for reasons that have nothing to do with the host being absent.
+        rejects_empty = not accepted(f"{schema}://")
+        rejects_invalid = (
+            schema in hostname_schemas
+            and schema not in ambiguous
+            and not accepted(invalid)
+            and not hostname_rule_conflicts(schema)
+        )
+        # Port range is not a framework rule: json:// happily accepts :70000
+        # while matrix refuses :0, so each schema is asked separately. A schema
+        # that rejects a legal port simply does not take one, and is not
+        # recorded.
+        # The port probe needs a base URL that actually names a server. A
+        # schema's first parity case may be a form whose authority is a token
+        # -- matrix's is a t2bot key -- and a port means nothing there, so an
+        # accepted vector with a real hostname is preferred when one exists.
+        port_base = base
+        for candidate in accepted_by_schema.get(schema, []):
+            parsed_candidate = _parse_url(candidate, verify_host=False)
+            if not parsed_candidate:
+                continue
+            candidate_host = (parsed_candidate.get("host") or "").strip()
+            if candidate_host and is_hostname(candidate_host, underscore=False):
+                port_base = candidate
+                break
+
+        rejects_bad_port = False
+        legal = _with_port(port_base, "8080")
+        if legal is not None and accepted(legal):
+            rejects_bad_port = all(
+                not accepted(candidate)
+                for candidate in (
+                    _with_port(port_base, "0"),
+                    _with_port(port_base, "65536"),
+                )
+                if candidate is not None
+            )
+
+        if not (rejects_empty or rejects_invalid or rejects_bad_port):
+            continue
+
+        out[schema] = {
+            "rejects_empty": rejects_empty,
+            "rejects_invalid": rejects_invalid,
+            "rejects_bad_port": rejects_bad_port,
+        }
+
+    json.dump(out, sys.stdout)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

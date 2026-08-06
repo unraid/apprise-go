@@ -28,5 +28,188 @@
         "url": "https://api.ciscospark.com/v1/webhooks/incoming//bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
       }
     ]
+  },
+  {
+    "name": "bot-single-room",
+    "requests": [
+      {
+        "body": "{\"roomId\": \"Y2lzY29zcGFyazovL3VzL1JPT00vYWJj\", \"markdown\": \"t\\r\\nhello\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      }
+    ]
+  },
+  {
+    "name": "bot-multiple-rooms",
+    "requests": [
+      {
+        "body": "{\"roomId\": \"room1\", \"markdown\": \"body\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      },
+      {
+        "body": "{\"roomId\": \"room2\", \"markdown\": \"body\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      }
+    ]
+  },
+  {
+    "name": "bot-to-alias",
+    "requests": [
+      {
+        "body": "{\"roomId\": \"room1\", \"markdown\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      },
+      {
+        "body": "{\"roomId\": \"room2\", \"markdown\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      }
+    ]
+  },
+  {
+    "name": "bot-text-format",
+    "requests": [
+      {
+        "body": "{\"roomId\": \"room1\", \"text\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      }
+    ]
+  },
+  {
+    "name": "explicit-webhook-mode",
+    "requests": [
+      {
+        "body": "{\"markdown\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.ciscospark.com/v1/webhooks/incoming//cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      }
+    ]
+  },
+  {
+    "name": "webhook-text-format",
+    "requests": [
+      {
+        "body": "{\"text\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.ciscospark.com/v1/webhooks/incoming//dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"roomId\"\r\n\r\nY2lzY29zcGFyazovL3VzL1JPT00vYWJj\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"markdown\"\r\n\r\ntitle\r\nbody\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"files\"; filename=\"pixel.png\"\r\nContent-Type: image/png\r\n\r\n\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "body_b64": "LS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJyb29tSWQiDQoNClkybHpZMjl6Y0dGeWF6b3ZMM1Z6TDFKUFQwMHZZV0pqDQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZDQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Im1hcmtkb3duIg0KDQp0aXRsZQ0KYm9keQ0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJmaWxlcyI7IGZpbGVuYW1lPSJwaXhlbC5wbmciDQpDb250ZW50LVR5cGU6IGltYWdlL3BuZw0KDQqJUE5HDQoaCgAAAA1JSERSAAAAAQAAAAEIBgAAAB8VxIkAAAANSURBVHjaY/zPwFAPAASFAYCEqYwhAAAAAElFTkSuQmCCDQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZLS0NCg==",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer botaccesstoken123",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://webexapis.com/v1/messages"
+      }
+    ]
+  },
+  {
+    "name": "overflow-split-dynamic",
+    "requests": [
+      {
+        "body": "{\"markdown\": \"over\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.ciscospark.com/v1/webhooks/incoming//aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "body": "{\"markdown\": \"word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.ciscospark.com/v1/webhooks/incoming//aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        "body": "{\"markdown\": \"word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.ciscospark.com/v1/webhooks/incoming//aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ]
+  },
+  {
+    "name": "body-format-html",
+    "requests": [
+      {
+        "body": "{\"markdown\": \"# over\\n**bold** and [link](<https://example.com>) plus `code`.\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.ciscospark.com/v1/webhooks/incoming//aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ]
   }
 ]

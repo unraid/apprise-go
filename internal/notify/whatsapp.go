@@ -8,7 +8,15 @@ import (
 	"strings"
 )
 
-const whatsappGraphVersion = "v17.0"
+const whatsappGraphVersion = "v21.0"
+
+// whatsappGroupID matches a WhatsApp Cloud API group ID. E.164 phone numbers
+// stop at 15 digits and group IDs run 18-20, so 16+ digits separates them.
+var whatsappGroupID = regexp.MustCompile(`^[0-9]{16,}$`)
+
+// whatsappGroupSuffix matches the @g.us JID suffix, which is re-added on send.
+var whatsappGroupSuffix = regexp.MustCompile(`(?i)@g\.us$`)
+
 const whatsappURLTemplate = "https://graph.facebook.com/" + whatsappGraphVersion + "/%s/messages"
 const whatsappDefaultLanguage = "en_US"
 
@@ -76,6 +84,14 @@ func NewWhatsAppTarget(target *ParsedURL) (*WhatsAppTarget, error) {
 		}
 		if normalized, ok := normalizePhone(entry); ok {
 			targets = append(targets, "+"+normalized)
+			continue
+		}
+
+		// Not a phone number, so it may be a group ID. Strip the optional
+		// hash prefix and the @g.us JID suffix upstream re-adds when sending.
+		gid := strings.TrimPrefix(strings.TrimSpace(whatsappGroupSuffix.ReplaceAllString(entry, "")), "#")
+		if whatsappGroupID.MatchString(gid) {
+			targets = append(targets, "#"+gid)
 		}
 	}
 
@@ -125,6 +141,8 @@ func (w *WhatsAppTarget) BuildRequest(body, title string, notifyType NotifyType)
 }
 
 func (w *WhatsAppTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(w.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -152,22 +170,27 @@ func (w *WhatsAppTarget) Send(body, title string, notifyType NotifyType) error {
 			},
 			Body: string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (w *WhatsAppTarget) buildPayload(message string, notifyType NotifyType, target string) map[string]any {
+	recipientType := "individual"
+	if group, ok := strings.CutPrefix(target, "#"); ok {
+		// Groups are addressed by their full Meta API JID.
+		target = group + "@g.us"
+		recipientType = "group"
+	}
+
 	payload := map[string]any{
 		"messaging_product": "whatsapp",
 		"to":                target,
+		"recipient_type":    recipientType,
 	}
 
 	if w.template == "" {
-		payload["recipient_type"] = "individual"
 		payload["type"] = "text"
 		payload["text"] = map[string]string{
 			"body": message,
@@ -293,7 +316,7 @@ func init() {
 		"details": map[string]any{
 			"args": map[string]any{
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -333,7 +356,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -422,13 +445,22 @@ func init() {
 					"required": false,
 					"type":     "string",
 				},
+				"target_group": map[string]any{
+					"map_to":   "targets",
+					"name":     "Target Group ID",
+					"prefix":   "#",
+					"private":  false,
+					"regex":    []string{"^[0-9]{16,}$", "i"},
+					"required": false,
+					"type":     "string",
+				},
 				"targets": map[string]any{
 					"delim":    []string{"/"},
-					"group":    []string{"target_phone"},
+					"group":    []string{"target_group", "target_phone"},
 					"map_to":   "targets",
 					"name":     "Targets",
 					"private":  false,
-					"required": false,
+					"required": true,
 					"type":     "list:string",
 				},
 				"template": map[string]any{

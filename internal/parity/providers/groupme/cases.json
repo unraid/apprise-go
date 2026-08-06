@@ -1,0 +1,37 @@
+[
+  {
+    "name": "default",
+    "url": "groupme://botid123456789",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "bot-id-query",
+    "url": "groupme://ignored?bot_id=botid123456789",
+    "body": "body only",
+    "title": "",
+    "type": "info"
+  },
+  {
+    "name": "attachment-image",
+    "url": "groupme://botid123456789?token=accesstoken123",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
+  },
+  {
+    "name": "attachment-unsupported-type",
+    "url": "groupme://botid123456789?token=accesstoken123",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ],
+    "attachment_dropped": true
+  }
+]

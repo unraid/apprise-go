@@ -173,6 +173,8 @@ func (o *OneSignalTarget) BuildRequest(body, title string, notifyType NotifyType
 }
 
 func (o *OneSignalTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	payload := o.buildPayload(body, title, notifyType)
 	sent := false
 
@@ -193,9 +195,7 @@ func (o *OneSignalTarget) Send(body, title string, notifyType NotifyType) error 
 			if err != nil {
 				return err
 			}
-			if err := SendRequest(spec); err != nil {
-				return err
-			}
+			outcome.record(SendRequest(spec))
 			sent = true
 		}
 	}
@@ -204,7 +204,7 @@ func (o *OneSignalTarget) Send(body, title string, notifyType NotifyType) error 
 		return fmt.Errorf("missing targets")
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (o *OneSignalTarget) buildPayload(body, title string, notifyType NotifyType) map[string]any {
@@ -335,7 +335,7 @@ func init() {
 					"type":     "bool",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -393,7 +393,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

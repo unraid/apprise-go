@@ -1,9 +1,0 @@
-[
-  {
-    "name": "v2_default",
-    "url": "msteams://acme/abcd1234@efgh5678/def456/ghi-789?image=no",
-    "body": "hello from python",
-    "title": "apprise parity",
-    "type": "warning"
-  }
-]

@@ -17,6 +17,14 @@ const providerRoot = "internal/parity/providers"
 type providerManifest struct {
 	Name    string   `json:"name"`
 	Schemas []string `json:"schemas"`
+
+	// VolatileHeaders names headers whose value cannot be reproduced across
+	// two runs — SOGS signs a random nonce and the current time, so its
+	// X-SOGS-* headers differ every request. They are asserted present and
+	// non-empty rather than equal. Nothing else re-checks their contents, so
+	// a provider listing one owes a pinned vector test proving how it is
+	// built; see sogs_vectors_test.go.
+	VolatileHeaders []string `json:"volatile_headers"`
 }
 
 type providerCase struct {
@@ -25,13 +33,56 @@ type providerCase struct {
 	Body  string `json:"body"`
 	Title string `json:"title"`
 	Type  string `json:"type"`
+
+	// BodyFormat is the format the caller says the body is in, which is not
+	// the same as the provider's own ?format=. Four plugins upstream only
+	// diverge from the framework when a markdown-native service is handed
+	// HTML, so without this no fixture could reach that path.
+	BodyFormat string `json:"body_format"`
+
+	// KnownDivergence records a case this port does not match upstream on,
+	// with the reason. The case still runs — the capture still happens and
+	// the golden is still refreshed — but the comparison is reported rather
+	// than failed.
+	//
+	// It exists so a gap can be kept in the fixture set instead of deleted.
+	// Removing a red fixture removes the evidence, which is how a difference
+	// stops being visible to anyone.
+	KnownDivergence string `json:"known_divergence"`
+
+	// SendsNothing marks a case where upstream deliberately issues no request
+	// at all — an Opsgenie note against an alert that was never created, for
+	// instance. Sending nothing is a real behavior worth pinning, but an
+	// empty golden otherwise means the capture silently failed, so the case
+	// has to say which one it is.
+	SendsNothing bool `json:"sends_nothing"`
+
+	// Attachments name files to send with the notification. They are paths
+	// relative to the repository, written with a {repo} prefix so the fixture
+	// stays portable.
+	Attachments []string `json:"attachments"`
+
+	// VolatileHeaders names headers this case alone cannot reproduce, added to
+	// whatever the manifest already lists. SES signs the request body, and a
+	// body carrying attachments carries a randomly generated MIME boundary, so
+	// the two sides sign different bytes by construction. Everything else about
+	// the request is still compared, and ses_signature_test.go pins how the
+	// signature is built.
+	VolatileHeaders []string `json:"volatile_headers"`
+
+	// AttachmentDropped marks a case where the service deliberately refuses
+	// the attachment — an image-only service handed a PDF, or an upload that
+	// needs credentials the URL does not carry. The request is still made,
+	// just without the file.
+	AttachmentDropped bool `json:"attachment_dropped"`
 }
 
 type providerDefinition struct {
-	Name    string
-	Schemas []string
-	Cases   []providerCase
-	Dir     string
+	Name            string
+	Schemas         []string
+	Cases           []providerCase
+	Dir             string
+	VolatileHeaders []string
 }
 
 func loadProviderDefinitions(t *testing.T) map[string]providerDefinition {
@@ -55,10 +106,11 @@ func loadProviderDefinitions(t *testing.T) map[string]providerDefinition {
 		cases := loadProviderCases(t, providerDir, name)
 
 		def := providerDefinition{
-			Name:    name,
-			Schemas: manifest.Schemas,
-			Cases:   cases,
-			Dir:     providerDir,
+			Name:            name,
+			Schemas:         manifest.Schemas,
+			Cases:           cases,
+			Dir:             providerDir,
+			VolatileHeaders: manifest.VolatileHeaders,
 		}
 
 		if _, exists := defs[name]; exists {
@@ -128,6 +180,23 @@ func loadProviderCases(t *testing.T, providerDir, providerName string) []provide
 		t.Fatalf("cases %s empty", casesPath)
 	}
 
+	// A case that points at a checked-in file — a payload template, say —
+	// needs an absolute path, because apprise resolves a relative one against
+	// the home directory rather than the working directory. {repo} keeps the
+	// fixture portable and is expanded before either side sees the URL.
+	repoRoot := testutil.RepoRoot(t)
+	expand := func(value string) string {
+		value = strings.ReplaceAll(value, "%7Brepo%7D", repoRoot)
+
+		return strings.ReplaceAll(value, "{repo}", repoRoot)
+	}
+	for i := range cases {
+		cases[i].URL = expand(cases[i].URL)
+		for j := range cases[i].Attachments {
+			cases[i].Attachments[j] = expand(cases[i].Attachments[j])
+		}
+	}
+
 	seen := map[string]struct{}{}
 	for _, c := range cases {
 		if strings.TrimSpace(c.Name) == "" {
@@ -169,4 +238,17 @@ func formatList(values []string) string {
 	}
 	sort.Strings(values)
 	return fmt.Sprintf("[%s]", strings.Join(values, ", "))
+}
+
+// caseVolatileHeaders merges the headers a provider always fails to reproduce
+// with the ones only this case does.
+func caseVolatileHeaders(def providerDefinition, c providerCase) []string {
+	if len(c.VolatileHeaders) == 0 {
+		return def.VolatileHeaders
+	}
+
+	merged := make([]string, 0, len(def.VolatileHeaders)+len(c.VolatileHeaders))
+	merged = append(merged, def.VolatileHeaders...)
+
+	return append(merged, c.VolatileHeaders...)
 }

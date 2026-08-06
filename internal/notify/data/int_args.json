@@ -1,0 +1,79 @@
+{
+ "burstsms": {
+  "validity": {
+   "rejects_nonnumeric": true
+  }
+ },
+ "discord": {
+  "flags": {
+   "min": 0,
+   "rejects_nonnumeric": true
+  }
+ },
+ "fluxer": {
+  "flags": {
+   "min": 0,
+   "rejects_nonnumeric": true
+  }
+ },
+ "fluxers": {
+  "flags": {
+   "min": 0,
+   "rejects_nonnumeric": true
+  }
+ },
+ "guilded": {
+  "flags": {
+   "min": 0,
+   "rejects_nonnumeric": true
+  }
+ },
+ "ncloud": {
+  "version": {
+   "min": 1,
+   "rejects_nonnumeric": true
+  }
+ },
+ "nclouds": {
+  "version": {
+   "min": 1,
+   "rejects_nonnumeric": true
+  }
+ },
+ "nexmo": {
+  "ttl": {
+   "max": 604800000,
+   "min": 20000,
+   "rejects_nonnumeric": false
+  }
+ },
+ "notifiarr": {
+  "event": {
+   "rejects_nonnumeric": true
+  }
+ },
+ "sendpulse": {
+  "template": {
+   "rejects_nonnumeric": true
+  }
+ },
+ "tgram": {
+  "topic": {
+   "rejects_nonnumeric": true
+  }
+ },
+ "vapid": {
+  "ttl": {
+   "max": 60,
+   "min": 0,
+   "rejects_nonnumeric": false
+  }
+ },
+ "vonage": {
+  "ttl": {
+   "max": 604800000,
+   "min": 20000,
+   "rejects_nonnumeric": false
+  }
+ }
+}

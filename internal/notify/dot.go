@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	dotTextURL  = "https://dot.mindreset.tech/api/open/text"
-	dotImageURL = "https://dot.mindreset.tech/api/open/image"
+	// The v2 API addresses the device in the path.
+	dotTextURLTemplate  = "https://dot.mindreset.tech/api/authV2/open/device/%s/text"
+	dotImageURLTemplate = "https://dot.mindreset.tech/api/authV2/open/device/%s/image"
 
 	dotModeText  = "text"
 	dotModeImage = "image"
@@ -24,26 +25,22 @@ type DotTarget struct {
 	icon         string
 	imageData    string
 	link         string
-	border       int
+	border       *int
 	ditherType   string
 	ditherKernel string
+	taskKey      string
 }
 
 func NewDotTarget(target *ParsedURL) (*DotTarget, error) {
 	apikey := strings.TrimSpace(target.User)
-	if apikey == "" {
-		return nil, fmt.Errorf("missing apikey")
-	}
-
 	deviceID := strings.TrimSpace(target.Host)
 	if deviceID == "" {
 		return nil, fmt.Errorf("missing device id")
 	}
 
+	// Upstream moved the mode from the path to a query argument.
 	mode := dotModeText
-	pathTokens := splitPath(target.Path)
-	if len(pathTokens) > 0 {
-		candidate := strings.ToLower(pathTokens[0])
+	if candidate := strings.ToLower(strings.TrimSpace(target.Query["mode"])); candidate != "" {
 		if candidate == dotModeText || candidate == dotModeImage {
 			mode = candidate
 		}
@@ -55,28 +52,27 @@ func NewDotTarget(target *ParsedURL) (*DotTarget, error) {
 	icon := strings.TrimSpace(target.Query["icon"])
 	imageData := strings.TrimSpace(target.Query["image"])
 	link := strings.TrimSpace(target.Query["link"])
+	taskKey := strings.TrimSpace(target.Query["task_key"])
 
-	border := 0
+	// These have no defaults upstream: unset means the field is left out of
+	// the payload entirely rather than sent with a value the caller never
+	// chose.
+	var border *int
 	if rawBorder := strings.TrimSpace(target.Query["border"]); rawBorder != "" {
 		if value, err := strconv.Atoi(rawBorder); err == nil {
-			border = value
+			border = &value
 		}
 	}
 
 	ditherType := strings.TrimSpace(target.Query["dither_type"])
-	if ditherType == "" {
-		ditherType = "DIFFUSION"
-	}
-
 	ditherKernel := strings.TrimSpace(target.Query["dither_kernel"])
-	if ditherKernel == "" {
-		ditherKernel = "FLOYD_STEINBERG"
-	}
 
 	if mode == dotModeText && imageData != "" {
 		imageData = ""
 	}
 
+	// Not refused here: upstream builds the object and reports this when the
+	// send is attempted. See the note in bark.go.
 	return &DotTarget{
 		apikey:       apikey,
 		deviceID:     deviceID,
@@ -89,10 +85,15 @@ func NewDotTarget(target *ParsedURL) (*DotTarget, error) {
 		border:       border,
 		ditherType:   ditherType,
 		ditherKernel: ditherKernel,
+		taskKey:      taskKey,
 	}, nil
 }
 
 func (d *DotTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if d.apikey == "" {
+		return RequestSpec{}, fmt.Errorf("missing apikey")
+	}
+
 	spec, err := d.buildRequest(body, title)
 	if err != nil {
 		return RequestSpec{}, err
@@ -104,37 +105,100 @@ func (d *DotTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 }
 
 func (d *DotTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := d.buildRequest(body, title)
-	if err != nil {
-		return err
+	if d.apikey == "" {
+		return fmt.Errorf("missing apikey")
+	}
+
+	return d.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments treats the first attachment as the image. Dot takes one
+// image per device, so any others are ignored rather than sent separately.
+func (d *DotTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	if d.apikey == "" {
+		return fmt.Errorf("missing apikey")
 	}
 
 	_ = notifyType
 
-	return SendRequest(spec)
+	// An image supplied by ?image= wins; an attachment fills in otherwise.
+	imageData := d.imageData
+	if imageData == "" && len(attachments) > 0 {
+		imageData = attachments[0].Base64()
+	}
+
+	// Image mode sends only the image; text mode sends the text and then,
+	// if there is an image, a second request to the image endpoint.
+	if d.mode == dotModeImage || imageData == "" {
+		spec, err := d.buildRequestWithImage(body, title, imageData)
+		if err != nil {
+			return err
+		}
+
+		return SendRequest(spec)
+	}
+
+	if body != "" || title != "" {
+		spec, err := d.buildRequestWithImage(body, title, "")
+		if err != nil {
+			return err
+		}
+		if err := SendRequest(spec); err != nil {
+			return err
+		}
+	}
+
+	imageSpec, err := d.buildImageRequest(imageData)
+	if err != nil {
+		return err
+	}
+
+	return SendRequest(imageSpec)
+}
+
+// buildImageRequest posts an image to the image endpoint, which text mode
+// uses alongside the text rather than instead of it.
+func (d *DotTarget) buildImageRequest(imageData string) (RequestSpec, error) {
+	image := *d
+	image.mode = dotModeImage
+
+	return image.buildRequestWithImage("", "", imageData)
 }
 
 func (d *DotTarget) buildRequest(body, title string) (RequestSpec, error) {
+	return d.buildRequestWithImage(body, title, d.imageData)
+}
+
+func (d *DotTarget) buildRequestWithImage(body, title, imageData string) (RequestSpec, error) {
+	// The v2 API identifies the device in the URL, not the payload.
 	payload := map[string]any{
 		"refreshNow": d.refreshNow,
-		"deviceId":   d.deviceID,
 	}
 
-	requestURL := dotTextURL
+	requestURL := fmt.Sprintf(dotTextURLTemplate, d.deviceID)
 	if d.mode == dotModeImage {
-		if d.imageData == "" {
+		if imageData == "" {
 			return RequestSpec{}, fmt.Errorf("missing image data")
 		}
 
-		payload["image"] = d.imageData
+		payload["image"] = imageData
 		if d.link != "" {
 			payload["link"] = d.link
 		}
-		payload["border"] = d.border
-		payload["ditherType"] = d.ditherType
-		payload["ditherKernel"] = d.ditherKernel
+		if d.border != nil {
+			payload["border"] = *d.border
+		}
+		if d.ditherType != "" {
+			payload["ditherType"] = d.ditherType
+		}
+		if d.ditherKernel != "" {
+			payload["ditherKernel"] = d.ditherKernel
+		}
+		if d.taskKey != "" {
+			payload["taskKey"] = d.taskKey
+		}
 
-		requestURL = dotImageURL
+		requestURL = fmt.Sprintf(dotImageURLTemplate, d.deviceID)
 	} else {
 		if title != "" {
 			payload["title"] = title
@@ -150,6 +214,9 @@ func (d *DotTarget) buildRequest(body, title string) (RequestSpec, error) {
 		}
 		if d.link != "" {
 			payload["link"] = d.link
+		}
+		if d.taskKey != "" {
+			payload["taskKey"] = d.taskKey
 		}
 	}
 
@@ -187,7 +254,7 @@ func init() {
 					"type":     "int",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -250,6 +317,22 @@ func init() {
 					"required": false,
 					"type":     "string",
 				},
+				"mode": map[string]any{
+					"default":  "text",
+					"map_to":   "mode",
+					"name":     "API Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"text", "image"},
+				},
+				"task_key": map[string]any{
+					"map_to":   "task_key",
+					"name":     "Task Key",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
 				"overflow": map[string]any{
 					"default":  "upstream",
 					"map_to":   "overflow",
@@ -268,7 +351,7 @@ func init() {
 					"type":     "bool",
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -308,7 +391,7 @@ func init() {
 				},
 			},
 			"kwargs":    map[string]any{},
-			"templates": []string{"{schema}://{apikey}@{device_id}/{mode}/"},
+			"templates": []string{"{schema}://{apikey}@{device_id}/"},
 			"tokens": map[string]any{
 				"apikey": map[string]any{
 					"map_to":   "apikey",
@@ -323,15 +406,6 @@ func init() {
 					"private":  false,
 					"required": true,
 					"type":     "string",
-				},
-				"mode": map[string]any{
-					"default":  "text",
-					"map_to":   "mode",
-					"name":     "API Mode",
-					"private":  false,
-					"required": false,
-					"type":     "choice:string",
-					"values":   []string{"text", "image"},
 				},
 				"schema": map[string]any{
 					"default":  "dot",

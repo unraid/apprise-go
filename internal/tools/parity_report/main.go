@@ -10,11 +10,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/unraid/apprise-go/internal/notify"
+	"github.com/unraid/apprise-go/internal/parity"
 )
 
 type testEvent struct {
@@ -45,6 +47,18 @@ type report struct {
 	GoSchemas      []string
 	MissingSchemas []string
 	ExtraSchemas   []string
+
+	// DeclaredGapSchemas are the schemas internal/notify/unsupported.go says
+	// this port does not implement. They are absent on purpose, so they are
+	// reported separately rather than counted as drift — the Go suites all
+	// defer to the same declaration.
+	DeclaredGapSchemas []string
+
+	// FrameworkArgs is what this port does with the arguments every provider
+	// inherits from upstream's base class. They are reported because a
+	// declaration-only argument is invisible everywhere else: the schema
+	// entry carries it, so metadata parity passes either way.
+	FrameworkArgs  map[string]parity.FrameworkArg
 	SchemaDiffErr  string
 	HTTPSchemas    []string
 	NonHTTPSchemas []string
@@ -66,10 +80,11 @@ func main() {
 	flag.StringVar(&pkg, "pkg", "./internal/parity", "go test package to run")
 	flag.Parse()
 
-	rep, raw, err := runParityTests(pkg)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
+	// A failing run is exactly when the report matters, so record the error
+	// and still write both outputs before exiting non-zero.
+	rep, raw, runErr := runParityTests(pkg)
+	if runErr != nil {
+		fmt.Fprintln(os.Stderr, runErr.Error())
 	}
 
 	if jsonPath != "" {
@@ -98,10 +113,29 @@ func main() {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
+
+	if runErr != nil {
+		os.Exit(1)
+	}
 }
 
+// parityTestTimeout is passed to go test explicitly.
+//
+// Without it the package inherits go test's 10 minute default, which the parity
+// suite outgrew: it drives a Python interpreter per capture, and CI runners are
+// slower than a developer machine, so a run that finishes in about four minutes
+// locally can pass ten on a runner. The failure looks like a hung test rather
+// than a slow one, so the limit is stated here instead of being inherited.
+//
+// Override with APPRISE_PARITY_TIMEOUT when bisecting a genuine hang.
+const parityTestTimeout = "45m"
+
 func runParityTests(pkg string) (report, []byte, error) {
-	cmd := exec.Command("go", "test", pkg, "-count=1", "-json", "-v")
+	timeout := parityTestTimeout
+	if override := strings.TrimSpace(os.Getenv("APPRISE_PARITY_TIMEOUT")); override != "" {
+		timeout = override
+	}
+	cmd := exec.Command("go", "test", pkg, "-count=1", "-json", "-v", "-timeout", timeout)
 	cmd.Env = os.Environ()
 	if os.Getenv("GOCACHE") == "" {
 		if dir, err := os.MkdirTemp("", "gocache"); err == nil {
@@ -122,10 +156,11 @@ func runParityTests(pkg string) (report, []byte, error) {
 
 	raw := &bytes.Buffer{}
 	rep := report{
-		GeneratedAt: time.Now(),
-		Package:     pkg,
-		Tests:       map[string]testResult{},
-		TopLevel:    map[string]testResult{},
+		FrameworkArgs: parity.FrameworkArgs,
+		GeneratedAt:   time.Now(),
+		Package:       pkg,
+		Tests:         map[string]testResult{},
+		TopLevel:      map[string]testResult{},
 	}
 
 	scanner := bufio.NewScanner(stdout)
@@ -163,8 +198,11 @@ func runParityTests(pkg string) (report, []byte, error) {
 		return report{}, nil, fmt.Errorf("read go test output: %w", err)
 	}
 
+	// A failing suite is exactly when the report is wanted, so the summary
+	// below still has to be computed; the error is returned at the end.
+	var runErr error
 	if err := cmd.Wait(); err != nil {
-		return rep, raw.Bytes(), fmt.Errorf("go test failed: %w", err)
+		runErr = fmt.Errorf("go test failed: %w", err)
 	}
 
 	repoRoot := findRepoRoot()
@@ -176,7 +214,8 @@ func runParityTests(pkg string) (report, []byte, error) {
 		} else {
 			rep.PythonSchemas = pythonSchemas
 			rep.GoSchemas = notify.SupportedSchemas()
-			rep.MissingSchemas, rep.ExtraSchemas = diffSchemas(rep.PythonSchemas, rep.GoSchemas)
+			rep.MissingSchemas, rep.DeclaredGapSchemas, rep.ExtraSchemas =
+				diffSchemas(rep.PythonSchemas, rep.GoSchemas)
 		}
 	}
 
@@ -199,7 +238,7 @@ func runParityTests(pkg string) (report, []byte, error) {
 		}
 	}
 
-	return rep, raw.Bytes(), nil
+	return rep, raw.Bytes(), runErr
 }
 
 func topLevelTest(name string) string {
@@ -303,7 +342,9 @@ func loadPythonSchemas(repoRoot string) ([]string, string, error) {
 	return schemas, appriseRoot, nil
 }
 
-func diffSchemas(pythonSchemas, goSchemas []string) ([]string, []string) {
+// diffSchemas splits the schemas upstream has and this port does not into the
+// ones that are absent on purpose and the ones that are drift.
+func diffSchemas(pythonSchemas, goSchemas []string) (missing, declared, extra []string) {
 	pythonSet := map[string]struct{}{}
 	for _, schema := range pythonSchemas {
 		normalized := strings.ToLower(strings.TrimSpace(schema))
@@ -322,21 +363,29 @@ func diffSchemas(pythonSchemas, goSchemas []string) ([]string, []string) {
 		goSet[normalized] = struct{}{}
 	}
 
-	missing := []string{}
+	missing = []string{}
+	declared = []string{}
 	for schema := range pythonSet {
-		if _, ok := goSet[schema]; !ok {
-			missing = append(missing, schema)
+		if _, ok := goSet[schema]; ok {
+			continue
 		}
+		if notify.IsKnownGapSchema(schema) {
+			declared = append(declared, schema)
+			continue
+		}
+		missing = append(missing, schema)
 	}
-	extra := []string{}
+	extra = []string{}
 	for schema := range goSet {
 		if _, ok := pythonSet[schema]; !ok {
 			extra = append(extra, schema)
 		}
 	}
 	sort.Strings(missing)
+	sort.Strings(declared)
 	sort.Strings(extra)
-	return missing, extra
+
+	return missing, declared, extra
 }
 
 func countProviders() int {
@@ -447,6 +496,21 @@ func renderMarkdown(rep report, jsonPath string) string {
 	fmt.Fprintf(&b, "- Provider parity: %s\n", rep.ProviderParity)
 	fmt.Fprintf(&b, "- Golden parity: %s\n\n", rep.GoldenParity)
 
+	b.WriteString("## Framework Arguments\n\n")
+	b.WriteString("Arguments every provider inherits from upstream's base class. " +
+		"Each schema entry declares them, so schema parity passes whether or " +
+		"not the behavior behind them exists — which is why they are " +
+		"reported separately.\n\n")
+	b.WriteString("| Argument | Implemented | Fixture-covered | Notes |\n")
+	b.WriteString("| --- | --- | --- | --- |\n")
+	for _, name := range sortedFrameworkArgs(rep.FrameworkArgs) {
+		arg := rep.FrameworkArgs[name]
+		fmt.Fprintf(&b, "| %s | %s | %s | %s |\n",
+			name, yesNo(arg.Implemented), yesNo(arg.FixtureCovered),
+			strings.ReplaceAll(arg.Note, "\n", " "))
+	}
+	b.WriteString("\n")
+
 	b.WriteString("## Schema Coverage Details\n\n")
 	if rep.SchemaDiffErr != "" {
 		fmt.Fprintf(&b, "- Apprise schemas: ERROR (%s)\n\n", rep.SchemaDiffErr)
@@ -457,10 +521,12 @@ func renderMarkdown(rep report, jsonPath string) string {
 		fmt.Fprintf(&b, "- Python schemas: %d\n", len(rep.PythonSchemas))
 		fmt.Fprintf(&b, "- Go schemas: %d\n", len(rep.GoSchemas))
 		fmt.Fprintf(&b, "- Missing in Go: %d\n", len(rep.MissingSchemas))
+		fmt.Fprintf(&b, "- Declared unsupported: %d\n", len(rep.DeclaredGapSchemas))
 		fmt.Fprintf(&b, "- Extra in Go: %d\n\n", len(rep.ExtraSchemas))
 		b.WriteString("| Type | Schemas |\n")
 		b.WriteString("| --- | --- |\n")
 		fmt.Fprintf(&b, "| Missing in Go | %s |\n", strings.Join(rep.MissingSchemas, ", "))
+		fmt.Fprintf(&b, "| Declared unsupported | %s |\n", strings.Join(rep.DeclaredGapSchemas, ", "))
 		fmt.Fprintf(&b, "| Extra in Go | %s |\n\n", strings.Join(rep.ExtraSchemas, ", "))
 	}
 
@@ -485,6 +551,24 @@ func renderMarkdown(rep report, jsonPath string) string {
 		tests := coverageTests(schema)
 		status := coverageStatus(rep.TopLevel, tests)
 		fmt.Fprintf(&b, "| %s | %s | %s |\n", schema, strings.Join(tests, ", "), status)
+	}
+
+	if failing := failingSubtests(rep.Tests); len(failing) > 0 {
+		b.WriteString("\n## Work Outstanding\n\n")
+		b.WriteString("Each entry below is a provider or schema that no longer matches upstream.\n\n")
+		b.WriteString("| Test | Count | Failing |\n")
+		b.WriteString("| --- | --- | --- |\n")
+
+		parents := make([]string, 0, len(failing))
+		for parent := range failing {
+			parents = append(parents, parent)
+		}
+		sort.Strings(parents)
+		for _, parent := range parents {
+			names := failing[parent]
+			sort.Strings(names)
+			fmt.Fprintf(&b, "| %s | %d | %s |\n", parent, len(names), strings.Join(names, ", "))
+		}
 	}
 
 	b.WriteString("\n## Parity Tests\n\n")
@@ -538,4 +622,48 @@ func coverageStatus(results map[string]testResult, tests []string) string {
 		}
 	}
 	return "PASS"
+}
+
+// failingSubtests groups failing subtests by their parent test so the report
+// names the providers and schemas that need porting, not just the test that
+// covers them.
+func failingSubtests(tests map[string]testResult) map[string][]string {
+	failing := map[string][]string{}
+	for name, result := range tests {
+		if result.Status != "fail" {
+			continue
+		}
+		parent := topLevelTest(name)
+		if parent == name {
+			continue
+		}
+		// Subtests can nest; the first segment after the parent identifies the
+		// provider or schema.
+		leaf := strings.TrimPrefix(name, parent+"/")
+		if idx := strings.Index(leaf, "/"); idx >= 0 {
+			leaf = leaf[:idx]
+		}
+		if !slices.Contains(failing[parent], leaf) {
+			failing[parent] = append(failing[parent], leaf)
+		}
+	}
+	return failing
+}
+
+func sortedFrameworkArgs(args map[string]parity.FrameworkArg) []string {
+	names := make([]string, 0, len(args))
+	for name := range args {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	return names
+}
+
+func yesNo(value bool) string {
+	if value {
+		return "yes"
+	}
+
+	return "no"
 }

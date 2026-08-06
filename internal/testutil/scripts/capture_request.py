@@ -91,10 +91,68 @@ import apprise
 from apprise import AppriseAsset
 
 DROP_HEADERS = {"x-apprise-id", "x-apprise-recursion-count"}
-KEEP_HEADERS = {"content-type", "accept", "accepts", "authorization"}
+# content-range is kept because it is the whole protocol of a chunked upload
+# session; dropping it would leave the part of the request most worth checking
+# uncompared.
+KEEP_HEADERS = {
+    "content-type",
+    "accept",
+    "accepts",
+    "authorization",
+    "content-range",
+}
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
-CACHE_VERSION = 12
+CACHE_VERSION = 15
+
+# How many requests still have to fail before the mocks answer normally. Set
+# from --fail-first, and the only way to reach a retry path: every mock here
+# answers 200, so neither implementation ever re-sends without it.
+_FAIL_BUDGET = 0
+# A recipient device for Matrix end-to-end encryption. Upstream verifies the
+# signatures on device keys and one-time keys before it will encrypt to a
+# device, so the mock signs them with upstream's own account implementation
+# rather than returning fixed strings that would be rejected.
+_MATRIX_E2EE_USER = "@target:example.com"
+_MATRIX_E2EE_DEVICE = "TARGETDEVICE"
+_matrix_e2ee_account = None
+
+
+def matrix_e2ee_account():
+    global _matrix_e2ee_account
+    if _matrix_e2ee_account is None:
+        from apprise.plugins.matrix.e2ee import MatrixOlmAccount
+
+        _matrix_e2ee_account = MatrixOlmAccount()
+    return _matrix_e2ee_account
+
+
+def matrix_e2ee_device_keys():
+    account = matrix_e2ee_account()
+    return {
+        "device_keys": {
+            _MATRIX_E2EE_USER: {
+                _MATRIX_E2EE_DEVICE: account.device_keys_payload(
+                    _MATRIX_E2EE_USER, _MATRIX_E2EE_DEVICE
+                )
+            }
+        }
+    }
+
+
+def matrix_e2ee_claimed_key():
+    account = matrix_e2ee_account()
+    otks = account.one_time_keys_payload(
+        _MATRIX_E2EE_USER, _MATRIX_E2EE_DEVICE, count=1
+    )
+    key_id, key_obj = next(iter(otks.items()))
+    return {
+        "one_time_keys": {
+            _MATRIX_E2EE_USER: {_MATRIX_E2EE_DEVICE: {key_id: key_obj}}
+        }
+    }
+
+
 CACHE_ENV = "APPRISE_CAPTURE_CACHE"
 CACHE_DIR_ENV = "APPRISE_CAPTURE_CACHE_DIR"
 CACHE_SUBDIR = ".tmp/pycapture"
@@ -193,7 +251,60 @@ def stable_attachment_cache_entries(attachments):
     return entries
 
 
-def cache_key(url, body, title, notify_type, body_format, attachments):
+def script_sha():
+    try:
+        return hashlib.sha256(Path(__file__).resolve().read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
+def referenced_file_shas(url):
+    """Return a sha for every local file the URL's query points at.
+
+    Only readable regular files are considered, so an ordinary query value
+    that happens to look like a path costs nothing.
+    """
+    try:
+        query = urlparse(url).query
+    except ValueError:
+        return {}
+
+    shas = {}
+    for key, values in parse_qs(query, keep_blank_values=True).items():
+        for value in values:
+            candidate = value.strip()
+            if not candidate:
+                continue
+            candidate = candidate[len("file://"):] if candidate.startswith("file://") else candidate
+            path = Path(candidate)
+            if not path.is_absolute():
+                path = Path.cwd() / path
+            try:
+                if not path.is_file():
+                    continue
+                shas[f"{key}:{value}"] = hashlib.sha256(path.read_bytes()).hexdigest()
+            except OSError:
+                continue
+
+    return shas
+
+
+def referenced_file_shas_for(paths):
+    """Return a sha for each readable path, so editing an attachment
+    invalidates the capture that used it."""
+    shas = {}
+    for raw in paths:
+        candidate = Path(str(raw).strip())
+        try:
+            if candidate.is_file():
+                shas[str(candidate)] = hashlib.sha256(candidate.read_bytes()).hexdigest()
+        except OSError:
+            continue
+
+    return shas
+
+
+def cache_key(url, body, title, notify_type, body_format, attach=None):
     notify_name = notify_type.name if hasattr(notify_type, "name") else str(notify_type)
     try:
         import apprise as apprise_module
@@ -208,9 +319,22 @@ def cache_key(url, body, title, notify_type, body_format, attachments):
         "title": title,
         "notify_type": notify_name,
         "body_format": body_format,
-        "attachments": stable_attachment_cache_entries(attachments),
+        # The forced-failure budget changes what upstream does, so a capture
+        # taken with one must not be served for a request without it.
+        "fail_first": _FAIL_BUDGET,
+        # An attachment shapes the request, so it belongs in the key.
+        "attach": sorted(attach or []),
+        "attach_shas": referenced_file_shas_for(attach or []),
+        "attachments": stable_attachment_cache_entries(attach or []),
         "apprise_version": apprise_version,
         "apprise_sha": apprise_git_sha(),
+        # The mocked responses live in this script, so a change to it must
+        # invalidate cached captures.
+        "script_sha": script_sha(),
+        # A URL may point at a local file whose contents shape the request —
+        # a payload template, for instance. Editing that file changes the
+        # capture without changing the URL, so it has to be part of the key.
+        "referenced_files": referenced_file_shas(url),
         "python_version": sys.version,
         "requests_version": getattr(requests, "__version__", ""),
         "env": {
@@ -235,10 +359,10 @@ def cache_key(url, body, title, notify_type, body_format, attachments):
     return digest
 
 
-def load_cache(url, body, title, notify_type, body_format, attachments):
+def load_cache(url, body, title, notify_type, body_format, attach=None):
     if not cache_enabled():
         return None, None
-    digest = cache_key(url, body, title, notify_type, body_format, attachments)
+    digest = cache_key(url, body, title, notify_type, body_format, attach)
     root = cache_dir()
     path = root / f"{digest}.json"
     if not path.exists():
@@ -280,6 +404,21 @@ def normalize_headers(headers, keep_user_agent):
         if lower in KEEP_HEADERS or lower.startswith("x-"):
             normalized[lower] = value
     return normalized
+
+
+# The multipart boundary Python invents for an email is random, so a capture
+# would differ on every run and --check could never pass. Pinning it here is
+# the same trick the frozen clock plays on the Date header; the Go comparison
+# rewrites its own generated boundary to this before diffing.
+def apply_fixed_mime_boundary():
+    import email.generator
+
+    # The generator asks its own class for a boundary, so the classmethod is
+    # what has to be replaced; rebinding the module-level function of the same
+    # name looks right and changes nothing.
+    email.generator.Generator._make_boundary = classmethod(
+        lambda cls, text=None: "APPRISE-PARITY-BOUNDARY"
+    )
 
 
 def apply_fixed_time():
@@ -445,15 +584,13 @@ def apply_simplepush_fixes():
         pass
 
 
-def capture_request(url, body, title, notify_type, body_format=None, attachments=None):
-    attachments = attachments or []
-    cached, cache_path = load_cache(
-        url, body, title, notify_type, body_format, attachments
-    )
+def capture_request(url, body, title, notify_type, body_format=None, attach=None):
+    cached, cache_path = load_cache(url, body, title, notify_type, body_format, attach)
     if cached is not None:
         return cached
 
     apply_fixed_time()
+    apply_fixed_mime_boundary()
     apply_store_fix()
     apply_oauth_fixes()
     apply_vapid_fixes()
@@ -469,22 +606,39 @@ def capture_request(url, body, title, notify_type, body_format=None, attachments
             header.lower() == "user-agent" for header in provided_headers.keys()
         )
 
+        # A raw file handle passed as data= is not read while the request is
+        # prepared, so the capture would record its repr rather than the
+        # bytes actually sent.
+        raw_data = kwargs.get("data")
+        if hasattr(raw_data, "read"):
+            raw_data = raw_data.read()
+
         req = requests.Request(
             method=method,
             url=url,
             headers=provided_headers,
-            data=kwargs.get("data"),
+            data=raw_data,
             params=kwargs.get("params"),
             json=kwargs.get("json"),
-            files=kwargs.get("files"),
             auth=kwargs.get("auth"),
+            # Without this an attachment never reaches the prepared body and
+            # the capture silently shows a request with no file in it.
+            files=kwargs.get("files"),
         )
         prepared = self.prepare_request(req)
         req_body = prepared.body
+        body_b64 = None
         if req_body is None:
             body_text = ""
         elif isinstance(req_body, bytes):
-            body_text = req_body.decode("utf-8", "replace")
+            try:
+                body_text = req_body.decode("utf-8")
+            except UnicodeDecodeError:
+                # A binary body — an image attachment, say — cannot survive a
+                # lossy decode, and a golden holding the mangled text would
+                # never match a live request. Keep the bytes alongside it.
+                body_text = req_body.decode("utf-8", "replace")
+                body_b64 = base64.b64encode(req_body).decode("ascii")
         else:
             body_text = str(req_body)
 
@@ -499,14 +653,15 @@ def capture_request(url, body, title, notify_type, body_format=None, attachments
             except (TypeError, ValueError):
                 pass
 
-        captured.append(
-            {
-                "method": prepared.method,
-                "url": prepared.url,
-                "headers": normalize_headers(prepared.headers, explicit_user_agent),
-                "body": body_text,
-            }
-        )
+        record = {
+            "method": prepared.method,
+            "url": prepared.url,
+            "headers": normalize_headers(prepared.headers, explicit_user_agent),
+            "body": body_text,
+        }
+        if body_b64 is not None:
+            record["body_b64"] = body_b64
+        captured.append(record)
 
         response = requests.Response()
         response.status_code = 200
@@ -521,6 +676,22 @@ def capture_request(url, body, title, notify_type, body_format=None, attachments
             "/oauth2/v2.0/token"
         ):
             response._content = b'{"access_token":"token","expires_in":3600}'
+        elif parsed.netloc == "graph.microsoft.com" and parsed.path.endswith(
+            "/attachments/createUploadSession"
+        ):
+            response._content = (
+                b'{"uploadUrl":"https://upload.example.com/session123"}'
+            )
+        elif (
+            parsed.netloc == "graph.microsoft.com"
+            and parsed.path.endswith("/messages")
+            and method.upper() == "POST"
+        ):
+            # A draft, which the caller needs an id from before it can attach
+            # anything to it.
+            response._content = b'{"id":"draft123"}'
+        elif parsed.netloc == "upload.example.com":
+            response._content = b"{}"
         elif parsed.netloc == "graph.microsoft.com" and parsed.path.startswith(
             "/v1.0/users/"
         ):
@@ -543,24 +714,19 @@ def capture_request(url, body, title, notify_type, body_format=None, attachments
             response._content = b'{"uri":"at://example/post"}'
         elif parsed.netloc == "api.twist.com" and parsed.path.endswith("/users/login"):
             response._content = b'{"token":"token","default_workspace":12345}'
-        elif parsed.netloc == "api.twitter.com" and parsed.path.endswith(
-            "/account/verify_credentials.json"
-        ):
-            response._content = b'{"screen_name":"apprise","id":"123","id_str":"123"}'
-        elif parsed.netloc == "api.twitter.com" and parsed.path.endswith(
-            "/users/lookup.json"
-        ):
-            values = parse_qs(body_text)
-            names = values.get("screen_name") or []
-            if not names:
-                names = ["user"]
+        elif parsed.netloc == "api.twitter.com" and parsed.path == "/2/users/me":
+            # X API v2 wraps the user in a data object
+            response._content = b'{"data":{"id":"123","username":"apprise"}}'
+        elif parsed.netloc == "api.twitter.com" and parsed.path == "/2/users/by":
+            names = parse_qs(parsed.query).get("usernames") or []
+            names = [n for entry in names for n in entry.split(",")] or ["user"]
             response._content = json.dumps(
-                [{"screen_name": name, "id": "123", "id_str": "123"} for name in names]
+                {"data": [{"username": name, "id": "123"} for name in names]}
             ).encode("utf-8")
         elif parsed.netloc == "slack.com" and parsed.path == "/api/users.lookupByEmail":
             response._content = b'{"ok": true, "user": {"id": "U123"}}'
         elif parsed.netloc == "slack.com" and parsed.path == "/api/chat.postMessage":
-            response._content = b'{"ok": true, "ts": "123.456"}'
+            response._content = b'{"ok":true,"ts":"123.456","channel":"C123456"}'
         elif parsed.path.endswith("/Users/AuthenticateByName"):
             response._content = (
                 b'{"AccessToken":"token","Id":"user-id","User":{"Id":"user-id"}}'
@@ -575,6 +741,37 @@ def capture_request(url, body, title, notify_type, body_format=None, attachments
                 b"arn:aws:sns:us-east-1:000000000000:topic"
                 b"</TopicArn></CreateTopicResult></CreateTopicResponse>"
             )
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith(
+            "/state/m.room.encryption"
+        ):
+            # Advertising encryption is what makes upstream take the E2EE path
+            response._content = b'{"algorithm":"m.megolm.v1.aes-sha2"}'
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith(
+            "/joined_members"
+        ):
+            response._content = json.dumps(
+                {"joined": {_MATRIX_E2EE_USER: {"display_name": "Target"}}}
+            ).encode("utf-8")
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith(
+            "/keys/upload"
+        ):
+            response._content = (
+                b'{"one_time_key_counts":{"signed_curve25519":50}}'
+            )
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith(
+            "/keys/query"
+        ):
+            response._content = json.dumps(matrix_e2ee_device_keys()).encode(
+                "utf-8"
+            )
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith(
+            "/keys/claim"
+        ):
+            response._content = json.dumps(matrix_e2ee_claimed_key()).encode(
+                "utf-8"
+            )
+        elif "/_matrix/client/" in parsed.path and "/sendToDevice/" in parsed.path:
+            response._content = b"{}"
         elif parsed.path == "/.well-known/matrix/client":
             base_url = f"{parsed.scheme}://{parsed.netloc}"
             response._content = json.dumps(
@@ -589,6 +786,9 @@ def capture_request(url, body, title, notify_type, body_format=None, attachments
                     "access_token": "token",
                     "home_server": host,
                     "user_id": f"@user:{host}",
+                    # E2EE key upload is keyed on the device the server
+                    # assigns at login, so the mock must return one.
+                    "device_id": "APPRISEDEVICE",
                 }
             ).encode("utf-8")
         elif "/_matrix/client/" in parsed.path and parsed.path.endswith("/register"):
@@ -619,7 +819,13 @@ def capture_request(url, body, title, notify_type, body_format=None, attachments
                 "utf-8"
             )
         elif (
-            "/_matrix/client/" in parsed.path and "/send/m.room.message" in parsed.path
+            "/_matrix/client/" in parsed.path
+            and (
+                "/send/m.room.message" in parsed.path
+                # Encrypted rooms send m.room.encrypted instead, and the
+                # plugin treats a send without an event_id as a failure.
+                or "/send/m.room.encrypted" in parsed.path
+            )
         ):
             response._content = b'{"event_id":"$event"}'
         elif "/_matrix/client/" in parsed.path and parsed.path.endswith("/logout"):
@@ -643,6 +849,22 @@ def capture_request(url, body, title, notify_type, body_format=None, attachments
             and parsed.path == "/api/send/message"
         ):
             response._content = b'{"code":1000,"msg":"ok"}'
+        elif parsed.netloc == "www.pushplus.plus" and parsed.path == "/send":
+            response._content = b'{"code":200,"msg":"ok"}'
+        elif parsed.netloc == "api2.serwersms.pl" and "/messages/" in parsed.path:
+            # SerwerSMS answers 200 and reports the outcome in the body
+            response._content = b'{"success":true}'
+        elif parsed.netloc == "api.octopush.com" and parsed.path.endswith(
+            "/sms-campaign/send"
+        ):
+            # Octopush answers 201 Created on success
+            response.status_code = 201
+            response._content = b"{}"
+        elif parsed.netloc == "chatapi.viber.com" and parsed.path.endswith(
+            "/send_message"
+        ):
+            # Viber always answers 200; status 0 in the body means success
+            response._content = b'{"status":0,"status_message":"ok"}'
         elif parsed.netloc.endswith("notificationapi.com"):
             response._content = b'{"ok":true}'
         elif parsed.netloc == "api.sendpulse.com" and parsed.path.endswith(
@@ -671,12 +893,99 @@ def capture_request(url, body, title, notify_type, body_format=None, attachments
             and parsed.path == "/v2/alerts"
         ):
             response._content = b'{"requestId":"request"}'
+        elif "/api/v4/teams/" in parsed.path and "/channels/name/" in parsed.path:
+            # Mattermost bot mode resolves a channel name to an id first.
+            response._content = b'{"id":"channelid123"}'
+        elif parsed.path.endswith("/api/v4/posts"):
+            response.status_code = 201
+            response._content = b'{"id":"postid"}'
+        elif parsed.netloc in (
+            "platform.ringcentral.com",
+            "platform.devtest.ringcentral.com",
+        ):
+            if parsed.path == "/restapi/oauth/token":
+                response._content = (
+                    b'{"access_token":"token","expires_in":3600,'
+                    b'"scope":"SMS","owner_id":"owner",'
+                    b'"endpoint_id":"endpoint"}'
+                )
+            else:
+                response._content = b'{"id":"message-id"}'
+        elif parsed.path == "/api/files.getUploadURLExternal":
+            response._content = (
+                b'{"ok":true,"file_id":"F123ABC456",'
+                b'"upload_url":"https://files.slack.com/upload/v1/ABC123"}'
+            )
+        elif parsed.path == "/api/files.completeUploadExternal":
+            response._content = (
+                b'{"ok":true,"files":[{"id":"F123ABC456","title":"pixel.png"}]}'
+            )
+        elif parsed.path.endswith("/api/v4/files"):
+            # Mattermost answers an upload with the file ids a post uses.
+            response._content = b'{"file_infos":[{"id":"fileid123"}]}'
+        elif parsed.netloc == "api.x.com" and parsed.path == "/2/media/upload":
+            response._content = b'{"data":{"id":"1234567890","media_key":"3_1234567890"}}'
+        elif parsed.path.endswith("/xrpc/com.atproto.repo.uploadBlob"):
+            response._content = (
+                b'{"blob":{"$type":"blob","ref":{"$link":"bafyblob123"},'
+                b'"mimeType":"image/png","size":70}}'
+            )
+        elif parsed.path == "/api/v1/media":
+            # Mastodon answers a media upload with the id a status references.
+            response._content = b'{"id":"110001"}'
+        elif parsed.path == "/api/v3/asset/create":
+            # Kook answers a CDN upload with the URL a message references.
+            response._content = (
+                b'{"code":0,"data":{"url":"https://img.kookapp.cn/assets/pixel.png"}}'
+            )
+        elif parsed.netloc == "image.groupme.com":
+            # GroupMe answers an image upload with the URL to reference.
+            response._content = (
+                b'{"payload":{"url":"https://i.groupme.com/pixel.png"}}'
+            )
+        elif "/api/v1/post/container/" in parsed.path:
+            # HumHub returns the new post's id so files can be attached to it.
+            response._content = b'{"id":4242}'
+        elif parsed.path == "/v2/upload-request":
+            # Pushbullet answers with where to put the file and where it will
+            # then be readable.
+            response._content = (
+                b'{"file_name":"pixel.png","file_type":"image/png",'
+                b'"file_url":"https://dl.pushb.com/abc/pixel.png",'
+                b'"upload_url":"https://upload.pushbullet.com/upload-legacy/abc"}'
+            )
+        elif parsed.netloc == "qyapi.weixin.qq.com":
+            # WeCom reports application errors in the body with a 200 status,
+            # so both the token hop and the send need errcode 0.
+            if parsed.path == "/cgi-bin/gettoken":
+                response._content = (
+                    b'{"errcode":0,"errmsg":"ok",'
+                    b'"access_token":"token","expires_in":7200}'
+                )
+            else:
+                response._content = b'{"errcode":0,"errmsg":"ok"}'
+        elif (
+            parsed.netloc == "api.atlassian.com"
+            and parsed.path == "/jsm/ops/integration/v2/alerts"
+        ):
+            # Jira Service Management, like Opsgenie, treats a 200 with no
+            # requestId in the body as a failure.
+            response._content = b'{"requestId":"request"}'
         elif parsed.netloc == "www.dmc.sfr-sh.fr" and parsed.path.endswith(
             "/DmcWS/1.5.8/JsonService/MessagesUnitairesWS/addSingleCall"
         ):
             response._content = b'{"success":true}'
         else:
             response._content = b"ok"
+        # The forced-failure budget is applied last: several providers set a
+        # status of their own further up, and injecting earlier let those
+        # overwrite the failure, which made a rejected request look accepted.
+        global _FAIL_BUDGET
+        if _FAIL_BUDGET > 0:
+            _FAIL_BUDGET -= 1
+            response.status_code = 500
+            response._content = b'{"error":"parity forced failure"}'
+
         response.headers.setdefault("Content-Type", "text/plain")
         response.headers["Content-Length"] = str(len(response.content))
         response.url = prepared.url
@@ -698,12 +1007,15 @@ def capture_request(url, body, title, notify_type, body_format=None, attachments
             instance = apprise.Apprise.instantiate(url, asset=asset)
             if instance:
                 service.servers.append(instance)
-        success = service.notify(
-            body=body,
-            title=title,
-            notify_type=notify_type,
-            attach=attachments or None,
-        )
+
+        notify_kwargs = {
+            "body": body,
+            "title": title,
+            "notify_type": notify_type,
+        }
+        if attach:
+            notify_kwargs["attach"] = list(attach)
+        success = service.notify(**notify_kwargs)
     finally:
         requests.sessions.Session.request = original_request
 
@@ -720,6 +1032,13 @@ def main():
     parser.add_argument("--type", default="info")
     parser.add_argument("--body-format", default="")
     parser.add_argument("--attach", action="append", default=[])
+    parser.add_argument(
+        "--fail-first",
+        type=int,
+        default=0,
+        help="answer this many requests with a 500 before succeeding, so a "
+        "retry path is reachable",
+    )
     args = parser.parse_args()
 
     notify_type = NotifyType.INFO
@@ -731,13 +1050,11 @@ def main():
         notify_type = NotifyType.FAILURE
 
     body_format = args.body_format.strip().lower() or None
+    global _FAIL_BUDGET
+    _FAIL_BUDGET = max(0, args.fail_first)
+
     payload = capture_request(
-        args.url,
-        args.body,
-        args.title,
-        notify_type,
-        body_format,
-        args.attach,
+        args.url, args.body, args.title, notify_type, body_format, args.attach
     )
     print(json.dumps(payload))
 

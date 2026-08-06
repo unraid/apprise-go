@@ -3,7 +3,7 @@
     "name": "all-devices",
     "requests": [
       {
-        "body": "token=token123&user=userkey123&priority=0&title=apprise+parity&message=hello+from+python&device=ALL_DEVICES&sound=pushover",
+        "body": "token=token123&priority=0&title=apprise+parity&message=hello+from+python&sound=pushover&user=userkey123&device=ALL_DEVICES",
         "headers": {
           "accept": "*/*",
           "authorization": "Basic dG9rZW4xMjM6",
@@ -19,7 +19,99 @@
     "name": "device",
     "requests": [
       {
-        "body": "token=token123&user=userkey123&priority=0&title=Apprise+Notifications&message=body&device=device1&sound=pushover",
+        "body": "token=token123&priority=0&title=Apprise+Notifications&message=body&sound=pushover&user=userkey123&device=device1",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushover.net/1/messages.json"
+      }
+    ]
+  },
+  {
+    "name": "group",
+    "requests": [
+      {
+        "body": "token=token123&priority=0&title=apprise+parity&message=body&sound=pushover&user=mygroup",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushover.net/1/messages.json"
+      }
+    ]
+  },
+  {
+    "name": "devices-and-group",
+    "requests": [
+      {
+        "body": "token=token123&priority=0&title=apprise+parity&message=body&sound=pushover&user=userkey123&device=device1",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushover.net/1/messages.json"
+      },
+      {
+        "body": "token=token123&priority=0&title=apprise+parity&message=body&sound=pushover&user=mygroup",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushover.net/1/messages.json"
+      }
+    ]
+  },
+  {
+    "name": "emergency-interval",
+    "requests": [
+      {
+        "body": "token=token123&priority=2&title=apprise+parity&message=body&sound=pushover&retry=120&expire=600&user=userkey123&device=ALL_DEVICES",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushover.net/1/messages.json"
+      }
+    ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"token\"\r\n\r\ntoken123\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"priority\"\r\n\r\n0\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"title\"\r\n\r\ntitle\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"message\"\r\n\r\nbody\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"sound\"\r\n\r\npushover\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"user\"\r\n\r\nuserkey123\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"device\"\r\n\r\nALL_DEVICES\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"attachment\"; filename=\"pixel.png\"\r\n\r\n\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "body_b64": "LS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJ0b2tlbiINCg0KdG9rZW4xMjMNCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icHJpb3JpdHkiDQoNCjANCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0idGl0bGUiDQoNCnRpdGxlDQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZDQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Im1lc3NhZ2UiDQoNCmJvZHkNCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0ic291bmQiDQoNCnB1c2hvdmVyDQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZDQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InVzZXIiDQoNCnVzZXJrZXkxMjMNCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0iZGV2aWNlIg0KDQpBTExfREVWSUNFUw0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJhdHRhY2htZW50IjsgZmlsZW5hbWU9InBpeGVsLnBuZyINCg0KiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWS0tDQo=",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dG9rZW4xMjM6",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pushover.net/1/messages.json"
+      }
+    ]
+  },
+  {
+    "name": "attachment-unsupported-type",
+    "requests": [
+      {
+        "body": "token=token123&priority=0&title=title&message=body&sound=pushover&user=userkey123&device=ALL_DEVICES",
         "headers": {
           "accept": "*/*",
           "authorization": "Basic dG9rZW4xMjM6",

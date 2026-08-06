@@ -10,20 +10,31 @@ import (
 const snsServiceName = "sns"
 
 type SNSTarget struct {
-	accessKey string
-	secretKey string
-	region    string
-	phones    []string
-	topics    []string
+	accessKey    string
+	secretKey    string
+	sessionToken string
+	region       string
+	phones       []string
+	topics       []string
 }
 
 func NewSNSTarget(target *ParsedURL) (*SNSTarget, error) {
 	accessKey := strings.TrimSpace(target.Host)
-	if rawAccess := strings.TrimSpace(target.Query["access"]); rawAccess != "" {
+	// ?key= is upstream's preferred alias for the access key id; ?access= is
+	// kept for backwards compatibility and loses to it.
+	if rawKey := strings.TrimSpace(target.Query["key"]); rawKey != "" {
+		accessKey = rawKey
+	} else if rawAccess := strings.TrimSpace(target.Query["access"]); rawAccess != "" {
 		accessKey = rawAccess
 	}
 	if accessKey == "" {
 		return nil, fmt.Errorf("missing access key")
+	}
+
+	// The session token may arrive in the user field or as ?token=.
+	sessionToken := strings.TrimSpace(target.User)
+	if raw := strings.TrimSpace(target.Query["token"]); raw != "" {
+		sessionToken = raw
 	}
 
 	entries := splitPath(target.Path)
@@ -38,19 +49,22 @@ func NewSNSTarget(target *ParsedURL) (*SNSTarget, error) {
 		}
 		secretParts = append(secretParts, entry)
 	}
-	if region == "" {
-		return nil, fmt.Errorf("missing region")
-	}
-
 	secretKey := strings.TrimSpace(strings.Join(secretParts, "/"))
 	if rawSecret := strings.TrimSpace(target.Query["secret"]); rawSecret != "" {
 		secretKey = rawSecret
 	}
-	if secretKey == "" {
-		return nil, fmt.Errorf("missing secret key")
-	}
 	if rawRegion := strings.TrimSpace(target.Query["region"]); rawRegion != "" {
 		region = normalizeAWSRegion(rawRegion)
+	}
+
+	// Both credentials and the region have more than one source, so nothing is
+	// missing until every source has been read. sns://?access=..&secret=..&
+	// region=..&to=.. carries no path at all and is still complete.
+	if region == "" {
+		return nil, fmt.Errorf("missing region")
+	}
+	if secretKey == "" {
+		return nil, fmt.Errorf("missing secret key")
 	}
 
 	entries = entries[index:]
@@ -89,11 +103,12 @@ func NewSNSTarget(target *ParsedURL) (*SNSTarget, error) {
 	}
 
 	return &SNSTarget{
-		accessKey: accessKey,
-		secretKey: secretKey,
-		region:    region,
-		phones:    phones,
-		topics:    topics,
+		accessKey:    accessKey,
+		secretKey:    secretKey,
+		sessionToken: sessionToken,
+		region:       region,
+		phones:       phones,
+		topics:       topics,
 	}, nil
 }
 
@@ -119,6 +134,8 @@ func (s *SNSTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 }
 
 func (s *SNSTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	message := mergeTitleBody(title, body)
 	for _, phone := range s.phones {
 		payload := s.publishPhonePayload(message, phone)
@@ -128,9 +145,7 @@ func (s *SNSTarget) Send(body, title string, notifyType NotifyType) error {
 			Headers: s.signer().headers(payload, fixedTime()),
 			Body:    payload,
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	for _, topic := range s.topics {
@@ -148,14 +163,12 @@ func (s *SNSTarget) Send(body, title string, notifyType NotifyType) error {
 			Headers: s.signer().headers(payload, fixedTime()),
 			Body:    payload,
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = title
 	_ = notifyType
-	return nil
+	return outcome.err()
 }
 
 func (s *SNSTarget) notifyURL() string {
@@ -164,11 +177,12 @@ func (s *SNSTarget) notifyURL() string {
 
 func (s *SNSTarget) signer() awsSigV4 {
 	return awsSigV4{
-		accessKey: s.accessKey,
-		secretKey: s.secretKey,
-		region:    s.region,
-		service:   snsServiceName,
-		host:      fmt.Sprintf("sns.%s.amazonaws.com", s.region),
+		accessKey:    s.accessKey,
+		secretKey:    s.secretKey,
+		sessionToken: s.sessionToken,
+		region:       s.region,
+		service:      snsServiceName,
+		host:         fmt.Sprintf("sns.%s.amazonaws.com", s.region),
 	}
 }
 
@@ -250,7 +264,7 @@ func init() {
 					"alias_of": "access_key_id",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -274,6 +288,21 @@ func init() {
 					"type":     "choice:string",
 					"values":   []string{"html", "markdown", "text"},
 				},
+				"key": map[string]any{
+					"alias_of": "access_key_id",
+				},
+				"mode": map[string]any{
+					"default":  "sms",
+					"map_to":   "mode",
+					"name":     "Mode",
+					"private":  false,
+					"required": false,
+					"type":     "choice:string",
+					"values":   []string{"sms", "topic"},
+				},
+				"token": map[string]any{
+					"alias_of": "token",
+				},
 				"overflow": map[string]any{
 					"default":  "upstream",
 					"map_to":   "overflow",
@@ -287,7 +316,7 @@ func init() {
 					"alias_of": "region",
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -327,7 +356,7 @@ func init() {
 				},
 			},
 			"kwargs":    map[string]any{},
-			"templates": []string{"{schema}://{access_key_id}/{secret_access_key}/{region}/{targets}"},
+			"templates": []string{"{schema}://{token}@{access_key_id}/{secret_access_key}/{region}/{targets}", "{schema}://{access_key_id}/{secret_access_key}/{region}/{targets}"},
 			"tokens": map[string]any{
 				"access_key_id": map[string]any{
 					"map_to":   "access_key_id",
@@ -374,6 +403,13 @@ func init() {
 					"prefix":   "#",
 					"private":  false,
 					"regex":    []string{"^[A-Za-z0-9_-]+$", "i"},
+					"required": false,
+					"type":     "string",
+				},
+				"token": map[string]any{
+					"map_to":   "session_token",
+					"name":     "Session Token",
+					"private":  true,
 					"required": false,
 					"type":     "string",
 				},

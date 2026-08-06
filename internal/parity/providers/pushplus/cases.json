@@ -12,5 +12,27 @@
     "body": "hello",
     "title": "",
     "type": "info"
+  },
+  {
+    "name": "wecom-alias",
+    "url": "wecom://token12345678901234567890123456789012",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "group-topic",
+    "url": "pushplus://token12345678901234567890123456789012/topic1",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "body-format-markdown",
+    "url": "pushplus://token12345678901234567890123456789012",
+    "body": "**bold** and [link](https://example.com) plus `code`.",
+    "title": "over",
+    "type": "info",
+    "body_format": "markdown"
   }
 ]

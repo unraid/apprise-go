@@ -117,6 +117,8 @@ func (s *SMSManagerTarget) BuildRequest(body, title string, notifyType NotifyTyp
 }
 
 func (s *SMSManagerTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(s.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -147,14 +149,12 @@ func (s *SMSManagerTarget) Send(body, title string, notifyType NotifyType) error
 			},
 		}
 
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (s *SMSManagerTarget) buildPayload(message string, targets []string) url.Values {
@@ -184,7 +184,7 @@ func init() {
 					"type":     "bool",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -238,7 +238,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

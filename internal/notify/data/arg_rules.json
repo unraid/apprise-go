@@ -1,0 +1,475 @@
+{
+ "apprise": {
+  "to": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]{1,128}$"
+  }
+ },
+ "apprises": {
+  "to": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]{1,128}$"
+  }
+ },
+ "atalk": {
+  "apikey": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
+  }
+ },
+ "azure": {
+  "oauth_id": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9-]+$"
+  }
+ },
+ "bulksms": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^\\+?[0-9\\s)(+-]+$"
+  }
+ },
+ "bulkvs": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^\\+?[0-9\\s)(+-]+$"
+  }
+ },
+ "burstsms": {
+  "key": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]+$"
+  },
+  "secret": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]+$"
+  }
+ },
+ "chanify": {
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9._-]+$"
+  }
+ },
+ "clickatell": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[0-9\\s)(+-]+$"
+  }
+ },
+ "dingtalk": {
+  "secret": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]+$"
+  },
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]+$"
+  }
+ },
+ "feishu": {
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
+  }
+ },
+ "hassio": {
+  "nid": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9_-]+$"
+  }
+ },
+ "hassios": {
+  "nid": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9_-]+$"
+  }
+ },
+ "httpsms": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^\\+?[0-9\\s)(+-]+$"
+  }
+ },
+ "kavenegar": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[0-9\\s)(+-]+$"
+  }
+ },
+ "lametric": {
+  "app_ver": {
+   "ignorecase": false,
+   "kind": "regex",
+   "pattern": "^[1-9][0-9]*$"
+  }
+ },
+ "lametrics": {
+  "app_ver": {
+   "ignorecase": false,
+   "kind": "regex",
+   "pattern": "^[1-9][0-9]*$"
+  }
+ },
+ "msgbird": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[0-9\\s)(+-]+$"
+  }
+ },
+ "napi": {
+  "type": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
+  }
+ },
+ "nexmo": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^\\+?[0-9\\s)(+-]+$"
+  },
+  "key": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]+$"
+  },
+  "secret": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]+$"
+  }
+ },
+ "notificationapi": {
+  "type": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
+  }
+ },
+ "notifico": {
+  "project": {
+   "ignorecase": false,
+   "kind": "regex",
+   "pattern": "^[0-9]+$"
+  },
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]+$"
+  }
+ },
+ "notificos": {
+  "project": {
+   "ignorecase": false,
+   "kind": "regex",
+   "pattern": "^[0-9]+$"
+  },
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]+$"
+  }
+ },
+ "o365": {
+  "oauth_id": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9-]+$"
+  }
+ },
+ "plivo": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[0-9\\s)(+-]+$"
+  },
+  "id": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]{20,30}$"
+  },
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]{30,50}$"
+  }
+ },
+ "pushplus": {
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9_-]{32,64}$"
+  }
+ },
+ "pushward": {
+  "apikey": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^hlk_[A-Za-z0-9]+$"
+  },
+  "volume": {
+   "kind": "float",
+   "max": 1.0,
+   "min": 0.0
+  }
+ },
+ "ringc": {
+  "secret": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9_-]+$"
+  }
+ },
+ "sendpulse": {
+  "id": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9._-]+$"
+  },
+  "secret": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9._-]+$"
+  }
+ },
+ "serwersms": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9][a-z0-9 _-]{0,10}$"
+  },
+  "sender": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9][a-z0-9 _-]{0,10}$"
+  }
+ },
+ "ses": {
+  "region": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z]{2}-[a-z-]+?-[0-9]+$"
+  }
+ },
+ "signal": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^\\+?[0-9\\s)(+-]+$"
+  }
+ },
+ "signals": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^\\+?[0-9\\s)(+-]+$"
+  }
+ },
+ "sinch": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^\\+?[0-9\\s)(+-]+$"
+  },
+  "region": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z]{2}$"
+  },
+  "spi": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-f0-9]+$"
+  },
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-f0-9]+$"
+  }
+ },
+ "sns": {
+  "region": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z]{2}-[a-z-]+?-[0-9]+$"
+  }
+ },
+ "splunk": {
+  "apikey": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
+  },
+  "route": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
+  },
+  "routing_key": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
+  }
+ },
+ "stackfield": {
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$"
+  }
+ },
+ "strmlabs": {
+  "currency": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z]{3}$"
+  },
+  "name": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[^\\s].{1,24}$"
+  }
+ },
+ "twilio": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^([a-z]+:)?\\+?[0-9\\s)(+-]+$"
+  },
+  "sid": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^AC[a-f0-9]+$"
+  },
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]+$"
+  }
+ },
+ "victorops": {
+  "apikey": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
+  },
+  "route": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
+  },
+  "routing_key": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
+  }
+ },
+ "voipms": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^\\+?[0-9\\s)(+-]+$"
+  }
+ },
+ "vonage": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^\\+?[0-9\\s)(+-]+$"
+  },
+  "key": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]+$"
+  },
+  "secret": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]+$"
+  }
+ },
+ "wecom": {
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9_-]{32,64}$"
+  }
+ },
+ "wecombot": {
+  "key": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9_-]+$"
+  }
+ },
+ "whatsapp": {
+  "from": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[0-9]+$"
+  },
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9]+$"
+  }
+ },
+ "workflow": {
+  "id": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
+  },
+  "sig": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9_-]+$"
+  }
+ },
+ "workflows": {
+  "id": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
+  },
+  "sig": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[a-z0-9_-]+$"
+  }
+ },
+ "wxpusher": {
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^AT_[^\\s]+$"
+  }
+ },
+ "zulip": {
+  "token": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9]{32}$"
+  }
+ }
+}

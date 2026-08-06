@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/unraid/apprise-go/internal/notify"
@@ -41,10 +41,62 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		Body:    body,
 	})
 
+	// A test may ask for the first N requests to fail, which is the only way
+	// to reach a retry path: every mock here answers 200, so neither
+	// implementation ever re-sends without it.
+	if failBudget.Add(-1) >= 0 {
+		return &http.Response{
+			StatusCode: http.StatusInternalServerError,
+			Status:     "500 Internal Server Error",
+			Body:       io.NopCloser(strings.NewReader(`{"error":"parity forced failure"}`)),
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Request:    req,
+		}, nil
+	}
+
 	responseBody := "ok"
 	contentType := "text/plain"
 	if strings.Contains(req.URL.String(), "sendpulse.com/oauth/access_token") {
 		responseBody = `{"access_token":"token","expires_in":3600}`
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/api/v4/teams/") && strings.Contains(req.URL.Path, "/channels/name/") {
+		responseBody = `{"id":"channelid123"}`
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Host, "ringcentral.com") && req.URL.Path == "/restapi/oauth/token" {
+		responseBody = `{"access_token":"token","expires_in":3600,"scope":"SMS","owner_id":"owner","endpoint_id":"endpoint"}`
+		contentType = "application/json"
+	} else if req.URL.Path == "/api/files.getUploadURLExternal" {
+		responseBody = `{"ok":true,"file_id":"F123ABC456","upload_url":"https://files.slack.com/upload/v1/ABC123"}`
+		contentType = "application/json"
+	} else if req.URL.Path == "/api/files.completeUploadExternal" {
+		responseBody = `{"ok":true,"files":[{"id":"F123ABC456","title":"pixel.png"}]}`
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/api/v4/files") {
+		responseBody = `{"file_infos":[{"id":"fileid123"}]}`
+		contentType = "application/json"
+	} else if req.URL.Host == "api.x.com" && req.URL.Path == "/2/media/upload" {
+		responseBody = `{"data":{"id":"1234567890","media_key":"3_1234567890"}}`
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/xrpc/com.atproto.repo.uploadBlob") {
+		responseBody = `{"blob":{"$type":"blob","ref":{"$link":"bafyblob123"},"mimeType":"image/png","size":70}}`
+		contentType = "application/json"
+	} else if req.URL.Path == "/api/v1/media" {
+		responseBody = `{"id":"110001"}`
+		contentType = "application/json"
+	} else if req.URL.Path == "/api/v3/asset/create" {
+		responseBody = `{"code":0,"data":{"url":"https://img.kookapp.cn/assets/pixel.png"}}`
+		contentType = "application/json"
+	} else if req.URL.Host == "image.groupme.com" {
+		responseBody = `{"payload":{"url":"https://i.groupme.com/pixel.png"}}`
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/api/v1/post/container/") {
+		responseBody = `{"id":4242}`
+		contentType = "application/json"
+	} else if req.URL.Path == "/v2/upload-request" {
+		responseBody = `{"file_name":"pixel.png","file_type":"image/png","file_url":"https://dl.pushb.com/abc/pixel.png","upload_url":"https://upload.pushbullet.com/upload-legacy/abc"}`
+		contentType = "application/json"
+	} else if req.URL.Host == "qyapi.weixin.qq.com" && req.URL.Path == "/cgi-bin/gettoken" {
+		responseBody = `{"errcode":0,"errmsg":"ok","access_token":"token","expires_in":7200}`
 		contentType = "application/json"
 	} else if strings.Contains(req.URL.String(), "reddit.com/api/v1/access_token") {
 		responseBody = `{"access_token":"token","expires_in":3600}`
@@ -58,18 +110,22 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	} else if strings.Contains(req.URL.Host, "login.microsoftonline.com") && strings.HasSuffix(req.URL.Path, "/oauth2/v2.0/token") {
 		responseBody = `{"access_token":"token","expires_in":3600}`
 		contentType = "application/json"
+	} else if req.URL.Host == "graph.microsoft.com" && strings.HasSuffix(req.URL.Path, "/attachments/createUploadSession") {
+		responseBody = `{"uploadUrl":"https://upload.example.com/session123"}`
+		contentType = "application/json"
+	} else if req.URL.Host == "graph.microsoft.com" && strings.HasSuffix(req.URL.Path, "/messages") && req.Method == http.MethodPost {
+		responseBody = `{"id":"draft123"}`
+		contentType = "application/json"
+	} else if req.URL.Host == "upload.example.com" {
+		responseBody = `{}`
+		contentType = "application/json"
 	} else if req.URL.Host == "graph.microsoft.com" && strings.HasPrefix(req.URL.Path, "/v1.0/users/") && req.Method == http.MethodGet {
 		responseBody = `{"mail":"user@example.com","userPrincipalName":"user@example.com","displayName":"Apprise"}`
 		contentType = "application/json"
-	} else if req.URL.Host == "api.twitter.com" && strings.HasSuffix(req.URL.Path, "/users/lookup.json") {
+	} else if req.URL.Host == "api.twitter.com" && req.URL.Path == "/2/users/by" {
 		names := []string{}
-		if values, err := url.ParseQuery(body); err == nil {
-			names = values["screen_name"]
-			if len(names) == 0 {
-				if value := values.Get("screen_name"); value != "" {
-					names = []string{value}
-				}
-			}
+		for _, entry := range req.URL.Query()["usernames"] {
+			names = append(names, strings.Split(entry, ",")...)
 		}
 		if len(names) == 0 {
 			names = []string{"user"}
@@ -77,23 +133,22 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		entries := make([]map[string]string, 0, len(names))
 		for _, name := range names {
 			entries = append(entries, map[string]string{
-				"screen_name": name,
-				"id":          "123",
-				"id_str":      "123",
+				"username": name,
+				"id":       "123",
 			})
 		}
-		if data, err := json.Marshal(entries); err == nil {
+		if data, err := json.Marshal(map[string]any{"data": entries}); err == nil {
 			responseBody = string(data)
 			contentType = "application/json"
 		}
-	} else if req.URL.Host == "api.twitter.com" && strings.HasSuffix(req.URL.Path, "/account/verify_credentials.json") {
-		responseBody = `{"screen_name":"apprise","id":"123","id_str":"123"}`
+	} else if req.URL.Host == "api.twitter.com" && req.URL.Path == "/2/users/me" {
+		responseBody = `{"data":{"id":"123","username":"apprise"}}`
 		contentType = "application/json"
 	} else if req.URL.Host == "slack.com" && req.URL.Path == "/api/users.lookupByEmail" {
 		responseBody = `{"ok":true,"user":{"id":"U123"}}`
 		contentType = "application/json"
 	} else if req.URL.Host == "slack.com" && req.URL.Path == "/api/chat.postMessage" {
-		responseBody = `{"ok":true,"ts":"123.456"}`
+		responseBody = `{"ok":true,"ts":"123.456","channel":"C123456"}`
 		contentType = "application/json"
 	} else if strings.HasSuffix(req.URL.Path, "/xrpc/com.atproto.server.createSession") {
 		responseBody = `{"accessJwt":"token","refreshJwt":"refresh"}`
@@ -132,14 +187,16 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		if host == "" {
 			host = req.URL.Host
 		}
-		responseBody = fmt.Sprintf(`{"access_token":"token","home_server":"%s","user_id":"@user:%s"}`, host, host)
+		// A device id is what e2ee binds its keys to; without one the flow
+		// cannot upload them.
+		responseBody = fmt.Sprintf(`{"access_token":"token","home_server":"%s","user_id":"@user:%s","device_id":"APPRISEDEVICE"}`, host, host)
 		contentType = "application/json"
 	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.HasSuffix(req.URL.Path, "/register") {
 		host := req.URL.Hostname()
 		if host == "" {
 			host = req.URL.Host
 		}
-		responseBody = fmt.Sprintf(`{"access_token":"token","home_server":"%s","user_id":"@user:%s"}`, host, host)
+		responseBody = fmt.Sprintf(`{"access_token":"token","home_server":"%s","user_id":"@user:%s","device_id":"APPRISEDEVICE"}`, host, host)
 		contentType = "application/json"
 	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.Contains(req.URL.Path, "/join/") {
 		host := req.URL.Hostname()
@@ -168,6 +225,27 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 			host = req.URL.Host
 		}
 		responseBody = fmt.Sprintf(`{"joined_rooms":["#room:%s"]}`, host)
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/keys/upload") {
+		responseBody = `{"one_time_key_counts":{"signed_curve25519":50}}`
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/keys/query") {
+		responseBody = matrixE2EEDeviceKeys()
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/keys/claim") {
+		responseBody = matrixE2EEClaimedKey()
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/state/m.room.encryption") {
+		responseBody = `{"algorithm":"m.megolm.v1.aes-sha2"}`
+		contentType = "application/json"
+	} else if strings.HasSuffix(req.URL.Path, "/joined_members") {
+		responseBody = `{"joined":{"` + matrixE2EEUserID + `":{"display_name":"target"}}}`
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/sendToDevice/m.room.encrypted") {
+		responseBody = `{}`
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/send/m.room.encrypted") {
+		responseBody = `{"event_id":"$encrypted"}`
 		contentType = "application/json"
 	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.Contains(req.URL.Path, "/send/m.room.message") {
 		responseBody = `{"event_id":"$event"}`
@@ -272,4 +350,17 @@ func CaptureGoRequestsResult(t *testing.T, send func() error) ([]notify.RequestS
 
 	err := send()
 	return capture.requests, err
+}
+
+// failBudget counts down the requests that must fail before the mocks answer
+// normally. It is a counter rather than a flag so a retry can be observed
+// succeeding on the attempt after its budget runs out.
+var failBudget atomic.Int64
+
+// FailNextRequests makes the next count requests answer 500. The returned
+// function clears the budget, so a test cannot leak one into the next.
+func FailNextRequests(count int) func() {
+	failBudget.Store(int64(count))
+
+	return func() { failBudget.Store(0) }
 }

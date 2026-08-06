@@ -66,9 +66,6 @@ var providerBuilders = map[string]buildTargetFunc{
 	"nctalk": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewNextcloudTalkTarget(parsed)
 	},
-	"popcorn": func(parsed *notify.ParsedURL) (requestSender, error) {
-		return notify.NewPopcornTarget(parsed)
-	},
 	"httpsms": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewHttpSMSTarget(parsed)
 	},
@@ -138,6 +135,63 @@ var providerBuilders = map[string]buildTargetFunc{
 	"whatsapp": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewWhatsAppTarget(parsed)
 	},
+	"evolution": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewEvolutionTarget(parsed)
+	},
+	"kook": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewKookTarget(parsed)
+	},
+	"serwersms": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewSerwerSMSTarget(parsed)
+	},
+	"octopush": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewOctopushTarget(parsed)
+	},
+	"eight00com": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewEight00comTarget(parsed)
+	},
+	"exotel": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewExotelTarget(parsed)
+	},
+	"smsc": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewSMSCTarget(parsed)
+	},
+	"notifyre": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewNotifyreTarget(parsed)
+	},
+	"mailersend": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewMailerSendTarget(parsed)
+	},
+	"postmark": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewPostmarkTarget(parsed)
+	},
+	"humhub": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewHumHubTarget(parsed)
+	},
+	"pushward": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewPushWardTarget(parsed)
+	},
+	"groupme": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewGroupMeTarget(parsed)
+	},
+	"zoom": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewZoomTarget(parsed)
+	},
+	"viber": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewViberTarget(parsed)
+	},
+	"chime": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewChimeTarget(parsed)
+	},
+	"flowtriq": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewFlowtriqTarget(parsed)
+	},
+	"jellyfin": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewEmbyTarget(parsed)
+	},
+	"stackfield": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewStackfieldTarget(parsed)
+	},
 	"ryver": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewRyverTarget(parsed)
 	},
@@ -149,9 +203,6 @@ var providerBuilders = map[string]buildTargetFunc{
 	},
 	"slack": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewSlackTarget(parsed)
-	},
-	"msteams": func(parsed *notify.ParsedURL) (requestSender, error) {
-		return notify.NewMSTeamsTarget(parsed)
 	},
 	"revolt": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewRevoltTarget(parsed)
@@ -173,6 +224,21 @@ var providerBuilders = map[string]buildTargetFunc{
 	},
 	"opsgenie": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewOpsgenieTarget(parsed)
+	},
+	"jira": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewJiraTarget(parsed)
+	},
+	"wechat": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewWeChatTarget(parsed)
+	},
+	"ringc": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewRingCentralTarget(parsed)
+	},
+	"sogs": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewSOGSTarget(parsed)
+	},
+	"fluxer": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewFluxerTarget(parsed)
 	},
 	"matrix": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewMatrixTarget(parsed)

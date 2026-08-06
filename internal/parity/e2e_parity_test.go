@@ -92,7 +92,7 @@ func TestE2ERequestParityAllSchemas(t *testing.T) {
 			}
 
 			logProgress(t, "python-vs-go "+schema)
-			pythonSpecs, pythonSuccess := testutil.CapturePythonRequestsWithTypeResult(t, c.URL, c.Body, c.Title, notifyType)
+			pythonSpecs, pythonSuccess := testutil.CapturePythonRequestsWithTypeResult(t, c.URL, c.Body, c.Title, "", notifyType)
 
 			parsedURL, err := notify.ParseURL(c.URL)
 			if err != nil {

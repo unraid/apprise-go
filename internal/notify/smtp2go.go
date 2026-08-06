@@ -120,7 +120,7 @@ func (s *SMTP2GoTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		batchSize = smtp2goBatchSize
 	}
 
-	payload := s.buildPayload(body, title, s.targets[:minInt(len(s.targets), batchSize)])
+	payload := s.buildPayload(body, title, s.targets[:minInt(len(s.targets), batchSize)], nil)
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
@@ -141,6 +141,12 @@ func (s *SMTP2GoTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (s *SMTP2GoTarget) Send(body, title string, notifyType NotifyType) error {
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (s *SMTP2GoTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(s.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -156,7 +162,7 @@ func (s *SMTP2GoTarget) Send(body, title string, notifyType NotifyType) error {
 			end = len(s.targets)
 		}
 
-		payload := s.buildPayload(body, title, s.targets[index:end])
+		payload := s.buildPayload(body, title, s.targets[index:end], attachments)
 		data, err := json.Marshal(payload)
 		if err != nil {
 			return err
@@ -172,17 +178,15 @@ func (s *SMTP2GoTarget) Send(body, title string, notifyType NotifyType) error {
 			},
 			Body: string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
-func (s *SMTP2GoTarget) buildPayload(body, title string, recipients []emailEntry) map[string]any {
+func (s *SMTP2GoTarget) buildPayload(body, title string, recipients []emailEntry, attachments []Attachment) map[string]any {
 	payload := map[string]any{
 		"api_key":   s.apiKey,
 		"sender":    formatEmail(s.fromName, s.fromAddr),
@@ -218,6 +222,10 @@ func (s *SMTP2GoTarget) buildPayload(body, title string, recipients []emailEntry
 			})
 		}
 		payload["custom_headers"] = customHeaders
+	}
+
+	if len(attachments) > 0 {
+		payload["attachments"] = attachmentsSMTP2GoStyle(attachments)
 	}
 
 	return payload
@@ -265,6 +273,17 @@ func isSimpleEmail(value string) bool {
 	return smtp2goEmailRegex.MatchString(value)
 }
 
+// isEmailAddress reports whether the value is an address upstream's is_email
+// accepts, including the "Display Name <addr@host>" form that appears in
+// reply-to and from arguments.
+func isEmailAddress(value string) bool {
+	value = strings.TrimSpace(value)
+	if open := strings.LastIndex(value, "<"); open != -1 && strings.HasSuffix(value, ">") {
+		value = strings.TrimSpace(value[open+1 : len(value)-1])
+	}
+	return isSimpleEmail(value)
+}
+
 func init() {
 	RegisterSchemaEntryOrdered(18, SchemaEntry{
 		"attachment_support": true,
@@ -298,7 +317,7 @@ func init() {
 					"type":     "list:string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -339,7 +358,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -385,7 +404,7 @@ func init() {
 					"type":     "string",
 				},
 			},
-			"templates": []string{"{schema}://{user}@{host}:{apikey}/", "{schema}://{user}@{host}:{apikey}/{targets}"},
+			"templates": []string{"{schema}://{user}@{host}/{apikey}/", "{schema}://{user}@{host}/{apikey}/{targets}"},
 			"tokens": map[string]any{
 				"apikey": map[string]any{
 					"map_to":   "apikey",

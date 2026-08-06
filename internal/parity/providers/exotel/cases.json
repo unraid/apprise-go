@@ -1,0 +1,16 @@
+[
+  {
+    "name": "default",
+    "url": "exotel://sid123:token456@15550000000/15551234567",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "india-region-high-priority",
+    "url": "exotel://sid123:token456@15550000000/15551234567?region=in&priority=high&unicode=no",
+    "body": "body",
+    "title": "",
+    "type": "info"
+  }
+]

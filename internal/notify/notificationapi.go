@@ -490,7 +490,7 @@ func init() {
 					"values":   []string{"email", "inapp", "mobile_push", "slack", "sms", "web_push"},
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -558,7 +558,7 @@ func init() {
 					"type":     "string",
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -661,7 +661,7 @@ func init() {
 					"map_to":   "targets",
 					"name":     "Targets",
 					"private":  false,
-					"required": false,
+					"required": true,
 					"type":     "list:string",
 				},
 				"type": map[string]any{

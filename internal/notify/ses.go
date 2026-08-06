@@ -1,7 +1,9 @@
 package notify
 
 import (
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/binary"
 	"fmt"
 	"mime"
 	"mime/quotedprintable"
@@ -16,32 +18,42 @@ const sesDefaultFromName = "Apprise Notifications"
 var awsRegionPattern = regexp.MustCompile(`^[A-Za-z]{2}-[A-Za-z-]+-[0-9]+$`)
 
 type SESTarget struct {
-	accessKey string
-	secretKey string
-	region    string
-	fromEmail string
-	fromName  string
-	targets   []string
+	accessKey    string
+	secretKey    string
+	sessionToken string
+	region       string
+	fromEmail    string
+	fromName     string
+	targets      []string
 }
 
 func NewSESTarget(target *ParsedURL) (*SESTarget, error) {
 	fromEmail := ""
+	// The session token arrives in the URL password field or as ?token=,
+	// with the query parameter winning when both are set.
+	sessionToken := strings.TrimSpace(target.Password)
+	if raw := strings.TrimSpace(target.Query["token"]); raw != "" {
+		sessionToken = raw
+	}
+
 	if target.User != "" && target.Host != "" {
 		fromEmail = strings.TrimSpace(target.User) + "@" + strings.TrimSpace(target.Host)
 	} else if strings.Contains(target.Host, "@") {
 		fromEmail = strings.TrimSpace(target.Host)
 	}
-	if !isSimpleEmail(fromEmail) {
-		return nil, fmt.Errorf("invalid from email")
+	// ?from= names the sender outright, so a URL with no userinfo at all is
+	// still complete.
+	if raw := strings.TrimSpace(target.Query["from"]); raw != "" {
+		fromEmail = raw
 	}
 
 	entries := splitPath(target.Path)
-	if len(entries) < 2 {
-		return nil, fmt.Errorf("missing credentials")
+	accessKey := ""
+	rest := []string{}
+	if len(entries) > 0 {
+		accessKey = strings.TrimSpace(entries[0])
+		rest = entries[1:]
 	}
-
-	accessKey := strings.TrimSpace(entries[0])
-	rest := entries[1:]
 
 	secretParts := []string{}
 	region := ""
@@ -54,26 +66,45 @@ func NewSESTarget(target *ParsedURL) (*SESTarget, error) {
 		}
 		secretParts = append(secretParts, entry)
 	}
+	secretKey := strings.TrimSpace(strings.Join(secretParts, "/"))
+	if rawSecret := strings.TrimSpace(target.Query["secret"]); rawSecret != "" {
+		secretKey = rawSecret
+	}
+	// ?key= is upstream's preferred alias for the access key id; ?access= is
+	// kept for backwards compatibility and loses to it.
+	if rawKey := strings.TrimSpace(target.Query["key"]); rawKey != "" {
+		accessKey = rawKey
+	} else if rawAccess := strings.TrimSpace(target.Query["access"]); rawAccess != "" {
+		accessKey = rawAccess
+	}
+	if rawRegion := strings.TrimSpace(target.Query["region"]); rawRegion != "" {
+		region = normalizeAWSRegion(rawRegion)
+	}
+
+	// Every field above has both a path form and a query form. Judging any of
+	// them before all the sources have been read rejects URLs that supply
+	// everything through the query string, which is the form configuration
+	// files tend to use.
+	if !isSimpleEmail(fromEmail) {
+		return nil, fmt.Errorf("invalid from email")
+	}
+	// Upstream validates the reply-to address and raises; see brevo.go.
+	// Split on commas only: a display-name address carries spaces of its own,
+	// so treating whitespace as a separator turns "No One <a@b.ca>" into three
+	// broken addresses.
+	for _, entry := range strings.Split(strings.TrimSpace(target.Query["reply"]), ",") {
+		if entry = strings.TrimSpace(entry); entry != "" && !isEmailAddress(entry) {
+			return nil, fmt.Errorf("invalid reply-to address: %q", entry)
+		}
+	}
 	if accessKey == "" {
 		return nil, fmt.Errorf("missing access key")
 	}
 	if region == "" {
 		return nil, fmt.Errorf("missing region")
 	}
-
-	secretKey := strings.TrimSpace(strings.Join(secretParts, "/"))
-	if rawSecret := strings.TrimSpace(target.Query["secret"]); rawSecret != "" {
-		secretKey = rawSecret
-	}
 	if secretKey == "" {
 		return nil, fmt.Errorf("missing secret key")
-	}
-
-	if rawAccess := strings.TrimSpace(target.Query["access"]); rawAccess != "" {
-		accessKey = rawAccess
-	}
-	if rawRegion := strings.TrimSpace(target.Query["region"]); rawRegion != "" {
-		region = normalizeAWSRegion(rawRegion)
 	}
 
 	targets := []string{}
@@ -103,12 +134,13 @@ func NewSESTarget(target *ParsedURL) (*SESTarget, error) {
 	}
 
 	return &SESTarget{
-		accessKey: accessKey,
-		secretKey: secretKey,
-		region:    region,
-		fromEmail: fromEmail,
-		fromName:  fromName,
-		targets:   targets,
+		accessKey:    accessKey,
+		secretKey:    secretKey,
+		sessionToken: sessionToken,
+		region:       region,
+		fromEmail:    fromEmail,
+		fromName:     fromName,
+		targets:      targets,
 	}, nil
 }
 
@@ -116,7 +148,7 @@ func (s *SESTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 	if len(s.targets) == 0 {
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
-	payload := s.buildPayload(body, title, s.targets[0])
+	payload := s.buildPayload(body, title, s.targets[0], nil)
 	return RequestSpec{
 		Method:  "POST",
 		URL:     s.notifyURL(),
@@ -126,25 +158,29 @@ func (s *SESTarget) BuildRequest(body, title string, notifyType NotifyType) (Req
 }
 
 func (s *SESTarget) Send(body, title string, notifyType NotifyType) error {
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (s *SESTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(s.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
 
 	for _, target := range s.targets {
-		payload := s.buildPayload(body, title, target)
+		payload := s.buildPayload(body, title, target, attachments)
 		spec := RequestSpec{
 			Method:  "POST",
 			URL:     s.notifyURL(),
 			Headers: s.signer().headers(payload, fixedTime()),
 			Body:    payload,
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
-	return nil
+	return outcome.err()
 }
 
 func (s *SESTarget) notifyURL() string {
@@ -153,16 +189,17 @@ func (s *SESTarget) notifyURL() string {
 
 func (s *SESTarget) signer() awsSigV4 {
 	return awsSigV4{
-		accessKey: s.accessKey,
-		secretKey: s.secretKey,
-		region:    s.region,
-		service:   sesServiceName,
-		host:      fmt.Sprintf("email.%s.amazonaws.com", s.region),
+		accessKey:    s.accessKey,
+		secretKey:    s.secretKey,
+		sessionToken: s.sessionToken,
+		region:       s.region,
+		service:      sesServiceName,
+		host:         fmt.Sprintf("email.%s.amazonaws.com", s.region),
 	}
 }
 
-func (s *SESTarget) buildPayload(body, title, target string) string {
-	raw := buildSESMIME(s.fromName, s.fromEmail, target, body, title, fixedTime())
+func (s *SESTarget) buildPayload(body, title, target string, attachments []Attachment) string {
+	raw := buildSESMIME(s.fromName, s.fromEmail, target, body, title, fixedTime(), attachments)
 	message := base64.StdEncoding.EncodeToString([]byte(raw))
 
 	pairs := []formPair{
@@ -175,7 +212,7 @@ func (s *SESTarget) buildPayload(body, title, target string) string {
 	return encodeFormPairs(pairs)
 }
 
-func buildSESMIME(fromName, fromEmail, toEmail, body, title string, now time.Time) string {
+func buildSESMIME(fromName, fromEmail, toEmail, body, title string, now time.Time, attachments []Attachment) string {
 	subject := ""
 	if strings.TrimSpace(title) != "" {
 		subject = encodeRFC2047(title)
@@ -184,10 +221,20 @@ func buildSESMIME(fromName, fromEmail, toEmail, body, title string, now time.Tim
 	to := formatMIMEAddress("", toEmail)
 	date := now.UTC().Format("Mon, 02 Jan 2006 15:04:05 +0000")
 
-	headers := []string{
+	encodedBody, err := encodeQuotedPrintable(body)
+	if err != nil {
+		encodedBody = body
+	}
+
+	// The text part's own headers, which stay with the text whether it is the
+	// whole message or the first part of a multipart one.
+	textHeaders := []string{
 		`Content-Type: text/html; charset="utf-8"`,
 		"MIME-Version: 1.0",
 		"Content-Transfer-Encoding: quoted-printable",
+	}
+
+	envelope := []string{
 		fmt.Sprintf("Subject: %s", subject),
 		fmt.Sprintf("From: %s", from),
 		fmt.Sprintf("To: %s", to),
@@ -196,12 +243,61 @@ func buildSESMIME(fromName, fromEmail, toEmail, body, title string, now time.Tim
 		"X-Application: Apprise",
 	}
 
-	encodedBody, err := encodeQuotedPrintable(body)
-	if err != nil {
-		encodedBody = body
+	if len(attachments) == 0 {
+		return strings.Join(append(textHeaders, envelope...), "\n") + "\n\n" + encodedBody
 	}
 
-	return strings.Join(headers, "\n") + "\n\n" + encodedBody
+	// With attachments the message becomes multipart/mixed: the text is
+	// demoted to the first part and each file follows it as its own.
+	boundary := sesMIMEBoundary()
+	headers := append([]string{
+		fmt.Sprintf(`Content-Type: multipart/mixed; boundary="%s"`, boundary),
+		"MIME-Version: 1.0",
+	}, envelope...)
+
+	var builder strings.Builder
+	builder.WriteString(strings.Join(headers, "\n"))
+	builder.WriteString("\n\n")
+
+	builder.WriteString("--" + boundary + "\n")
+	builder.WriteString(strings.Join(textHeaders, "\n"))
+	builder.WriteString("\n\n")
+	builder.WriteString(encodedBody)
+
+	for index, attachment := range attachments {
+		mimeType := attachment.MIMEType
+		if mimeType == "" {
+			mimeType = "application/octet-stream"
+		}
+
+		builder.WriteString("\n--" + boundary + "\n")
+		builder.WriteString(strings.Join([]string{
+			"Content-Transfer-Encoding: base64",
+			"MIME-Version: 1.0",
+			fmt.Sprintf("Content-Type: %s", mimeType),
+			fmt.Sprintf(`Content-Disposition: attachment; filename="%s"`,
+				attachment.FileName(index, ".dat")),
+		}, "\n"))
+		builder.WriteString("\n\n")
+		builder.WriteString(wrapBase64(attachment.Base64(), 76))
+	}
+
+	builder.WriteString("\n--" + boundary + "--\n")
+
+	return builder.String()
+}
+
+// wrapBase64 breaks an encoded payload into the fixed-width lines a MIME part
+// carries.
+func wrapBase64(encoded string, width int) string {
+	var lines []string
+	for len(encoded) > width {
+		lines = append(lines, encoded[:width])
+		encoded = encoded[width:]
+	}
+	lines = append(lines, encoded)
+
+	return strings.Join(lines, "\n") + "\n"
 }
 
 func formatMIMEAddress(name, email string) string {
@@ -294,7 +390,10 @@ func encodeQuotedPrintable(value string) (string, error) {
 	if err := writer.Close(); err != nil {
 		return "", err
 	}
-	return b.String(), nil
+	// Go's encoder ends a soft line break with CRLF; the Python one this is
+	// compared against uses a bare newline, and the difference changes the
+	// bytes a signature is computed over.
+	return strings.ReplaceAll(b.String(), "=\r\n", "=\n"), nil
 }
 
 func isASCII(value string) bool {
@@ -334,7 +433,7 @@ func init() {
 					"type":     "list:string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -368,6 +467,12 @@ func init() {
 					"required": false,
 					"type":     "string",
 				},
+				"key": map[string]any{
+					"alias_of": "access_key_id",
+				},
+				"token": map[string]any{
+					"alias_of": "token",
+				},
 				"overflow": map[string]any{
 					"default":  "upstream",
 					"map_to":   "overflow",
@@ -388,7 +493,7 @@ func init() {
 					"type":     "string",
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -468,6 +573,13 @@ func init() {
 					"required": true,
 					"type":     "string",
 				},
+				"token": map[string]any{
+					"map_to":   "session_token",
+					"name":     "Session Token",
+					"private":  true,
+					"required": false,
+					"type":     "string",
+				},
 				"targets": map[string]any{
 					"delim":    []string{"/"},
 					"group":    []any{},
@@ -491,4 +603,16 @@ func init() {
 		"service_url":      "https://aws.amazon.com/ses/",
 		"setup_url":        "https://appriseit.com/services/ses/",
 	})
+}
+
+// sesMIMEBoundary mirrors the shape Python's email package generates: a run of
+// equals signs around a random number, which cannot appear in the encoded
+// parts it separates.
+func sesMIMEBoundary() string {
+	var buf [8]byte
+	if _, err := rand.Read(buf[:]); err != nil {
+		return "===============0=="
+	}
+
+	return fmt.Sprintf("===============%d==", binary.BigEndian.Uint64(buf[:])>>1)
 }

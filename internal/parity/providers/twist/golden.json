@@ -24,5 +24,31 @@
         "url": "https://api.twist.com/api/v3/threads/add"
       }
     ]
+  },
+  {
+    "name": "body-format-html",
+    "requests": [
+      {
+        "body": "email=user%40example.com&password=password",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.twist.com/api/v3/users/login"
+      },
+      {
+        "body": "channel_id=456&title=over&content=%2A%2Abold%2A%2A+and+%5Blink%5D%28%3Chttps%3A%2F%2Fexample.com%3E%29+plus+%60code%60.",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.twist.com/api/v3/threads/add"
+      }
+    ]
   }
 ]

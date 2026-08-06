@@ -90,6 +90,10 @@ func NewSignalTarget(target *ParsedURL) (*SignalTarget, error) {
 }
 
 func (s *SignalTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return s.buildRequest(body, title, notifyType, nil)
+}
+
+func (s *SignalTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
 	if len(s.targets) == 0 {
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
@@ -111,6 +115,14 @@ func (s *SignalTarget) BuildRequest(body, title string, notifyType NotifyType) (
 		"number":     s.source,
 		"text_mode":  "normal",
 		"recipients": recipients,
+	}
+	if len(attachments) > 0 {
+		// Signal takes bare base64 strings rather than described objects.
+		encoded := make([]string, 0, len(attachments))
+		for _, attachment := range attachments {
+			encoded = append(encoded, attachment.Base64())
+		}
+		payload["base64_attachments"] = encoded
 	}
 
 	data, err := json.Marshal(payload)
@@ -140,6 +152,12 @@ func (s *SignalTarget) BuildRequest(body, title string, notifyType NotifyType) (
 }
 
 func (s *SignalTarget) Send(body, title string, notifyType NotifyType) error {
+	return s.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (s *SignalTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(s.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -166,6 +184,14 @@ func (s *SignalTarget) Send(body, title string, notifyType NotifyType) error {
 			"text_mode":  "normal",
 			"recipients": s.targets[index:end],
 		}
+		if len(attachments) > 0 {
+			// Signal takes bare base64 strings rather than described objects.
+			encoded := make([]string, 0, len(attachments))
+			for _, attachment := range attachments {
+				encoded = append(encoded, attachment.Base64())
+			}
+			payload["base64_attachments"] = encoded
+		}
 
 		data, err := json.Marshal(payload)
 		if err != nil {
@@ -191,12 +217,10 @@ func (s *SignalTarget) Send(body, title string, notifyType NotifyType) error {
 			Headers: headers,
 			Body:    string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (s *SignalTarget) buildURL() string {
@@ -253,7 +277,7 @@ func init() {
 					"type":     "bool",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -290,7 +314,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

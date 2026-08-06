@@ -81,10 +81,11 @@ func NewWxPusherTarget(target *ParsedURL) (*WxPusherTarget, error) {
 		}
 	}
 
-	if len(users) == 0 && len(topics) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &WxPusherTarget{
 		token:       token,
 		contentType: contentType,
@@ -94,6 +95,10 @@ func NewWxPusherTarget(target *ParsedURL) (*WxPusherTarget, error) {
 }
 
 func (w *WxPusherTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	if len(w.users) == 0 && len(w.topics) == 0 {
+		return RequestSpec{}, fmt.Errorf("missing targets")
+	}
+
 	spec, err := w.buildRequest(body, title)
 	if err != nil {
 		return RequestSpec{}, err
@@ -105,6 +110,10 @@ func (w *WxPusherTarget) BuildRequest(body, title string, notifyType NotifyType)
 }
 
 func (w *WxPusherTarget) Send(body, title string, notifyType NotifyType) error {
+	if len(w.users) == 0 && len(w.topics) == 0 {
+		return fmt.Errorf("missing targets")
+	}
+
 	spec, err := w.buildRequest(body, title)
 	if err != nil {
 		return err
@@ -176,7 +185,7 @@ func init() {
 		"details": map[string]any{
 			"args": map[string]any{
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -210,7 +219,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -282,7 +291,7 @@ func init() {
 					"map_to":   "targets",
 					"name":     "Targets",
 					"private":  false,
-					"required": false,
+					"required": true,
 					"type":     "list:string",
 				},
 				"token": map[string]any{

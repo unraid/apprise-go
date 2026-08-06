@@ -1,6 +1,15 @@
 package notify
 
 var smsSchemas = map[string]struct{}{
+	"notifyre":   {},
+	"smsc":       {},
+	"exotel":     {},
+	"eight00com": {},
+	"octopush":   {},
+	"serwersms":  {},
+	"evolution":  {},
+	"ringc":      {},
+	"evolutions": {},
 	"46elks":     {},
 	"atalk":      {},
 	"clickatell": {},

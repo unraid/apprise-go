@@ -1,0 +1,61 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "{\"type\": \"text\", \"text\": \"apprise parity\\r\\nhello from python\", \"sender\": {\"name\": \"Apprise Notifications\"}, \"receiver\": \"receiver1\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-viber-auth-token": "authtoken123"
+        },
+        "method": "POST",
+        "url": "https://chatapi.viber.com/pa/send_message"
+      }
+    ]
+  },
+  {
+    "name": "multiple-receivers",
+    "requests": [
+      {
+        "body": "{\"type\": \"text\", \"text\": \"body\", \"sender\": {\"name\": \"Apprise Notifications\"}, \"receiver\": \"receiver1\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-viber-auth-token": "authtoken123"
+        },
+        "method": "POST",
+        "url": "https://chatapi.viber.com/pa/send_message"
+      },
+      {
+        "body": "{\"type\": \"text\", \"text\": \"body\", \"sender\": {\"name\": \"Apprise Notifications\"}, \"receiver\": \"receiver2\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-viber-auth-token": "authtoken123"
+        },
+        "method": "POST",
+        "url": "https://chatapi.viber.com/pa/send_message"
+      }
+    ]
+  },
+  {
+    "name": "sender-and-avatar",
+    "requests": [
+      {
+        "body": "{\"type\": \"text\", \"text\": \"title\\r\\nbody\", \"sender\": {\"name\": \"BotName\", \"avatar\": \"https://example.com/a.png\"}, \"receiver\": \"receiver1\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-viber-auth-token": "authtoken123"
+        },
+        "method": "POST",
+        "url": "https://chatapi.viber.com/pa/send_message"
+      }
+    ]
+  }
+]

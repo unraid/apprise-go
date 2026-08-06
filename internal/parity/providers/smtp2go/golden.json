@@ -28,5 +28,35 @@
         "url": "https://api.smtp2go.com/v3/email/send"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "{\"api_key\": \"user@example.com\", \"sender\": \"key@example.com\", \"subject\": \"title\", \"to\": [\"key@example.com\"], \"attachments\": [{\"filename\": \"report.pdf\", \"fileblob\": \"UERGREFUQQ==\", \"mimetype\": \"application/pdf\"}], \"html_body\": \"body\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.smtp2go.com/v3/email/send"
+      }
+    ]
+  },
+  {
+    "name": "body-format-markdown",
+    "requests": [
+      {
+        "body": "{\"api_key\": \"apikey\", \"sender\": \"sender@domain.com\", \"subject\": \"over\", \"to\": [\"recipient@domain.com\"], \"html_body\": \"<p><strong>bold</strong> and <a href=\\\"https://example.com\\\">link</a> plus <code>code</code>.</p>\"}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.smtp2go.com/v3/email/send"
+      }
+    ]
   }
 ]

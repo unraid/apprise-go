@@ -28,5 +28,60 @@
         "url": "https://media.guilded.gg/webhooks/1234567890/abcdef"
       }
     ]
+  },
+  {
+    "name": "template-payload",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-256x256.png\", \"content\": \"the title: body text\", \"embeds\": [{\"title\": \"the title\", \"description\": \"body text\", \"color\": 13291305, \"footer\": {\"text\": \"Apprise Notifications\"}, \"url\": \"https://github.com/unraid/apprise-go\", \"thumbnail\": {\"url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-256x256.png\"}, \"fields\": [{\"name\": \"type\", \"value\": \"warning\"}, {\"name\": \"hex\", \"value\": \"#CACF29\"}, {\"name\": \"custom\", \"value\": \"hello\"}]}]}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://media.guilded.gg/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      }
+    ]
+  },
+  {
+    "name": "batch-off",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"content\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://media.guilded.gg/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      }
+    ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\", \"content\": \"title\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://media.guilded.gg/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      },
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"payload_json\"\r\n\r\n{\"tts\": false, \"wait\": true, \"avatar_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-256x256.png\"}\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"report.pdf\"\r\nContent-Type: application/pdf\r\n\r\nPDFDATA\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://media.guilded.gg/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz"
+      }
+    ]
   }
 ]

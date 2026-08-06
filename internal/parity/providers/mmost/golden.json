@@ -3,7 +3,7 @@
     "name": "webhook_default",
     "requests": [
       {
-        "body": "{\"text\": \"apprise parity\\r\\nhello from python\", \"icon_url\": null, \"username\": \"Apprise\"}",
+        "body": "{\"text\": \"apprise parity\\r\\nhello from python\", \"username\": \"Apprise\"}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json",
@@ -18,7 +18,7 @@
     "name": "mmosts-default",
     "requests": [
       {
-        "body": "{\"text\": \"apprise parity\\r\\nhello from python\", \"icon_url\": null, \"username\": \"Apprise\"}",
+        "body": "{\"text\": \"apprise parity\\r\\nhello from python\", \"username\": \"Apprise\"}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json",
@@ -26,6 +26,148 @@
         },
         "method": "POST",
         "url": "https://mattermost.example.com/hooks/hooks-token"
+      }
+    ]
+  },
+  {
+    "name": "webhook-with-channel",
+    "requests": [
+      {
+        "body": "{\"text\": \"t\\r\\nbody\", \"icon_url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-72x72.png\", \"username\": \"Apprise\", \"channel\": \"general\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/hooks/hooks-token"
+      }
+    ]
+  },
+  {
+    "name": "webhook-icon-url",
+    "requests": [
+      {
+        "body": "{\"text\": \"t\\r\\nbody\", \"icon_url\": \"https://example.com/icon.png\", \"username\": \"Apprise\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/hooks/hooks-token"
+      }
+    ]
+  },
+  {
+    "name": "webhook-botname",
+    "requests": [
+      {
+        "body": "{\"text\": \"t\\r\\nbody\", \"username\": \"deploybot\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/hooks/hooks-token"
+      }
+    ]
+  },
+  {
+    "name": "bot-channel-id",
+    "requests": [
+      {
+        "body": "{\"channel_id\": \"abc123def456\", \"message\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer bot-token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/api/v4/posts"
+      }
+    ]
+  },
+  {
+    "name": "bot-channel-name-lookup",
+    "requests": [
+      {
+        "body": "",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer bot-token",
+          "user-agent": "Apprise"
+        },
+        "method": "GET",
+        "url": "http://mattermost.example.com/api/v4/teams/name/team/channels/name/general"
+      },
+      {
+        "body": "{\"channel_id\": \"channelid123\", \"message\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer bot-token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/api/v4/posts"
+      }
+    ]
+  },
+  {
+    "name": "bot-multiple-channels",
+    "requests": [
+      {
+        "body": "{\"channel_id\": \"abc123\", \"message\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer bot-token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/api/v4/posts"
+      },
+      {
+        "body": "{\"channel_id\": \"def456\", \"message\": \"t\\r\\nbody\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer bot-token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/api/v4/posts"
+      }
+    ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"channel_id\"\r\n\r\nabc123def456\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"files\"; filename=\"pixel.png\"\r\nContent-Type: image/png\r\n\r\n\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "body_b64": "LS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJjaGFubmVsX2lkIg0KDQphYmMxMjNkZWY0NTYNCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0iZmlsZXMiOyBmaWxlbmFtZT0icGl4ZWwucG5nIg0KQ29udGVudC1UeXBlOiBpbWFnZS9wbmcNCg0KiVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWS0tDQo=",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer bot-token",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/api/v4/files"
+      },
+      {
+        "body": "{\"channel_id\": \"abc123def456\", \"message\": \"title\\r\\nbody\", \"file_ids\": [\"fileid123\"]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer bot-token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://mattermost.example.com/api/v4/posts"
       }
     ]
   }

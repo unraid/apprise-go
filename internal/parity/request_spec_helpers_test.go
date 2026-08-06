@@ -1,9 +1,12 @@
 package parity
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -34,6 +37,14 @@ const (
 func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpec) {
 	t.Helper()
 
+	assertRequestSpecMatchesExcept(t, pythonSpec, goSpec, nil)
+}
+
+// assertRequestSpecMatchesExcept compares two requests, treating the named
+// headers as volatile: present and non-empty on both sides, but not equal.
+func assertRequestSpecMatchesExcept(t *testing.T, pythonSpec, goSpec notify.RequestSpec, volatile []string) {
+	t.Helper()
+
 	if !strings.EqualFold(pythonSpec.Method, goSpec.Method) {
 		t.Fatalf("method mismatch: python=%s go=%s", pythonSpec.Method, goSpec.Method)
 	}
@@ -58,8 +69,23 @@ func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpe
 		t.Fatalf("url query mismatch: python=%s go=%s", pythonQuery, goQuery)
 	}
 
+	// A multipart boundary is generated per request and never matches across
+	// two runs, so both sides are rewritten to a fixed one. Everything the
+	// boundary separates is still compared.
+	pythonBody, pythonSpec.Headers = normalizeMultipart(pythonBody, pythonSpec.Headers)
+	goBody, goSpec.Headers = normalizeMultipart(goBody, goSpec.Headers)
+
 	pythonHeaders := normalizeHeaders(pythonSpec.Headers)
 	goHeaders := normalizeHeaders(goSpec.Headers)
+	for _, name := range volatile {
+		name = strings.ToLower(strings.TrimSpace(name))
+		for side, headers := range map[string]map[string]string{"python": pythonHeaders, "go": goHeaders} {
+			if strings.TrimSpace(headers[name]) == "" {
+				t.Fatalf("volatile header %s missing or empty on %s side", name, side)
+			}
+			delete(headers, name)
+		}
+	}
 	if !reflect.DeepEqual(pythonHeaders, goHeaders) {
 		t.Fatalf("header mismatch: python=%v go=%v", pythonHeaders, goHeaders)
 	}
@@ -77,6 +103,12 @@ func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpe
 		return
 	}
 
+	if isMultipartBody(pythonHeaders) {
+		assertMultipartBodyEqual(t, pythonBody, goBody)
+
+		return
+	}
+
 	if pythonBody != goBody {
 		t.Fatalf("body mismatch: python=%s go=%s", pythonBody, goBody)
 	}
@@ -85,12 +117,18 @@ func assertRequestSpecMatches(t *testing.T, pythonSpec, goSpec notify.RequestSpe
 func assertRequestSpecSequenceMatches(t *testing.T, pythonSpecs, goSpecs []notify.RequestSpec) {
 	t.Helper()
 
+	assertRequestSpecSequenceMatchesExcept(t, pythonSpecs, goSpecs, nil)
+}
+
+func assertRequestSpecSequenceMatchesExcept(t *testing.T, pythonSpecs, goSpecs []notify.RequestSpec, volatile []string) {
+	t.Helper()
+
 	if len(pythonSpecs) != len(goSpecs) {
 		t.Fatalf("request count mismatch: python=%d go=%d", len(pythonSpecs), len(goSpecs))
 	}
 
 	for i := range pythonSpecs {
-		assertRequestSpecMatches(t, pythonSpecs[i], goSpecs[i])
+		assertRequestSpecMatchesExcept(t, pythonSpecs[i], goSpecs[i], volatile)
 	}
 }
 
@@ -232,6 +270,10 @@ func normalizeQueryValues(values url.Values) url.Values {
 }
 
 func normalizeQueryValue(value string) string {
+	if normalized, ok := normalizeEmbeddedEmail(value); ok {
+		return normalized
+	}
+
 	trimmed := strings.TrimSpace(value)
 	if strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") {
 		var parsed any
@@ -277,4 +319,224 @@ func normalizeAppriseURL(value string) string {
 		return appriseGoRepoURL
 	}
 	return value
+}
+
+// normalizeEmbeddedEmail rewrites the multipart boundary inside a base64
+// field that carries a whole email — SES posts its message that way, as
+// RawMessage.Data. The boundary is generated per message, so without this the
+// two sides can never compare equal. It is returned still base64-encoded so
+// the caller compares like for like.
+func normalizeEmbeddedEmail(value string) (string, bool) {
+	decoded, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return "", false
+	}
+
+	message := string(decoded)
+	if !strings.HasPrefix(message, "Content-Type: multipart/") {
+		return "", false
+	}
+
+	match := emailBoundaryPattern.FindStringSubmatch(message)
+	if match == nil {
+		return "", false
+	}
+
+	boundary := match[1]
+	if boundary == "" || boundary == multipartFixedBoundary {
+		return value, true
+	}
+
+	message = strings.ReplaceAll(message, boundary, multipartFixedBoundary)
+
+	return base64.StdEncoding.EncodeToString([]byte(message)), true
+}
+
+// emailBoundaryPattern finds the boundary declared inside a MIME message. It
+// stops at the end of the header line, where the content type pattern used for
+// request headers would run on into the rest of the message.
+var emailBoundaryPattern = regexp.MustCompile(`boundary="?([^";\r\n]+)"?`)
+
+// multipartBoundaryPattern finds the boundary in a content type header.
+var multipartBoundaryPattern = regexp.MustCompile(`boundary=([^;]+)`)
+
+const multipartFixedBoundary = "APPRISE-PARITY-BOUNDARY"
+
+// normalizeMultipart replaces a generated multipart boundary with a fixed one
+// in both the header and the body, so two runs of the same request compare
+// equal. The parts themselves are untouched.
+func normalizeMultipart(body string, headers map[string]string) (string, map[string]string) {
+	contentType := ""
+	contentTypeKey := ""
+	for key, value := range headers {
+		if strings.EqualFold(key, "content-type") {
+			contentType, contentTypeKey = value, key
+			break
+		}
+	}
+
+	if !strings.Contains(strings.ToLower(contentType), "multipart/") {
+		return body, headers
+	}
+
+	matches := multipartBoundaryPattern.FindStringSubmatch(contentType)
+	if len(matches) < 2 {
+		return body, headers
+	}
+	boundary := strings.Trim(matches[1], `"`)
+	if boundary == "" {
+		return body, headers
+	}
+
+	rewritten := map[string]string{}
+	for key, value := range headers {
+		rewritten[key] = value
+	}
+	rewritten[contentTypeKey] = multipartBoundaryPattern.ReplaceAllString(
+		contentType, "boundary="+multipartFixedBoundary)
+
+	return strings.ReplaceAll(body, boundary, multipartFixedBoundary), rewritten
+}
+
+func isMultipartBody(headers map[string]string) bool {
+	return strings.Contains(strings.ToLower(headers["content-type"]), "multipart/")
+}
+
+// assertMultipartBodyEqual compares two multipart bodies part by part, in
+// order.
+//
+// Order used to be ignored: parts were indexed into a map by field name and
+// matched that way, on the reasoning that neither side's ordering carried
+// meaning. Two things were wrong with that. A receiver reads the stream in
+// order, so a service that acts on a field before the part depending on it
+// can tell the difference — and this port emitted fields sorted while upstream
+// emits them in the order its payload dictionary declares them, so almost
+// every multi-field request disagreed and nothing said so.
+//
+// The map also silently discarded repeats. Services that send several files
+// under one field name — RingCentral's attachment, SerwerSMS's file, 800.com's
+// media[] — had every part but the last thrown away before comparison, so a
+// second attachment was never checked at all.
+//
+// A part carrying JSON is still compared structurally, since key order and
+// whitespace differ between the encoders and neither is meaningful.
+func assertMultipartBodyEqual(t *testing.T, pythonBody, goBody string) {
+	t.Helper()
+
+	if err := compareMultipartBodies(pythonBody, goBody); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// compareMultipartBodies returns the difference rather than failing, so the
+// comparison itself can be tested. The order rule it enforces was previously
+// stated in a comment and enforced nowhere, which is the kind of thing that
+// only shows up if you can write a case the checker is supposed to reject.
+func compareMultipartBodies(pythonBody, goBody string) error {
+	pythonParts := splitMultipartParts(pythonBody)
+	goParts := splitMultipartParts(goBody)
+
+	if len(pythonParts) != len(goParts) {
+		return fmt.Errorf("multipart part count mismatch: python has %d (%s), go has %d (%s)",
+			len(pythonParts), strings.Join(multipartPartNames(pythonParts), ", "),
+			len(goParts), strings.Join(multipartPartNames(goParts), ", "))
+	}
+
+	for i := range pythonParts {
+		pythonPart, goPart := pythonParts[i], goParts[i]
+
+		if pythonPart.header != goPart.header {
+			return fmt.Errorf("multipart part %d header mismatch:\npython=%s\ngo=%s\n"+
+				"python order: %s\ngo order:     %s",
+				i, pythonPart.header, goPart.header,
+				strings.Join(multipartPartNames(pythonParts), ", "),
+				strings.Join(multipartPartNames(goParts), ", "))
+		}
+
+		if equal, ok := jsonBodiesEqual(pythonPart.content, goPart.content); ok {
+			if !equal {
+				return fmt.Errorf("multipart part %d json content mismatch:\npython=%s\ngo=%s",
+					i, pythonPart.content, goPart.content)
+			}
+			continue
+		}
+		if pythonPart.content != goPart.content {
+			return fmt.Errorf("multipart part %d (%s) content mismatch:\npython=%s\ngo=%s",
+				i, multipartPartName.FindString(pythonPart.header),
+				pythonPart.content, goPart.content)
+		}
+	}
+
+	return nil
+}
+
+// jsonBodiesEqual reports whether two bodies are equivalent JSON. The second
+// return says whether they were JSON at all; a caller comparing raw bytes
+// needs to tell "not JSON" from "different JSON".
+func jsonBodiesEqual(pythonBody, goBody string) (equal bool, isJSON bool) {
+	if !shouldCompareBodyAsJSON(pythonBody, goBody) {
+		return false, false
+	}
+
+	var pythonValue, goValue any
+	if err := json.Unmarshal([]byte(pythonBody), &pythonValue); err != nil {
+		return false, false
+	}
+	if err := json.Unmarshal([]byte(goBody), &goValue); err != nil {
+		return false, false
+	}
+
+	return reflect.DeepEqual(
+		normalizeJSONValue(pythonValue), normalizeJSONValue(goValue)), true
+}
+
+// multipartPartName reads the field name out of a part's headers.
+var multipartPartName = regexp.MustCompile(`(?:^|[^a-z])name="([^"]*)"`)
+
+// multipartPartNames lists the field names in order, for failure messages —
+// an order mismatch is unreadable without seeing both sequences.
+func multipartPartNames(parts []multipartPart) []string {
+	names := make([]string, 0, len(parts))
+	for _, part := range parts {
+		matches := multipartPartName.FindStringSubmatch(part.header)
+		if len(matches) < 2 {
+			names = append(names, "?")
+			continue
+		}
+		names = append(names, matches[1])
+	}
+
+	return names
+}
+
+type multipartPart struct {
+	header  string
+	content string
+}
+
+// splitMultipartParts breaks a body on the normalized boundary and separates
+// each part's headers from its content.
+func splitMultipartParts(body string) []multipartPart {
+	parts := []multipartPart{}
+	for _, chunk := range strings.Split(body, "--"+multipartFixedBoundary) {
+		trimmed := strings.Trim(chunk, "-\r\n")
+		if trimmed == "" {
+			continue
+		}
+
+		header, content, found := strings.Cut(strings.TrimLeft(chunk, "\r\n"), "\r\n\r\n")
+		if !found {
+			header, content, found = strings.Cut(strings.TrimLeft(chunk, "\n"), "\n\n")
+		}
+		if !found {
+			continue
+		}
+
+		parts = append(parts, multipartPart{
+			header:  strings.TrimSpace(header),
+			content: strings.Trim(content, "-\r\n"),
+		})
+	}
+
+	return parts
 }

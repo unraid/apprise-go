@@ -1,0 +1,72 @@
+[
+  {
+    "name": "secure-default",
+    "requests": [
+      {
+        "body": "{\"number\": \"15551234567\", \"text\": \"apprise parity\\r\\nhello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://evo.example.com/message/sendText/instance1"
+      }
+    ]
+  },
+  {
+    "name": "insecure-port-multiple",
+    "requests": [
+      {
+        "body": "{\"number\": \"15551234567\", \"text\": \"body\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://evo.example.com:8080/message/sendText/instance1"
+      },
+      {
+        "body": "{\"number\": \"15559876543\", \"text\": \"body\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://evo.example.com:8080/message/sendText/instance1"
+      }
+    ]
+  },
+  {
+    "name": "overflow-split-html",
+    "requests": [
+      {
+        "body": "{\"number\": \"15551234567\", \"text\": \"<b>over</b><br />\\r\\n<b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>.\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://evo.example.com/message/sendText/instance1"
+      }
+    ]
+  },
+  {
+    "name": "override-html-input",
+    "requests": [
+      {
+        "body": "{\"number\": \"15551234567\", \"text\": \"*over*\\n*bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```. *bold* and link (https://example.com) plus ```code```.\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://evo.example.com/message/sendText/instance1"
+      }
+    ]
+  }
+]

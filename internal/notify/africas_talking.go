@@ -130,6 +130,8 @@ func (a *AfricasTalkingTarget) BuildRequest(body, title string, notifyType Notif
 }
 
 func (a *AfricasTalkingTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(a.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -149,14 +151,12 @@ func (a *AfricasTalkingTarget) Send(body, title string, notifyType NotifyType) e
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (a *AfricasTalkingTarget) buildRequest(targets []string, message string) (RequestSpec, error) {
@@ -228,7 +228,7 @@ func init() {
 					"type":     "bool",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -279,7 +279,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -356,7 +356,7 @@ func init() {
 					"map_to":   "targets",
 					"name":     "Targets",
 					"private":  false,
-					"required": false,
+					"required": true,
 					"type":     "list:string",
 				},
 			},

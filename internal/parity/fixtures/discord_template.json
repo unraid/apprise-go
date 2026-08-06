@@ -1,0 +1,18 @@
+{
+  "content": "{{app_title}}: {{app_body}}",
+  "embeds": [
+    {
+      "title": "{{app_title}}",
+      "description": "{{app_body}}",
+      "color": {{app_color_int}},
+      "footer": {"text": "{{app_desc}}"},
+      "url": "{{app_url}}",
+      "thumbnail": {"url": "{{app_image_url}}"},
+      "fields": [
+        {"name": "type", "value": "{{app_type}}"},
+        {"name": "hex", "value": "{{app_color_hex}}"},
+        {"name": "custom", "value": "{{mytoken}}"}
+      ]
+    }
+  ]
+}

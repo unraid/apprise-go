@@ -1,0 +1,32 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "{\"recipients\": [{\"phone_number\": \"+15551234567\"}], \"text\": \"apprise parity\\r\\nhello from python\", \"type\": \"sms_premium\", \"purpose\": \"alert\", \"sender\": \"Apprise\", \"with_replies\": false}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.octopush.com/v1/public/sms-campaign/send"
+      }
+    ]
+  },
+  {
+    "name": "batched-with-sender",
+    "requests": [
+      {
+        "body": "{\"recipients\": [{\"phone_number\": \"+15551234567\"}, {\"phone_number\": \"+15559876543\"}], \"text\": \"body\", \"type\": \"sms_low_cost\", \"purpose\": \"alert\", \"sender\": \"Sender\", \"with_replies\": false}",
+        "headers": {
+          "accept": "application/json",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.octopush.com/v1/public/sms-campaign/send"
+      }
+    ]
+  }
+]

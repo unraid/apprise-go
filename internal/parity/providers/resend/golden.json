@@ -30,5 +30,21 @@
         "url": "https://api.resend.com/emails"
       }
     ]
+  },
+  {
+    "name": "body-format-markdown",
+    "requests": [
+      {
+        "body": "{\"from\": \"sender@domain.com\", \"subject\": \"over\", \"html\": \"<p><strong>bold</strong> and <a href=\\\"https://example.com\\\">link</a> plus <code>code</code>.</p>\", \"to\": \"recipient@domain.com\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.resend.com/emails"
+      }
+    ]
   }
 ]

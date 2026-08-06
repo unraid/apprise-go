@@ -1,0 +1,66 @@
+[
+  {
+    "name": "default",
+    "url": "jira://apikey/@user/%23team?region=eu&priority=high&tags=alpha,beta&entity=server1&alias=alert1&action=new&+detail=xyz",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "warning"
+  },
+  {
+    "name": "map-info-is-a-note-so-nothing-is-sent",
+    "url": "jira://apikey/@user",
+    "body": "body",
+    "title": "t",
+    "type": "info",
+    "sends_nothing": true
+  },
+  {
+    "name": "map-warning-creates-an-alert",
+    "url": "jira://apikey/@user",
+    "body": "body",
+    "title": "t",
+    "type": "warning"
+  },
+  {
+    "name": "mapping-override-makes-info-create",
+    "url": "jira://apikey/@user?:info=new",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "us-region-uses-the-same-endpoint",
+    "url": "jira://apikey/@user?region=us&action=new",
+    "body": "body",
+    "title": "t",
+    "type": "warning"
+  },
+  {
+    "name": "batch-off-splits-responders",
+    "url": "jira://apikey/@one/%23teamtwo/*sched/^esc?action=new",
+    "body": "body",
+    "title": "t",
+    "type": "warning"
+  },
+  {
+    "name": "batch-on-groups-responders",
+    "url": "jira://apikey/@one/%23teamtwo/*sched/^esc?action=new&batch=yes",
+    "body": "body",
+    "title": "t",
+    "type": "warning"
+  },
+  {
+    "name": "user-in-url-and-no-targets",
+    "url": "jira://someuser@apikey?action=new",
+    "body": "body",
+    "title": "this title is deliberately longer than the one hundred and thirty character message limit that upstream applies before it truncates with an ellipsis",
+    "type": "failure"
+  },
+  {
+    "name": "uuid-target-is-an-id",
+    "url": "jira://apikey/@8b8d1b3e-1a4f-4c2a-9f3e-2c7d5a6b1e90?action=new",
+    "body": "body",
+    "title": "t",
+    "type": "warning"
+  }
+]

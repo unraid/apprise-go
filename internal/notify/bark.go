@@ -84,10 +84,6 @@ func NewBarkTarget(target *ParsedURL) (*BarkTarget, error) {
 	if toValue, ok := target.Query["to"]; ok && toValue != "" {
 		targets = append(targets, parseList(toValue)...)
 	}
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
 	includeImage := parseBool(target.Query["image"], true)
 
 	sound := matchBarkSound(target.Query["sound"])
@@ -96,6 +92,11 @@ func NewBarkTarget(target *ParsedURL) (*BarkTarget, error) {
 	badge := parseIntInRange(target.Query["badge"], 0, 1<<31-1)
 	volume := parseIntInRange(target.Query["volume"], 0, 10)
 
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &BarkTarget{
 		targets:      targets,
 		host:         target.Host,
@@ -125,6 +126,8 @@ func (b *BarkTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 }
 
 func (b *BarkTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(b.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -134,12 +137,10 @@ func (b *BarkTarget) Send(body, title string, notifyType NotifyType) error {
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (b *BarkTarget) buildRequestForTarget(deviceKey, body, title string, notifyType NotifyType) (RequestSpec, error) {
@@ -357,7 +358,7 @@ func init() {
 					"type":     "string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -421,7 +422,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

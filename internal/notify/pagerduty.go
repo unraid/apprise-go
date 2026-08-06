@@ -44,6 +44,29 @@ type PagerDutyTarget struct {
 	details        map[string]string
 }
 
+// pagerDutyField reads a value from ?name= or the given path segment, and
+// reports whether the URL supplied one at all.
+func pagerDutyField(target *ParsedURL, name string, index int) (string, bool) {
+	if raw, ok := target.Query[name]; ok {
+		return strings.TrimSpace(raw), true
+	}
+	// splitPath drops a segment that is only whitespace, which is exactly the
+	// case being judged here -- a path of "/%20" supplies a source and it is
+	// blank. The raw path is split instead so the segment survives to be
+	// rejected.
+	raw := strings.Trim(target.Path, "/")
+	if raw == "" {
+		return "", false
+	}
+	segments := strings.Split(raw, "/")
+	if len(segments) > index {
+		// The stored path is still escaped, so %20 has to be decoded before it
+		// can be recognized as whitespace.
+		return strings.TrimSpace(lenientUnquote(segments[index])), true
+	}
+	return "", false
+}
+
 func NewPagerDutyTarget(target *ParsedURL) (*PagerDutyTarget, error) {
 	apiKey := strings.TrimSpace(target.Query["apikey"])
 	if apiKey == "" {
@@ -84,14 +107,17 @@ func NewPagerDutyTarget(target *ParsedURL) (*PagerDutyTarget, error) {
 		severity = parsed
 	}
 
-	source := strings.TrimSpace(target.Query["source"])
-	component := strings.TrimSpace(target.Query["component"])
-	segments := splitPath(target.Path)
-	if source == "" && len(segments) > 0 {
-		source = strings.TrimSpace(segments[0])
+	// Upstream distinguishes "not supplied" from "supplied but blank": an
+	// omitted source falls back to the default, while one that trims away to
+	// nothing -- a path segment of %20, say -- is an error rather than a
+	// silent default.
+	source, sourceGiven := pagerDutyField(target, "source", 0)
+	component, componentGiven := pagerDutyField(target, "component", 1)
+	if sourceGiven && source == "" {
+		return nil, fmt.Errorf("invalid pager duty notification source")
 	}
-	if component == "" && len(segments) > 1 {
-		component = strings.TrimSpace(segments[1])
+	if componentGiven && component == "" {
+		return nil, fmt.Errorf("invalid pager duty notification component")
 	}
 	if source == "" {
 		source = "Apprise"
@@ -230,7 +256,7 @@ func init() {
 					"type":     "string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -288,7 +314,7 @@ func init() {
 					"values":   []string{"us", "eu"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

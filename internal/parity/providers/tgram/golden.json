@@ -13,5 +13,66 @@
         "url": "https://api.telegram.org/bot123456:abcdef/sendMessage"
       }
     ]
+  },
+  {
+    "name": "attachment-image",
+    "requests": [
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"caption\"\r\n\r\n<b>title</b>\r\nbody\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"show_caption_above_media\"\r\n\r\nTrue\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"parse_mode\"\r\n\r\nHTML\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"title\"\r\n\r\npixel.png\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n12345\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"pixel.png\"\r\n\r\n\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "body_b64": "LS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJjYXB0aW9uIg0KDQo8Yj50aXRsZTwvYj4NCmJvZHkNCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0ic2hvd19jYXB0aW9uX2Fib3ZlX21lZGlhIg0KDQpUcnVlDQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZDQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9InBhcnNlX21vZGUiDQoNCkhUTUwNCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0idGl0bGUiDQoNCnBpeGVsLnBuZw0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJjaGF0X2lkIg0KDQoxMjM0NQ0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJwaG90byI7IGZpbGVuYW1lPSJwaXhlbC5wbmciDQoNColQTkcNChoKAAAADUlIRFIAAAABAAAAAQgGAAAAHxXEiQAAAA1JREFUeNpj/M/AUA8ABIUBgISpjCEAAAAASUVORK5CYIINCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlktLQ0K",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.telegram.org/bot123456:abcdef/sendPhoto"
+      }
+    ]
+  },
+  {
+    "name": "attachment-document",
+    "requests": [
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"caption\"\r\n\r\n<b>title</b>\r\nbody\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"show_caption_above_media\"\r\n\r\nTrue\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"parse_mode\"\r\n\r\nHTML\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"title\"\r\n\r\nnotes.txt\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n12345\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"document\"; filename=\"notes.txt\"\r\n\r\nplain text attachment\n\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.telegram.org/bot123456:abcdef/sendDocument"
+      }
+    ]
+  },
+  {
+    "name": "overflow-split-html",
+    "requests": [
+      {
+        "body": "{\"disable_notification\": false, \"disable_web_page_preview\": true, \"parse_mode\": \"HTML\", \"text\": \"<b>over</b>\\r\\n<b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>.\", \"chat_id\": 12345}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.telegram.org/bot123456:abcdef/sendMessage"
+      }
+    ]
+  },
+  {
+    "name": "override-html-input",
+    "requests": [
+      {
+        "body": "{\"disable_notification\": false, \"disable_web_page_preview\": true, \"parse_mode\": \"HTML\", \"text\": \"<b>over</b>\\r\\n<b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>.\", \"chat_id\": 12345}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.telegram.org/bot123456:abcdef/sendMessage"
+      }
+    ]
   }
 ]

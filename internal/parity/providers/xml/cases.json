@@ -12,5 +12,15 @@
     "body": "hello",
     "title": "title",
     "type": "success"
+  },
+  {
+    "name": "attachment",
+    "url": "xml://localhost/",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf"
+    ]
   }
 ]

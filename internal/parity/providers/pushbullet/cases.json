@@ -12,5 +12,15 @@
     "body": "body",
     "title": "title",
     "type": "success"
+  },
+  {
+    "name": "attachment",
+    "url": "pbul://token123",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
   }
 ]

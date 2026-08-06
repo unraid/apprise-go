@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"cmp"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -57,6 +58,15 @@ func NewNtfyTarget(target *ParsedURL) (*NtfyTarget, error) {
 		}
 	}
 
+	// Private mode addresses a server the caller runs, so the host has to be a
+	// hostname. Cloud mode does not care -- there the authority is a topic, so
+	// the check would be wrong applied to the schema as a whole. It also has to
+	// come after the mode is settled: a URL with no topics falls back to cloud,
+	// and judging it while it still looked private rejected ntfy:// itself.
+	if mode == NtfyModePrivate && !isValidHostname(strings.TrimSpace(target.Host)) {
+		return nil, fmt.Errorf("invalid hostname %q for a private ntfy server", target.Host)
+	}
+
 	includeImage := true
 	if rawImage, ok := target.Query["image"]; ok {
 		includeImage = parseBool(rawImage, true)
@@ -101,86 +111,73 @@ func NewNtfyTarget(target *ParsedURL) (*NtfyTarget, error) {
 		delay:        strings.TrimSpace(target.Query["delay"]),
 		click:        strings.TrimSpace(target.Query["click"]),
 		email:        strings.TrimSpace(target.Query["email"]),
-		tags:         parseDelimitedList(target.Query["tags"]),
-		actions:      strings.TrimSpace(target.Query["actions"]),
-		attach:       strings.TrimSpace(target.Query["attach"]),
-		filename:     strings.TrimSpace(target.Query["filename"]),
+		// Upstream renamed this to xtags and keeps tags as a legacy alias.
+		tags:     parseDelimitedList(cmp.Or(target.Query["xtags"], target.Query["tags"])),
+		actions:  strings.TrimSpace(target.Query["actions"]),
+		attach:   strings.TrimSpace(target.Query["attach"]),
+		filename: strings.TrimSpace(target.Query["filename"]),
 	}, nil
 }
 
 func (n *NtfyTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	requests, err := n.BuildRequestsWithAttachments(body, title, notifyType, nil)
-	if err != nil {
-		return RequestSpec{}, err
-	}
-	if len(requests) == 0 {
-		return RequestSpec{}, fmt.Errorf("no requests")
-	}
-	return requests[0], nil
+	return n.buildRequest(body, title, notifyType, nil)
 }
 
-func (n *NtfyTarget) BuildRequestsWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) ([]RequestSpec, error) {
+// buildRequest builds one request. With an attachment the file's bytes are the
+// body, the topic moves into the path and the message metadata into the query
+// string — ntfy has no envelope to put a file inside.
+func (n *NtfyTarget) buildRequest(body, title string, notifyType NotifyType, attachment *Attachment) (RequestSpec, error) {
 	if len(n.topics) == 0 {
-		return nil, fmt.Errorf("no topics")
-	}
-
-	if len(attachments) > 0 {
-		specs := []RequestSpec{}
-		for _, topic := range n.topics {
-			for i, attachment := range attachments {
-				sendBody := ""
-				sendTitle := ""
-				if i == 0 {
-					sendBody = body
-					sendTitle = title
-				}
-				spec, err := n.buildAttachmentRequest(topic, attachment, sendBody, sendTitle, notifyType)
-				if err != nil {
-					return nil, err
-				}
-				specs = append(specs, spec)
-			}
-		}
-		return specs, nil
+		return RequestSpec{}, fmt.Errorf("no topics")
 	}
 
 	urlStr, err := n.notifyURL()
 	if err != nil {
-		return nil, err
+		return RequestSpec{}, err
 	}
 
-	payload := map[string]any{
-		"topic":   n.topics[0],
-		"title":   title,
-		"message": body,
-	}
-	if n.attach != "" {
-		payload["attach"] = n.attach
-		if n.filename != "" {
-			payload["filename"] = n.filename
+	requestBody := ""
+	contentType := "application/json"
+
+	if attachment != nil {
+		query := url.Values{}
+		query.Set("filename", attachment.Name)
+		if title != "" {
+			query.Set("title", title)
 		}
+		if body != "" {
+			query.Set("message", body)
+		}
+
+		urlStr = strings.TrimRight(urlStr, "/") + "/" + n.topics[0] + "?" + query.Encode()
+		requestBody = string(attachment.Data)
+		contentType = ""
+	} else {
+		payload := map[string]any{
+			"topic":   n.topics[0],
+			"title":   title,
+			"message": body,
+		}
+		if n.attach != "" {
+			payload["attach"] = n.attach
+			if n.filename != "" {
+				payload["filename"] = n.filename
+			}
+		}
+
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		requestBody = string(data)
 	}
 
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return nil, err
-	}
-
-	headers := n.headers(notifyType)
-	headers["Content-Type"] = "application/json"
-
-	return []RequestSpec{{
-		Method:  "POST",
-		URL:     urlStr,
-		Headers: headers,
-		Body:    string(data),
-	}}, nil
-}
-
-func (n *NtfyTarget) headers(notifyType NotifyType) map[string]string {
 	headers := map[string]string{
 		"User-Agent": "Apprise",
 		"Accept":     "*/*",
+	}
+	if contentType != "" {
+		headers["Content-Type"] = contentType
 	}
 
 	if n.mode == NtfyModePrivate {
@@ -225,34 +222,12 @@ func (n *NtfyTarget) headers(notifyType NotifyType) map[string]string {
 	if n.actions != "" {
 		headers["X-Actions"] = n.actions
 	}
-	return headers
-}
-
-func (n *NtfyTarget) buildAttachmentRequest(topic string, attachment Attachment, body, title string, notifyType NotifyType) (RequestSpec, error) {
-	urlStr, err := n.attachmentURL(topic)
-	if err != nil {
-		return RequestSpec{}, err
-	}
-
-	u, err := url.Parse(urlStr)
-	if err != nil {
-		return RequestSpec{}, err
-	}
-	values := u.Query()
-	values.Set("filename", attachment.Name)
-	if title != "" {
-		values.Set("title", title)
-	}
-	if body != "" {
-		values.Set("message", body)
-	}
-	u.RawQuery = values.Encode()
 
 	return RequestSpec{
 		Method:  "POST",
-		URL:     u.String(),
-		Headers: n.headers(notifyType),
-		Body:    string(attachment.Data),
+		URL:     urlStr,
+		Headers: headers,
+		Body:    requestBody,
 	}, nil
 }
 
@@ -260,18 +235,34 @@ func (n *NtfyTarget) Send(body, title string, notifyType NotifyType) error {
 	return n.SendWithAttachments(body, title, notifyType, nil)
 }
 
+// SendWithAttachments posts one request per file. Only the first carries the
+// message text; repeating it under every attachment would notify twice.
 func (n *NtfyTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
-	specs, err := n.BuildRequestsWithAttachments(body, title, notifyType, attachments)
-	if err != nil {
-		return err
-	}
-
-	for _, spec := range specs {
-		if err := SendRequest(spec); err != nil {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
+	if len(attachments) == 0 {
+		spec, err := n.buildRequest(body, title, notifyType, nil)
+		if err != nil {
 			return err
 		}
+
+		return SendRequest(spec)
 	}
-	return nil
+
+	for index := range attachments {
+		messageBody, messageTitle := "", ""
+		if index == 0 {
+			messageBody, messageTitle = body, title
+		}
+
+		spec, err := n.buildRequest(messageBody, messageTitle, notifyType, &attachments[index])
+		if err != nil {
+			return err
+		}
+		outcome.record(SendRequest(spec))
+	}
+
+	return outcome.err()
 }
 
 func (n *NtfyTarget) notifyURL() (string, error) {
@@ -294,27 +285,6 @@ func (n *NtfyTarget) notifyURL() (string, error) {
 	}
 
 	u := url.URL{Scheme: scheme, Host: host, Path: "/"}
-	return u.String(), nil
-}
-
-func (n *NtfyTarget) attachmentURL(topic string) (string, error) {
-	if n.mode == NtfyModeCloud {
-		u := url.URL{Scheme: "https", Host: "ntfy.sh", Path: "/" + topic}
-		return u.String(), nil
-	}
-
-	scheme := "http"
-	if strings.ToLower(n.target.Scheme) == "ntfys" {
-		scheme = "https"
-	}
-	host := n.target.Host
-	if host == "" {
-		return "", fmt.Errorf("missing host")
-	}
-	if n.target.Port != 0 {
-		host = fmt.Sprintf("%s:%d", host, n.target.Port)
-	}
-	u := url.URL{Scheme: scheme, Host: host, Path: "/" + topic}
 	return u.String(), nil
 }
 

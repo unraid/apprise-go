@@ -3,15 +3,15 @@
     "name": "tweet",
     "requests": [
       {
-        "body": "status=hello",
+        "body": "{\"text\": \"hello\"}",
         "headers": {
           "accept": "*/*",
-          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"vhZONi8FpUs2t9kmejTpy5M9DWo%3D\"",
-          "content-type": "application/x-www-form-urlencoded",
+          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"LfDSuky9L%2BaqtaKdpUnli31Twrg%3D\"",
+          "content-type": "application/json",
           "user-agent": "Apprise"
         },
         "method": "POST",
-        "url": "https://api.twitter.com/1.1/statuses/update.json"
+        "url": "https://api.twitter.com/2/tweets"
       }
     ]
   },
@@ -19,15 +19,15 @@
     "name": "twitter-mode-tweet",
     "requests": [
       {
-        "body": "status=hello",
+        "body": "{\"text\": \"hello\"}",
         "headers": {
           "accept": "*/*",
-          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"vhZONi8FpUs2t9kmejTpy5M9DWo%3D\"",
-          "content-type": "application/x-www-form-urlencoded",
+          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"LfDSuky9L%2BaqtaKdpUnli31Twrg%3D\"",
+          "content-type": "application/json",
           "user-agent": "Apprise"
         },
         "method": "POST",
-        "url": "https://api.twitter.com/1.1/statuses/update.json"
+        "url": "https://api.twitter.com/2/tweets"
       }
     ]
   },
@@ -38,22 +38,88 @@
         "body": "",
         "headers": {
           "accept": "*/*",
-          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"Lof9NNEEdqT59NvNMycCGVnQ68k%3D\"",
+          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"fF%2FbPvGSsKsYOUnfkXQZFvD7VpA%3D\"",
           "user-agent": "Apprise"
         },
         "method": "GET",
-        "url": "https://api.twitter.com/1.1/account/verify_credentials.json"
+        "url": "https://api.twitter.com/2/users/me"
       },
       {
-        "body": "{\"event\": {\"type\": \"message_create\", \"message_create\": {\"target\": {\"recipient_id\": \"123\"}, \"message_data\": {\"text\": \"hello\"}}}}",
+        "body": "{\"text\": \"hello\"}",
         "headers": {
           "accept": "*/*",
-          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"DHvqVkFRTOh3f%2BV%2FZPQcSiWmNQg%3D\"",
+          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"TevuQwkEnvXpLUK6cOoCSlCAsRQ%3D\"",
           "content-type": "application/json",
           "user-agent": "Apprise"
         },
         "method": "POST",
-        "url": "https://api.twitter.com/1.1/direct_messages/events/new.json"
+        "url": "https://api.twitter.com/2/dm_conversations/with/123/messages"
+      }
+    ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"media_category\"\r\n\r\ntweet_image\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"media\"; filename=\"pixel.png\"\r\n\r\n\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "body_b64": "LS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJtZWRpYV9jYXRlZ29yeSINCg0KdHdlZXRfaW1hZ2UNCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0ibWVkaWEiOyBmaWxlbmFtZT0icGl4ZWwucG5nIg0KDQqJUE5HDQoaCgAAAA1JSERSAAAAAQAAAAEIBgAAAB8VxIkAAAANSURBVHjaY/zPwFAPAASFAYCEqYwhAAAAAElFTkSuQmCCDQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZLS0NCg==",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"KfG6wYhlAQI15q7Y%2Fz9Xvsktm7M%3D\"",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.x.com/2/media/upload"
+      },
+      {
+        "body": "{\"text\": \"title\\r\\nbody\", \"media\": {\"media_ids\": [\"1234567890\"]}}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"LfDSuky9L%2BaqtaKdpUnli31Twrg%3D\"",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.twitter.com/2/tweets"
+      }
+    ]
+  },
+  {
+    "name": "overflow-split-dynamic",
+    "requests": [
+      {
+        "body": "{\"text\": \"over\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"LfDSuky9L%2BaqtaKdpUnli31Twrg%3D\"",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.twitter.com/2/tweets"
+      },
+      {
+        "body": "{\"text\": \"word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"LfDSuky9L%2BaqtaKdpUnli31Twrg%3D\"",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.twitter.com/2/tweets"
+      },
+      {
+        "body": "{\"text\": \"word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word word\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "OAuth oauth_nonce=\"parity-nonce\", oauth_timestamp=\"1704067200\", oauth_version=\"1.0\", oauth_signature_method=\"HMAC-SHA1\", oauth_consumer_key=\"ckey\", oauth_token=\"akey\", oauth_signature=\"LfDSuky9L%2BaqtaKdpUnli31Twrg%3D\"",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.twitter.com/2/tweets"
       }
     ]
   }

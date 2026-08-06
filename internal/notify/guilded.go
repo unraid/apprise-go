@@ -11,15 +11,18 @@ import (
 const guildedWebhookBase = "https://media.guilded.gg/webhooks"
 
 type GuildedTarget struct {
-	webhookID    string
-	webhookToken string
-	username     string
-	tts          bool
-	avatar       bool
-	avatarURL    string
-	threadID     string
-	flags        int
-	format       string
+	webhookID      string
+	webhookToken   string
+	username       string
+	tts            bool
+	avatar         bool
+	avatarURL      string
+	threadID       string
+	flags          int
+	format         string
+	batch          bool
+	templatePath   string
+	templateTokens map[string]string
 }
 
 func NewGuildedTarget(target *ParsedURL) (*GuildedTarget, error) {
@@ -59,6 +62,12 @@ func NewGuildedTarget(target *ParsedURL) (*GuildedTarget, error) {
 		flags = value
 	}
 
+	// :key=value pairs are substituted into the template.
+	templateTokens := map[string]string{}
+	for key, value := range target.QueryPayload {
+		templateTokens[key] = value
+	}
+
 	return &GuildedTarget{
 		webhookID:    webhookID,
 		webhookToken: webhookToken,
@@ -69,10 +78,15 @@ func NewGuildedTarget(target *ParsedURL) (*GuildedTarget, error) {
 		threadID:     threadID,
 		flags:        flags,
 		format:       format,
+		// Batching only affects how attachments are grouped, which this port
+		// does not send; it is accepted so the URL round-trips.
+		batch:          parseBoolWithDefault(target.Query["batch"], true),
+		templatePath:   strings.TrimSpace(target.Query["template"]),
+		templateTokens: templateTokens,
 	}, nil
 }
 
-func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+func (g *GuildedTarget) buildPayload(body, title string, notifyType NotifyType) (map[string]any, error) {
 	payload := map[string]any{
 		"tts":  g.tts,
 		"wait": !g.tts,
@@ -94,7 +108,17 @@ func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		payload["username"] = g.username
 	}
 
-	if g.format == "markdown" {
+	// A template defines the whole message, so the embed and content the
+	// plugin would otherwise build are skipped entirely.
+	if g.templatePath != "" {
+		rendered, err := renderNotifyTemplate(g.templatePath, g.templateTokens, body, title, notifyType, "256x256")
+		if err != nil {
+			return nil, err
+		}
+		for key, value := range rendered {
+			payload[key] = value
+		}
+	} else if g.format == "markdown" {
 		embed := map[string]any{
 			"author": map[string]any{
 				"name": "Apprise",
@@ -113,15 +137,44 @@ func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		}
 	}
 
-	data, err := json.Marshal(payload)
+	return payload, nil
+}
+
+func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return g.buildRequest(body, title, notifyType, nil)
+}
+
+func (g *GuildedTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
+	payload, err := g.buildPayload(body, title, notifyType)
 	if err != nil {
 		return RequestSpec{}, err
 	}
 
+	requestBody := ""
+	contentType := "application/json; charset=utf-8"
+	if len(attachments) > 0 {
+		// Files move the payload into a multipart field, and the generated
+		// boundary decides the content type.
+		requestBody, contentType, err = discordStyleAttachmentBody(payload, attachments)
+		if err != nil {
+			return RequestSpec{}, err
+		}
+	} else {
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		requestBody = string(data)
+	}
+
+	return g.specFor(requestBody, contentType)
+}
+
+func (g *GuildedTarget) specFor(requestBody, contentType string) (RequestSpec, error) {
 	headers := map[string]string{
 		"User-Agent":   "Apprise",
 		"Accept":       "*/*",
-		"Content-Type": "application/json; charset=utf-8",
+		"Content-Type": contentType,
 	}
 
 	targetURL := fmt.Sprintf("%s/%s/%s", guildedWebhookBase, g.webhookID, g.webhookToken)
@@ -140,17 +193,58 @@ func (g *GuildedTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		Method:  "POST",
 		URL:     targetURL,
 		Headers: headers,
-		Body:    string(data),
+		Body:    requestBody,
 	}, nil
 }
 
 func (g *GuildedTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := g.BuildRequest(body, title, notifyType)
+	return g.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments posts the message, then the files separately, the way
+// Discord does — Guilded is modeled on it.
+func (g *GuildedTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
+	spec, err := g.buildRequest(body, title, notifyType, nil)
 	if err != nil {
 		return err
 	}
+	outcome.record(SendRequest(spec))
 
-	return SendRequest(spec)
+	if len(attachments) == 0 {
+		return outcome.err()
+	}
+
+	payload, err := g.buildPayload(body, title, notifyType)
+	if err != nil {
+		return err
+	}
+	payload["tts"] = false
+	payload["wait"] = true
+	delete(payload, "content")
+	delete(payload, "embeds")
+	delete(payload, "allow_mentions")
+
+	perRequest := discordMaxAttachments
+	if !g.batch {
+		perRequest = 1
+	}
+
+	for start := 0; start < len(attachments); start += perRequest {
+		end := min(start+perRequest, len(attachments))
+		requestBody, contentType, err := discordStyleAttachmentBody(payload, attachments[start:end])
+		if err != nil {
+			return err
+		}
+		spec, err := g.specFor(requestBody, contentType)
+		if err != nil {
+			return err
+		}
+		outcome.record(SendRequest(spec))
+	}
+
+	return outcome.err()
 }
 
 func init() {
@@ -175,7 +269,7 @@ func init() {
 					"type":     "string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -231,6 +325,21 @@ func init() {
 					"type":     "choice:string",
 					"values":   []string{"html", "markdown", "text"},
 				},
+				"batch": map[string]any{
+					"default":  true,
+					"map_to":   "batch",
+					"name":     "Batch Attachments",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"template": map[string]any{
+					"map_to":   "template",
+					"name":     "Template Path",
+					"private":  true,
+					"required": false,
+					"type":     "string",
+				},
 				"href": map[string]any{
 					"map_to":   "href",
 					"name":     "URL",
@@ -265,7 +374,7 @@ func init() {
 					"type":     "list:string",
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -315,7 +424,16 @@ func init() {
 					"type":     "bool",
 				},
 			},
-			"kwargs":    map[string]any{},
+			"kwargs": map[string]any{
+				"tokens": map[string]any{
+					"map_to":   "tokens",
+					"name":     "Template Tokens",
+					"prefix":   ":",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+			},
 			"templates": []string{"{schema}://{webhook_id}/{webhook_token}", "{schema}://{botname}@{webhook_id}/{webhook_token}"},
 			"tokens": map[string]any{
 				"botname": map[string]any{

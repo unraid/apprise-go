@@ -11,7 +11,7 @@
           "user-agent": "Apprise"
         },
         "method": "POST",
-        "url": "http://homeassistant.local:8123/prefix/api/services/persistent_notification/create"
+        "url": "http://homeassistant.local:8123/api/services/persistent_notification/create"
       }
     ]
   },
@@ -28,6 +28,172 @@
         },
         "method": "POST",
         "url": "https://homeassistant.local/api/services/persistent_notification/create"
+      }
+    ]
+  },
+  {
+    "name": "service-target",
+    "requests": [
+      {
+        "body": "{\"title\": \"apprise parity\", \"message\": \"hello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer eyjhbgcioi.eyjpc3mioi.abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://homeassistant.local:8123/api/services/notify/mobile_app_pixel_8"
+      }
+    ]
+  },
+  {
+    "name": "service-target-explicit-domain",
+    "requests": [
+      {
+        "body": "{\"title\": \"apprise parity\", \"message\": \"hello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer eyjhbgcioi.eyjpc3mioi.abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://homeassistant.local:8123/api/services/notify/mobile_app_pixel_8"
+      }
+    ]
+  },
+  {
+    "name": "service-target-subjects",
+    "requests": [
+      {
+        "body": "{\"title\": \"apprise parity\", \"message\": \"hello from python\", \"targets\": [\"alice\"]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer eyjhbgcioi.eyjpc3mioi.abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://homeassistant.local:8123/api/services/notify/notify_group"
+      },
+      {
+        "body": "{\"title\": \"apprise parity\", \"message\": \"hello from python\", \"targets\": [\"bob\"]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer eyjhbgcioi.eyjpc3mioi.abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://homeassistant.local:8123/api/services/notify/notify_group"
+      }
+    ]
+  },
+  {
+    "name": "service-target-subjects-batched",
+    "requests": [
+      {
+        "body": "{\"title\": \"apprise parity\", \"message\": \"hello from python\", \"targets\": [\"alice\", \"bob\"]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer eyjhbgcioi.eyjpc3mioi.abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://homeassistant.local:8123/api/services/notify/notify_group"
+      }
+    ]
+  },
+  {
+    "name": "service-targets-multiple",
+    "requests": [
+      {
+        "body": "{\"title\": \"apprise parity\", \"message\": \"hello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer eyjhbgcioi.eyjpc3mioi.abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://homeassistant.local:8123/api/services/media_player/living_room"
+      },
+      {
+        "body": "{\"title\": \"apprise parity\", \"message\": \"hello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer eyjhbgcioi.eyjpc3mioi.abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://homeassistant.local:8123/api/services/notify/phone1"
+      }
+    ]
+  },
+  {
+    "name": "service-target-prefix",
+    "requests": [
+      {
+        "body": "{\"title\": \"apprise parity\", \"message\": \"hello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer eyjhbgcioi.eyjpc3mioi.abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://homeassistant.local:8123/ha/api/services/notify/mobile_app_pixel_8"
+      }
+    ]
+  },
+  {
+    "name": "query-token-with-target",
+    "requests": [
+      {
+        "body": "{\"title\": \"apprise parity\", \"message\": \"hello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer eyjhbgcioi.eyjpc3mioi.abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://homeassistant.local:8123/api/services/notify/mobile_app_pixel_8"
+      }
+    ]
+  },
+  {
+    "name": "to-target",
+    "requests": [
+      {
+        "body": "{\"title\": \"apprise parity\", \"message\": \"hello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer eyjhbgcioi.eyjpc3mioi.abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://homeassistant.local:8123/api/services/notify/mobile_app_pixel_8"
+      }
+    ]
+  },
+  {
+    "name": "secure-service-target",
+    "requests": [
+      {
+        "body": "{\"title\": \"apprise parity\", \"message\": \"hello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer eyjhbgcioi.eyjpc3mioi.abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://my.secure.server/api/services/notify/mobile_app_myphone"
       }
     ]
   }

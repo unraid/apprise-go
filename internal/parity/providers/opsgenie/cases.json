@@ -5,5 +5,63 @@
     "body": "hello from python",
     "title": "apprise parity",
     "type": "warning"
+  },
+  {
+    "name": "map-info-is-a-note-so-nothing-is-sent",
+    "url": "opsgenie://apikey/@user",
+    "body": "body",
+    "title": "t",
+    "type": "info",
+    "sends_nothing": true
+  },
+  {
+    "name": "map-warning-creates-an-alert",
+    "url": "opsgenie://apikey/@user",
+    "body": "body",
+    "title": "t",
+    "type": "warning"
+  },
+  {
+    "name": "mapping-override-makes-info-create",
+    "url": "opsgenie://apikey/@user?:info=new",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "mapping-override-prefix-match",
+    "url": "opsgenie://apikey/@user?:warn=note",
+    "body": "body",
+    "title": "t",
+    "type": "warning",
+    "sends_nothing": true
+  },
+  {
+    "name": "batch-off-splits-responders",
+    "url": "opsgenie://apikey/@one/%23teamtwo/*sched/^esc?action=new",
+    "body": "body",
+    "title": "t",
+    "type": "warning"
+  },
+  {
+    "name": "batch-on-groups-responders",
+    "url": "opsgenie://apikey/@one/%23teamtwo/*sched/^esc?action=new&batch=yes",
+    "body": "body",
+    "title": "t",
+    "type": "warning"
+  },
+  {
+    "name": "no-targets-and-long-title",
+    "url": "opsgenie://apikey?action=new",
+    "body": "body",
+    "title": "this title is deliberately longer than the one hundred and thirty character message limit that upstream applies before it truncates with an ellipsis",
+    "type": "warning"
+  },
+  {
+    "name": "uuid-target-is-an-id",
+    "url": "opsgenie://apikey/@8b8d1b3e-1a4f-4c2a-9f3e-2c7d5a6b1e90?action=new",
+    "body": "body",
+    "title": "t",
+    "type": "warning"
   }
 ]

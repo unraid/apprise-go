@@ -215,21 +215,66 @@ func (p *PushSaferTarget) BuildRequest(body, title string, notifyType NotifyType
 }
 
 func (p *PushSaferTarget) Send(body, title string, notifyType NotifyType) error {
+	return p.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments sends images only — PushSafer ignores anything else, so
+// a PDF would silently never arrive. Images go three at a time, since that is
+// all one request carries.
+func (p *PushSaferTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
+	images := []Attachment{}
+	for _, attachment := range attachments {
+		if strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
+			images = append(images, attachment)
+		}
+	}
+
+	if len(images) == 0 {
+		return p.sendPlain(body, title, notifyType)
+	}
+
+	for _, recipient := range p.targets {
+		for start := 0; start < len(images); start += len(pushSaferPictureFields) {
+			end := min(start+len(pushSaferPictureFields), len(images))
+			spec := p.buildSpecWithImages(body, title, notifyType, recipient, images[start:end])
+			outcome.record(SendRequest(spec))
+		}
+	}
+
+	return outcome.err()
+}
+
+func (p *PushSaferTarget) sendPlain(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(p.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
 
 	for _, recipient := range p.targets {
 		spec := p.buildSpec(body, title, notifyType, recipient)
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
+// pushSaferPictureFields are the payload keys that carry images; PushSafer
+// takes at most three per request.
+var pushSaferPictureFields = []string{"p", "p2", "p3"}
+
 func (p *PushSaferTarget) buildSpec(body, title string, notifyType NotifyType, recipient string) RequestSpec {
+	return p.buildSpecWithImages(body, title, notifyType, recipient, nil)
+}
+
+func (p *PushSaferTarget) buildSpecWithImages(
+	body, title string,
+	notifyType NotifyType,
+	recipient string,
+	images []Attachment,
+) RequestSpec {
 	values := url.Values{}
 	values.Set("t", title)
 	values.Set("m", body)
@@ -243,6 +288,15 @@ func (p *PushSaferTarget) buildSpec(body, title string, notifyType NotifyType, r
 	}
 	if p.vibration != nil {
 		values.Set("v", strconv.Itoa(*p.vibration))
+	}
+
+	// PushSafer wants each image as a data URL rather than an upload.
+	for index, image := range images {
+		if index >= len(pushSaferPictureFields) {
+			break
+		}
+		values.Set(pushSaferPictureFields[index],
+			fmt.Sprintf("data:%s;base64,%s", image.MIMEType, image.Base64()))
 	}
 
 	scheme := "http"
@@ -302,7 +356,7 @@ func init() {
 		"details": map[string]any{
 			"args": map[string]any{
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -344,7 +398,7 @@ func init() {
 					"values":   []any{-2, -1, 0, 1, 2},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

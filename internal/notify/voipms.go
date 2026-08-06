@@ -96,6 +96,8 @@ func (v *VoipmsTarget) BuildRequest(body, title string, notifyType NotifyType) (
 }
 
 func (v *VoipmsTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(v.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -115,14 +117,12 @@ func (v *VoipmsTarget) Send(body, title string, notifyType NotifyType) error {
 				"Content-Type": "application/x-www-form-urlencoded",
 			},
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (v *VoipmsTarget) buildPayload(message, target string) url.Values {
@@ -160,7 +160,7 @@ func init() {
 		"details": map[string]any{
 			"args": map[string]any{
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -197,7 +197,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -248,7 +248,7 @@ func init() {
 					"name":     "From Phone No",
 					"private":  false,
 					"regex":    []string{"^\\+?[0-9\\s)(+-]+$", "i"},
-					"required": false,
+					"required": true,
 					"type":     "string",
 				},
 				"password": map[string]any{

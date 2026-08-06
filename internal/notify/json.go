@@ -8,12 +8,14 @@ import (
 )
 
 var jsonMethods = map[string]struct{}{
-	"POST":   {},
-	"GET":    {},
-	"DELETE": {},
-	"PUT":    {},
-	"HEAD":   {},
-	"PATCH":  {},
+	"POST":    {},
+	"GET":     {},
+	"DELETE":  {},
+	"PUT":     {},
+	"HEAD":    {},
+	"PATCH":   {},
+	"UPDATE":  {},
+	"OPTIONS": {},
 }
 
 type JSONTarget struct {
@@ -47,7 +49,7 @@ func (j *JSONTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (j *JSONTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
-	spec, err := j.BuildRequestWithAttachments(body, title, notifyType, attachments)
+	spec, err := j.buildRequest(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -56,15 +58,21 @@ func (j *JSONTarget) SendWithAttachments(body, title string, notifyType NotifyTy
 }
 
 func (j *JSONTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	return j.BuildRequestWithAttachments(body, title, notifyType, nil)
+	return j.buildRequest(body, title, notifyType, nil)
 }
 
-func (j *JSONTarget) BuildRequestWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
+func (j *JSONTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
+	// The key is always present, empty when there is nothing attached.
+	encoded := []any{}
+	if len(attachments) > 0 {
+		encoded = attachmentsCustomJSONStyle(attachments)
+	}
+
 	payload := map[string]any{
 		"version":     "1.0",
 		"title":       title,
 		"message":     body,
-		"attachments": attachmentPayloads(attachments),
+		"attachments": encoded,
 		"type":        string(notifyType),
 	}
 

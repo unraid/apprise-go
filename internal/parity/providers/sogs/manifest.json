@@ -1,0 +1,5 @@
+{
+  "name": "sogs",
+  "schemas": ["session", "sessions", "sogs"],
+  "volatile_headers": ["x-sogs-nonce", "x-sogs-timestamp", "x-sogs-signature"]
+}

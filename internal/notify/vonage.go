@@ -120,6 +120,8 @@ func (v *VonageTarget) BuildRequest(body, title string, notifyType NotifyType) (
 }
 
 func (v *VonageTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	targets := v.targets
 	if len(targets) == 0 {
 		targets = []string{v.source}
@@ -149,14 +151,12 @@ func (v *VonageTarget) Send(body, title string, notifyType NotifyType) error {
 			},
 			Body: values.Encode(),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func init() {
@@ -166,7 +166,7 @@ func init() {
 		"details": map[string]any{
 			"args": map[string]any{
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -206,7 +206,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

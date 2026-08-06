@@ -741,7 +741,8 @@ app = apprise.Apprise()
 app.add(config)
 result = {}
 for tag in tags:
-    result[tag] = [sorted(server.tags) for server in app.find(tag)]
+    # 1.12.0 returns AppriseTag objects rather than plain strings
+    result[tag] = [sorted(str(entry) for entry in server.tags) for server in app.find(tag)]
 print(json.dumps(result, sort_keys=True))
 `
 	args := append([]string{"-c", script, configPath}, tags...)

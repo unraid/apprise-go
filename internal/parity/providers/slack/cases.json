@@ -5,5 +5,58 @@
     "body": "hello from python",
     "title": "apprise parity",
     "type": "info"
+  },
+  {
+    "name": "workflow-mode",
+    "url": "slack://T111/F222/X333/Y444?mode=workflow",
+    "body": "body",
+    "title": "the title",
+    "type": "info"
+  },
+  {
+    "name": "trigger-mode",
+    "url": "slack://T111/X333/Y444?mode=trigger",
+    "body": "body",
+    "title": "the title",
+    "type": "warning"
+  },
+  {
+    "name": "workflow-no-title",
+    "url": "slack://T111/F222/X333/Y444?mode=workflow",
+    "body": "body only",
+    "title": "",
+    "type": "info"
+  },
+  {
+    "name": "workflow-template",
+    "url": "slack://T111/F222/X333/Y444?mode=workflow&template=%7Brepo%7D%2Finternal%2Fparity%2Ffixtures%2Fslack_template.json&:mytoken=hi",
+    "body": "body",
+    "title": "the title",
+    "type": "success"
+  },
+  {
+    "name": "attachment",
+    "url": "slack://xoxb-token/%23general",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
+  },
+  {
+    "name": "overflow-split-html",
+    "url": "slack://T1JJ3T3L2/A1BRTD4JD/TIAJKDNL0AZKC0XRIDEVI7?image=no&footer=no&timestamp=no&overflow=split&format=html",
+    "body": "<b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>a link</a> plus <code>code</code>.",
+    "title": "over",
+    "type": "info"
+  },
+  {
+    "name": "override-html-input",
+    "url": "slack://T1JJ3T3L2/A1BRTD4JD/TIAJKDNL0AZKC0XRIDEVI7?image=no&footer=no&timestamp=no&overflow=split",
+    "body": "<b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>. <b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>.",
+    "title": "over",
+    "type": "info",
+    "body_format": "html"
   }
 ]

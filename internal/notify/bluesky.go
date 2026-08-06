@@ -12,6 +12,9 @@ const blueskyResolveURL = "https://public.api.bsky.app/xrpc/com.atproto.identity
 const blueskyPLCBase = "https://plc.directory"
 const blueskyCreateSessionPath = "/xrpc/com.atproto.server.createSession"
 const blueskyCreateRecordPath = "/xrpc/com.atproto.repo.createRecord"
+
+// An image is uploaded as a blob first; the post then embeds what comes back.
+const blueskyUploadBlobPath = "/xrpc/com.atproto.repo.uploadBlob"
 const blueskyFixedCreatedAt = "2024-01-01T00:00:00Z"
 
 type BlueskyTarget struct {
@@ -59,6 +62,18 @@ func (b *BlueskyTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (b *BlueskyTarget) Send(body, title string, notifyType NotifyType) error {
+	return b.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments uploads each image as a blob, then posts one record per
+// image embedding it. Bluesky has no way to attach several images to one
+// post here, so posts after the first are labeled "02/03" rather than
+// repeating the message.
+func (b *BlueskyTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
+	_ = notifyType
+
 	if err := b.resolveIdentity(); err != nil {
 		return err
 	}
@@ -69,18 +84,104 @@ func (b *BlueskyTarget) Send(body, title string, notifyType NotifyType) error {
 	}
 
 	message := mergeTitleBody(title, body)
-	spec, err := b.createRecordSpec(message, accessToken)
+
+	type blueskyBlob struct {
+		blob any
+		name string
+	}
+	blobs := []blueskyBlob{}
+	for index, attachment := range attachments {
+		// Images only; anything else is ignored rather than rejected.
+		if !strings.HasPrefix(strings.ToLower(attachment.MIMEType), "image/") {
+			continue
+		}
+
+		blob, err := b.uploadBlob(attachment, accessToken)
+		if err != nil {
+			return err
+		}
+		blobs = append(blobs, blueskyBlob{blob: blob, name: attachment.FileName(index, ".dat")})
+	}
+
+	if len(blobs) == 0 {
+		spec, err := b.createRecordSpec(message, accessToken)
+		if err != nil {
+			return err
+		}
+
+		return SendRequest(spec)
+	}
+
+	for index, entry := range blobs {
+		text := message
+		if index > 0 {
+			// Later posts carry a counter in place of the message.
+			text = fmt.Sprintf("%02d/%02d", index+1, len(blobs))
+		}
+
+		spec, err := b.createRecordSpec(text, accessToken)
+		if err != nil {
+			return err
+		}
+		spec.Body, err = blueskyEmbedImage(spec.Body, entry.blob, entry.name)
+		if err != nil {
+			return err
+		}
+		outcome.record(SendRequest(spec))
+	}
+
+	return outcome.err()
+}
+
+// uploadBlob posts an image and returns the blob reference a post embeds.
+func (b *BlueskyTarget) uploadBlob(attachment Attachment, accessToken string) (any, error) {
+	var response struct {
+		Blob any `json:"blob"`
+	}
+	if err := doJSONRequest(RequestSpec{
+		Method: "POST",
+		URL:    b.endpoint + blueskyUploadBlobPath,
+		Headers: map[string]string{
+			"User-Agent":    "Apprise",
+			"Content-Type":  attachment.MIMEType,
+			"Authorization": "Bearer " + accessToken,
+		},
+		Body: string(attachment.Data),
+	}, &response); err != nil {
+		return nil, err
+	}
+	if response.Blob == nil {
+		return nil, fmt.Errorf("bluesky upload returned no blob")
+	}
+
+	return response.Blob, nil
+}
+
+// blueskyEmbedImage adds the image embed to an already built record payload,
+// keeping the rest of it untouched.
+func blueskyEmbedImage(body string, blob any, name string) (string, error) {
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(body), &payload); err != nil {
+		return "", err
+	}
+
+	record, ok := payload["record"].(map[string]any)
+	if !ok {
+		return "", fmt.Errorf("bluesky record payload is malformed")
+	}
+	record["embed"] = map[string]any{
+		"images": []any{
+			map[string]any{"image": blob, "alt": name},
+		},
+		"$type": "app.bsky.embed.images",
+	}
+
+	data, err := json.Marshal(payload)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	if err := SendRequest(spec); err != nil {
-		return err
-	}
-
-	_ = notifyType
-
-	return nil
+	return string(data), nil
 }
 
 func (b *BlueskyTarget) resolveIdentity() error {

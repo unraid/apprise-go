@@ -48,10 +48,11 @@ func NewLineTarget(target *ParsedURL) (*LineTarget, error) {
 		}
 	}
 
-	if len(targets) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
+	// An empty target list is not refused here. Upstream builds the object
+	// and reports the failure when the send is attempted; both make no
+	// request and both report failure, so matching upstream keeps the rest
+	// of a configuration file behaving identically either way. The guard
+	// lives on the send path instead.
 	return &LineTarget{
 		token:        token,
 		targets:      targets,
@@ -68,6 +69,8 @@ func (l *LineTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 }
 
 func (l *LineTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(l.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -77,12 +80,10 @@ func (l *LineTarget) Send(body, title string, notifyType NotifyType) error {
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
-	return nil
+	return outcome.err()
 }
 
 func (l *LineTarget) buildRequestForTarget(target, body, title string, notifyType NotifyType) (RequestSpec, error) {
@@ -136,7 +137,7 @@ func init() {
 		"details": map[string]any{
 			"args": map[string]any{
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -178,7 +179,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

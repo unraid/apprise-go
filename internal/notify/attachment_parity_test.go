@@ -74,7 +74,8 @@ func TestAttachmentRequestParity(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			body := "hello"
 			title := "Greeting"
-			pythonSpecs := testutil.CapturePythonRequestsWithAttachments(t, tt.rawURL, body, title, tt.attachments)
+			pythonSpecs := testutil.CapturePythonRequestsWithAttachments(
+				t, tt.rawURL, body, title, notify.NotifyInfo, tt.attachments)
 
 			goSpecs := testutil.CaptureGoRequests(t, func() error {
 				attachments, err := notify.ParseAttachments(tt.attachments)

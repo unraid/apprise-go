@@ -3,6 +3,7 @@ package notify
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 )
 
 const serverChanURL = "https://sctapi.ftqq.com/%s.send"
@@ -10,6 +11,9 @@ const serverChanURL = "https://sctapi.ftqq.com/%s.send"
 type ServerChanTarget struct {
 	token string
 }
+
+// serverChanTokenRe mirrors upstream's token regex.
+var serverChanTokenRe = regexp.MustCompile(`(?i)^[a-z0-9-]+$`)
 
 func NewServerChanTarget(target *ParsedURL) (*ServerChanTarget, error) {
 	token := target.Host
@@ -21,6 +25,9 @@ func NewServerChanTarget(target *ParsedURL) (*ServerChanTarget, error) {
 	}
 	if token == "" {
 		return nil, fmt.Errorf("missing token")
+	}
+	if !serverChanTokenRe.MatchString(token) {
+		return nil, fmt.Errorf("invalid serverchan api token: %q", token)
 	}
 
 	return &ServerChanTarget{token: token}, nil

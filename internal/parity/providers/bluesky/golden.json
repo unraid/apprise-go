@@ -90,5 +90,63 @@
         "url": "https://bsky.social/xrpc/com.atproto.repo.createRecord"
       }
     ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "GET",
+        "url": "https://public.api.bsky.app/xrpc/com.atproto.identity.resolveHandle?handle=handle.bsky.social"
+      },
+      {
+        "body": "",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "GET",
+        "url": "https://plc.directory/did:plc:123"
+      },
+      {
+        "body": "{\"identifier\": \"did:plc:123\", \"password\": \"token\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://bsky.social/xrpc/com.atproto.server.createSession"
+      },
+      {
+        "body": "\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd",
+        "body_b64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "image/png",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://bsky.social/xrpc/com.atproto.repo.uploadBlob"
+      },
+      {
+        "body": "{\"collection\": \"app.bsky.feed.post\", \"repo\": \"did:plc:123\", \"record\": {\"text\": \"title\\r\\nbody\", \"createdAt\": \"2024-01-01T00:00:00Z\", \"$type\": \"app.bsky.feed.post\", \"embed\": {\"images\": [{\"image\": {\"$type\": \"blob\", \"ref\": {\"$link\": \"bafyblob123\"}, \"mimeType\": \"image/png\", \"size\": 70}, \"alt\": \"pixel.png\"}], \"$type\": \"app.bsky.embed.images\"}}}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://bsky.social/xrpc/com.atproto.repo.createRecord"
+      }
+    ]
   }
 ]

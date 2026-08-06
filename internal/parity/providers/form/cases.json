@@ -12,5 +12,25 @@
     "body": "hello",
     "title": "title",
     "type": "success"
+  },
+  {
+    "name": "attachment",
+    "url": "form://localhost/",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf"
+    ]
+  },
+  {
+    "name": "attachment-ordered-extras",
+    "url": "form://localhost/?:zulu=z&:alpha=a&:mike=m&attach-as=doc*",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
   }
 ]

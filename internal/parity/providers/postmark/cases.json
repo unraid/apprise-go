@@ -1,0 +1,34 @@
+[
+  {
+    "name": "default",
+    "url": "postmark://apikey123:sender@example.com/target@example.com",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "from-query",
+    "url": "postmark://apikey123@example.com/target@example.com?from=sender@example.com&name=Apprise",
+    "body": "body",
+    "title": "",
+    "type": "info"
+  },
+  {
+    "name": "attachment",
+    "url": "postmark://token:sender@example.com/user@example.com",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf"
+    ]
+  },
+  {
+    "name": "body-format-markdown",
+    "url": "postmark://apikey123:sender@example.com/target@example.com",
+    "body": "**bold** and [link](https://example.com) plus `code`.",
+    "title": "over",
+    "type": "info",
+    "body_format": "markdown"
+  }
+]

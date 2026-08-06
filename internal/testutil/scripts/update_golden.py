@@ -1,4 +1,5 @@
 import argparse
+import base64
 import json
 import os
 import sys
@@ -46,6 +47,49 @@ LOCAL_ASSET_BASE = (
 )
 UPSTREAM_APP_URL = "https://github.com/caronc/apprise"
 LOCAL_APP_URL = "https://github.com/unraid/apprise-go"
+
+
+# The Go comparison rewrites every multipart boundary to this before diffing,
+# so writing it into the golden keeps the file stable across captures. A
+# generated boundary would differ on every run and --check could never pass.
+PARITY_BOUNDARY = "APPRISE-PARITY-BOUNDARY"
+
+
+def normalize_multipart(specs):
+    """Rewrite generated multipart boundaries to a fixed one."""
+    import re
+
+    for spec in specs:
+        headers = spec.get("headers") or {}
+        key = next(
+            (k for k in headers if k.lower() == "content-type"),
+            None,
+        )
+        if key is None or "multipart/" not in headers[key].lower():
+            continue
+
+        match = re.search(r"boundary=([^;]+)", headers[key])
+        if not match:
+            continue
+
+        boundary = match.group(1).strip('"')
+        if not boundary:
+            continue
+
+        headers[key] = re.sub(
+            r"boundary=[^;]+", f"boundary={PARITY_BOUNDARY}", headers[key]
+        )
+        for field in ("body", "body_b64"):
+            if field == "body_b64" and spec.get(field):
+                # Decode, swap, re-encode so the bytes stay faithful.
+                raw = base64.b64decode(spec[field])
+                spec[field] = base64.b64encode(
+                    raw.replace(boundary.encode(), PARITY_BOUNDARY.encode())
+                ).decode("ascii")
+            elif spec.get(field):
+                spec[field] = spec[field].replace(boundary, PARITY_BOUNDARY)
+
+    return specs
 
 
 def apply_default_env():
@@ -119,18 +163,51 @@ def main():
         if not cases:
             raise SystemExit(f"No cases in {cases_path}")
 
+        # Headers the provider cannot reproduce across runs — a signature over
+        # a random nonce, say — are written as a placeholder. Without this the
+        # golden differs on every capture and --check can never pass. The Go
+        # side only asserts these are present, never equal; what they contain
+        # is pinned by a vector test instead.
+        manifest_path = provider_dir / "manifest.json"
+        volatile_headers = set()
+        if manifest_path.exists():
+            manifest = json.loads(manifest_path.read_text())
+            volatile_headers = {
+                str(h).strip().lower()
+                for h in (manifest.get("volatile_headers") or [])
+            }
+
         golden_cases = []
         for case in cases:
+            # {repo} keeps a template path in a fixture portable; apprise
+            # resolves a relative path against the home directory, so the URL
+            # has to carry an absolute one by the time it is parsed.
+            def expand(value):
+                return value.replace("%7Brepo%7D", str(repo_root)).replace(
+                    "{repo}", str(repo_root)
+                )
+
+            case_url = expand(case["url"])
+            case_attach = [expand(a) for a in case.get("attachments", [])]
             payload = capture_request(
-                case["url"],
+                case_url,
                 case.get("body", ""),
                 case.get("title", ""),
                 parse_notify_type(case.get("type")),
+                # The format the caller declares the body is in. Several
+                # plugins branch on it independently of their own ?format=,
+                # so a golden captured without it describes a different send.
+                case.get("body_format") or None,
+                case_attach or None,
             )
-            specs = payload.get("requests", [])
-            golden_cases.append(
-                {"name": case["name"], "requests": rewrite_values(specs)}
-            )
+            specs = normalize_multipart(rewrite_values(payload.get("requests", [])))
+            if volatile_headers:
+                for spec in specs:
+                    headers = spec.get("headers") or {}
+                    for name in list(headers):
+                        if name.strip().lower() in volatile_headers:
+                            headers[name] = "<volatile>"
+            golden_cases.append({"name": case["name"], "requests": specs})
 
         golden_path = provider_dir / "golden.json"
         rendered = json.dumps(golden_cases, indent=2, sort_keys=True)

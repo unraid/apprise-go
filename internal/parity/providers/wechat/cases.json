@@ -1,0 +1,37 @@
+[
+  {
+    "name": "single-user",
+    "url": "wechat://corpid:corpsecret@1000002/johndoe",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "broadcast-all",
+    "url": "wechat://corpid:corpsecret@1000002/@all",
+    "body": "body",
+    "title": "",
+    "type": "warning"
+  },
+  {
+    "name": "users-departments-and-tags",
+    "url": "wechat://corpid:corpsecret@1000002/@alice/bob/%231/%232/+7",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "markdown-format",
+    "url": "wechat://corpid:corpsecret@1000002/johndoe?format=markdown",
+    "body": "**bold**",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "to-alias",
+    "url": "wechat://corpid:corpsecret@1000002?to=alice,%232,+9",
+    "body": "body",
+    "title": "t",
+    "type": "failure"
+  }
+]

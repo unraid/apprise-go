@@ -2,7 +2,6 @@ package notify
 
 import (
 	"fmt"
-	"net/url"
 	"strings"
 )
 
@@ -25,9 +24,14 @@ type MailgunTarget struct {
 	bcc      map[string]struct{}
 	headers  map[string]string
 	tokens   map[string]string
-	batch    bool
-	verify   bool
-	disabled bool
+
+	// The URL's own ordering for the two maps above; upstream emits these
+	// fields in the order they were written.
+	headerOrder []string
+	tokenOrder  []string
+	batch       bool
+	verify      bool
+	disabled    bool
 }
 
 func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
@@ -41,7 +45,9 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 		pathEntries = pathEntries[1:]
 	}
 	if apiKey == "" {
-		return &MailgunTarget{disabled: true}, nil
+		// Upstream raises here rather than producing an inert target: a
+		// mailgun URL with no api key names a service it can never reach.
+		return nil, fmt.Errorf("missing mailgun api key")
 	}
 
 	if user == "" || host == "" {
@@ -117,6 +123,7 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 		}
 		headers[key] = value
 	}
+	headerOrder := trimmedOrder(target.QueryAddOrder)
 
 	tokens := map[string]string{}
 	for key, value := range target.QueryPayload {
@@ -126,6 +133,7 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 		}
 		tokens[key] = value
 	}
+	tokenOrder := trimmedOrder(target.QueryPayloadOrder)
 
 	return &MailgunTarget{
 		apiKey:   apiKey,
@@ -138,8 +146,11 @@ func NewMailgunTarget(target *ParsedURL) (*MailgunTarget, error) {
 		bcc:      bcc,
 		headers:  headers,
 		tokens:   tokens,
-		batch:    parseBoolWithDefault(target.Query["batch"], false),
-		verify:   parseBoolWithDefault(target.Query["verify"], true),
+
+		headerOrder: headerOrder,
+		tokenOrder:  tokenOrder,
+		batch:       parseBoolWithDefault(target.Query["batch"], false),
+		verify:      parseBoolWithDefault(target.Query["verify"], true),
 	}, nil
 }
 
@@ -178,6 +189,12 @@ func (m *MailgunTarget) BuildRequest(body, title string, notifyType NotifyType) 
 }
 
 func (m *MailgunTarget) Send(body, title string, notifyType NotifyType) error {
+	return m.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (m *MailgunTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if m.disabled {
 		return nil
 	}
@@ -197,32 +214,43 @@ func (m *MailgunTarget) Send(body, title string, notifyType NotifyType) error {
 		}
 
 		payload := m.buildPayload(body, title, m.targets[index:end])
+
+		// Files turn the form-encoded body into a multipart one; the
+		// boundary the encoder picks decides the content type.
+		requestBody := payload.Encode()
+		contentType := "application/x-www-form-urlencoded"
+		if len(attachments) > 0 {
+			var err error
+			requestBody, contentType, err = mailgunAttachmentBody(payload, attachments)
+			if err != nil {
+				return err
+			}
+		}
+
 		spec := RequestSpec{
 			Method: "POST",
 			URL:    m.buildURL(),
 			Headers: map[string]string{
 				"User-Agent":   "Apprise",
 				"Accept":       "application/json",
-				"Content-Type": "application/x-www-form-urlencoded",
+				"Content-Type": contentType,
 				"Authorization": basicAuthHeader(
 					"api",
 					m.apiKey,
 				),
 			},
-			Body: payload.Encode(),
+			Body: requestBody,
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
-func (m *MailgunTarget) buildPayload(body, title string, recipients []emailEntry) url.Values {
-	values := url.Values{}
+func (m *MailgunTarget) buildPayload(body, title string, recipients []emailEntry) formFields {
+	values := formFields{}
 	if m.verify {
 		values.Set("o:skip-verification", "False")
 	} else {
@@ -254,11 +282,13 @@ func (m *MailgunTarget) buildPayload(body, title string, recipients []emailEntry
 		values.Set("bcc", strings.Join(bcc, ","))
 	}
 
-	for key, value := range m.tokens {
-		values.Set("v:"+key, value)
+	// In the order the URL named them, which is the order upstream sends
+	// them in.
+	for _, key := range orderedKeys(m.tokenOrder, m.tokens) {
+		values.Set("v:"+key, m.tokens[key])
 	}
-	for key, value := range m.headers {
-		values.Set("h:"+key, value)
+	for _, key := range orderedKeys(m.headerOrder, m.headers) {
+		values.Set("h:"+key, m.headers[key])
 	}
 
 	return values
@@ -317,7 +347,7 @@ func init() {
 					"type":     "list:string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -370,7 +400,7 @@ func init() {
 					"values":   []string{"us", "eu"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -424,7 +454,7 @@ func init() {
 					"type":     "string",
 				},
 			},
-			"templates": []string{"{schema}://{user}@{host}:{apikey}/", "{schema}://{user}@{host}:{apikey}/{targets}"},
+			"templates": []string{"{schema}://{user}@{host}/{apikey}/", "{schema}://{user}@{host}/{apikey}/{targets}"},
 			"tokens": map[string]any{
 				"apikey": map[string]any{
 					"map_to":   "apikey",

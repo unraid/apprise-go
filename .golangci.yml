@@ -96,18 +96,20 @@ linters:
       # whole point of these files, and args are validated before exec.
       - path: internal/notify/(local_notify_target|macosx_target|windows_target)\.go
         text: "G204"
-      # Reading a user-specified config, credential, template, TLS cert/key, or
-      # VAPID key file by path is core behaviour, not an injection vector.
-      # G304 (file inclusion) and G703 (path-traversal taint) are the same read.
-      - path: internal/(cli/config|notify/fcm_oauth|notify/msteams|notify/workflows|notify/tls_helpers|notify/vapid)\.go
+      # Reading a user-specified config, credential, template, attachment,
+      # TLS cert/key, or VAPID key file by path is core behaviour, not an
+      # injection vector. G304 (file inclusion) and G703 (path-traversal
+      # taint) are the same read.
+      - path: internal/(cli/config|notify/attachment|notify/fcm_oauth|notify/msteams|notify/notify_template|notify/workflows|notify/tls_helpers|notify/vapid)\.go
         text: "(G304|G703)"
       # Hardcoded-credential false positives on OAuth grant-type/token-type
-      # string constants (no real secrets).
-      - path: internal/notify/fcm_oauth\.go
+      # string constants and on endpoint URLs whose path contains "token"
+      # (no real secrets).
+      - path: internal/notify/(fcm_oauth|wechat)\.go
         text: "G101"
       # InsecureSkipVerify is gated behind an explicit user opt-in (verify=no),
       # matching upstream Apprise behaviour; it is never unconditionally true.
-      - path: internal/notify/(mailto_target|mqtt_target)\.go
+      - path: internal/notify/(mailto_target|mqtt_target|xmpp|irc)\.go
         text: "G402"
       # False positive: idx ranges over the slice it indexes, so it is in bounds.
       - path: internal/cli/config\.go

@@ -1,0 +1,65 @@
+[
+  {
+    "name": "bot-single-channel",
+    "url": "kook://bottoken123/1234567890",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "bot-channel-and-dm",
+    "url": "kook://bottoken123/1234567890/@9876543210",
+    "body": "body",
+    "title": "",
+    "type": "warning"
+  },
+  {
+    "name": "bot-text-format",
+    "url": "kook://bottoken123/1234567890?format=text",
+    "body": "plain body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "webhook-mode",
+    "url": "kook://webhookkey456?mode=webhook",
+    "body": "hook body",
+    "title": "hook title",
+    "type": "success"
+  },
+  {
+    "name": "to-alias-and-hash-prefix",
+    "url": "kook://bottoken123/#1111111111?to=2222222222,@3333333333",
+    "body": "b",
+    "title": "",
+    "type": "info"
+  },
+  {
+    "name": "attachment-image",
+    "url": "kook://bottoken123/1234567890",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
+  },
+  {
+    "name": "attachment-file",
+    "url": "kook://bottoken123/1234567890",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ]
+  },
+  {
+    "name": "body-format-html",
+    "url": "kook://bottoken123/1234567890",
+    "body": "<b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>.",
+    "title": "over",
+    "type": "info",
+    "body_format": "html"
+  }
+]

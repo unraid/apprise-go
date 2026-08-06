@@ -1,21 +1,20 @@
 package notify
 
 import (
-	"bytes"
 	"fmt"
-	"mime/multipart"
-	"net/textproto"
 	"net/url"
 	"strings"
 )
 
 var formMethods = map[string]struct{}{
-	"POST":   {},
-	"GET":    {},
-	"DELETE": {},
-	"PUT":    {},
-	"HEAD":   {},
-	"PATCH":  {},
+	"POST":    {},
+	"GET":     {},
+	"DELETE":  {},
+	"PUT":     {},
+	"HEAD":    {},
+	"PATCH":   {},
+	"UPDATE":  {},
+	"OPTIONS": {},
 }
 
 type FormTarget struct {
@@ -25,8 +24,15 @@ type FormTarget struct {
 	params        map[string]string
 	payloadExtras map[string]string
 	payloadMap    map[string]string
-	attachAs      string
-	attachMulti   bool
+
+	// The URL's own ordering for payloadExtras and params.
+	payloadExtraOrder []string
+	paramOrder        []string
+
+	// attachAs is the field-name template for uploaded files; attachMulti
+	// says whether it carries a counter to be filled in per file.
+	attachAs    string
+	attachMulti bool
 }
 
 func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
@@ -38,7 +44,16 @@ func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
 		return nil, fmt.Errorf("invalid method: %s", method)
 	}
 
+	// The URL argument is attach-as; attach_as is only the name it maps to
+	// internally, and reading that spelling meant the documented one did
+	// nothing.
+	attachAs, attachMulti, err := parseFormAttachAs(target.Query["attach-as"])
+	if err != nil {
+		return nil, err
+	}
+
 	payloadExtras := cloneMap(target.QueryPayload)
+	payloadExtraOrder := target.QueryPayloadOrder
 	payloadMap := map[string]string{
 		"version": "version",
 		"title":   "title",
@@ -55,20 +70,20 @@ func NewFormTarget(target *ParsedURL) (*FormTarget, error) {
 		delete(payloadExtras, key)
 	}
 
-	attachAs, attachMulti, err := parseFormAttachAs(target.Query["attach-as"])
-	if err != nil {
-		return nil, err
-	}
-
 	return &FormTarget{
-		target:        target,
-		method:        method,
-		headers:       cloneMap(target.QueryAdd),
-		params:        cloneMap(target.QueryDel),
-		payloadExtras: payloadExtras,
-		payloadMap:    payloadMap,
-		attachAs:      attachAs,
-		attachMulti:   attachMulti,
+		target:            target,
+		method:            method,
+		headers:           cloneMap(target.QueryAdd),
+		params:            cloneMap(target.QueryDel),
+		payloadExtras:     payloadExtras,
+		payloadExtraOrder: payloadExtraOrder,
+		paramOrder:        target.QueryDelOrder,
+		payloadMap:        payloadMap,
+		// The URL argument is attach-as; attach_as is only the name it maps
+		// to internally, and reading that spelling meant the documented one
+		// did nothing.
+		attachAs:    attachAs,
+		attachMulti: attachMulti,
 	}, nil
 }
 
@@ -77,7 +92,7 @@ func (f *FormTarget) Send(body, title string, notifyType NotifyType) error {
 }
 
 func (f *FormTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
-	spec, err := f.BuildRequestWithAttachments(body, title, notifyType, attachments)
+	spec, err := f.buildRequest(body, title, notifyType, attachments)
 	if err != nil {
 		return err
 	}
@@ -86,29 +101,31 @@ func (f *FormTarget) SendWithAttachments(body, title string, notifyType NotifyTy
 }
 
 func (f *FormTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
-	return f.BuildRequestWithAttachments(body, title, notifyType, nil)
+	return f.buildRequest(body, title, notifyType, nil)
 }
 
-func (f *FormTarget) BuildRequestWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
-	payload := map[string]string{}
-
-	base := map[string]string{
-		"version": "1.0",
-		"title":   title,
-		"message": body,
-		"type":    string(notifyType),
+func (f *FormTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
+	// Upstream walks these four in this order and the extras follow, which
+	// is the order a receiver reads the fields off the wire in.
+	base := []struct{ key, value string }{
+		{"version", "1.0"},
+		{"title", title},
+		{"message", body},
+		{"type", string(notifyType)},
 	}
 
-	for key, value := range base {
-		mapped := f.payloadMap[key]
+	payload := formFields{}
+	for _, entry := range base {
+		mapped := f.payloadMap[entry.key]
 		if mapped == "" {
 			continue
 		}
-		payload[mapped] = value
+		payload.Set(mapped, entry.value)
 	}
 
-	for key, value := range f.payloadExtras {
-		payload[key] = value
+	// In the order the URL named them, which is upstream's order too.
+	for _, key := range orderedKeys(f.payloadExtraOrder, f.payloadExtras) {
+		payload.Set(key, f.payloadExtras[key])
 	}
 
 	scheme := "http"
@@ -131,40 +148,35 @@ func (f *FormTarget) BuildRequestWithAttachments(body, title string, notifyType 
 	}
 
 	if f.method == "GET" {
-		values := url.Values{}
-		for key, value := range payload {
-			values.Set(key, value)
+		query := payload.Clone()
+		for _, key := range orderedKeys(f.paramOrder, f.params) {
+			query.Set(key, f.params[key])
 		}
-		for key, value := range f.params {
-			values.Set(key, value)
-		}
-		u.RawQuery = values.Encode()
+		u.RawQuery = query.Encode()
 	}
 
 	bodyPayload := ""
-	contentType := "application/x-www-form-urlencoded"
+	contentType := ""
 	if f.method != "GET" {
 		if len(attachments) > 0 {
+			// Files turn the form-encoded body multipart; the field name
+			// comes from ?attach_as=, numbered when it carries a wildcard.
 			var err error
-			bodyPayload, contentType, err = f.buildMultipartPayload(payload, attachments)
+			bodyPayload, contentType, err = formAttachmentBody(payload, f.attachAs, f.attachMulti, attachments)
 			if err != nil {
 				return RequestSpec{}, err
 			}
 		} else {
-			values := url.Values{}
-			for key, value := range payload {
-				values.Set(key, value)
-			}
-			bodyPayload = values.Encode()
+			bodyPayload = payload.Encode()
 		}
 	}
 
 	if f.method != "GET" && len(f.params) > 0 {
-		values := url.Values{}
-		for key, value := range f.params {
-			values.Set(key, value)
+		query := formFields{}
+		for _, key := range orderedKeys(f.paramOrder, f.params) {
+			query.Set(key, f.params[key])
 		}
-		u.RawQuery = values.Encode()
+		u.RawQuery = query.Encode()
 	}
 
 	headers := map[string]string{
@@ -172,6 +184,10 @@ func (f *FormTarget) BuildRequestWithAttachments(body, title string, notifyType 
 		"Accept":     "*/*",
 	}
 	if f.method != "GET" {
+		// A multipart body carries its own boundary in the content type.
+		if contentType == "" {
+			contentType = "application/x-www-form-urlencoded"
+		}
 		headers["Content-Type"] = contentType
 	}
 	for key, value := range f.headers {
@@ -193,67 +209,6 @@ func (f *FormTarget) BuildRequestWithAttachments(body, title string, notifyType 
 	}, nil
 }
 
-func (f *FormTarget) buildMultipartPayload(payload map[string]string, attachments []Attachment) (string, string, error) {
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	for key, value := range payload {
-		if err := writer.WriteField(key, value); err != nil {
-			return "", "", err
-		}
-	}
-	for i, attachment := range attachments {
-		fieldName := f.attachAs
-		if f.attachMulti {
-			fieldName = fmt.Sprintf(f.attachAs, i+1)
-		}
-		if strings.TrimSpace(fieldName) == "" {
-			fieldName = "file"
-		}
-		header := textproto.MIMEHeader{}
-		header.Set("Content-Disposition", fmt.Sprintf(`form-data; name="%s"; filename="%s"`, escapeMultipartParam(fieldName), escapeMultipartParam(attachment.Name)))
-		header.Set("Content-Type", attachment.MIMEType)
-		part, err := writer.CreatePart(header)
-		if err != nil {
-			return "", "", err
-		}
-		if _, err := part.Write(attachment.Data); err != nil {
-			return "", "", err
-		}
-	}
-	if err := writer.Close(); err != nil {
-		return "", "", err
-	}
-	return body.String(), writer.FormDataContentType(), nil
-}
-
-func parseFormAttachAs(raw string) (string, bool, error) {
-	value := strings.TrimSpace(raw)
-	if value == "" {
-		return "file%02d", true, nil
-	}
-	if strings.Count(value, "%02d") > 1 {
-		return "", false, fmt.Errorf("attach-as supports only one placeholder")
-	}
-	if strings.Contains(value, "%02d") {
-		return value, true, nil
-	}
-
-	wildcard := -1
-	for i, ch := range value {
-		if !strings.ContainsRune("*?+$:.%", ch) {
-			continue
-		}
-		if wildcard >= 0 {
-			return "", false, fmt.Errorf("attach-as supports only one wildcard")
-		}
-		wildcard = i
-	}
-	if wildcard < 0 {
-		return value, false, nil
-	}
-	return value[:wildcard] + "%02d" + value[wildcard+1:], true, nil
-}
-
 func init() {
 	RegisterSchemaEntryOrdered(67, SchemaEntry{
 		"attachment_support": true,
@@ -269,7 +224,7 @@ func init() {
 					"type":     "string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -300,7 +255,7 @@ func init() {
 					"private":  false,
 					"required": false,
 					"type":     "choice:string",
-					"values":   []string{"POST", "GET", "DELETE", "PUT", "HEAD", "PATCH"},
+					"values":   []string{"POST", "GET", "DELETE", "PUT", "HEAD", "PATCH", "UPDATE", "OPTIONS"},
 				},
 				"overflow": map[string]any{
 					"default":  "upstream",
@@ -312,7 +267,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -424,4 +379,40 @@ func init() {
 		"service_url":      nil,
 		"setup_url":        "https://appriseit.com/services/form/",
 	})
+}
+
+// parseFormAttachAs turns the ?attach-as= value into a field-name template and
+// says whether it numbers its files. A wildcard becomes a two-digit counter so
+// several files get distinct names; without one every file reuses the field.
+//
+// More than one placeholder is rejected rather than silently taking the first:
+// a name with two counters in it is a typo, and guessing which was meant would
+// put the files under names the caller did not ask for.
+func parseFormAttachAs(raw string) (string, bool, error) {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return "file%02d", true, nil
+	}
+	if strings.Count(value, "%02d") > 1 {
+		return "", false, fmt.Errorf("attach-as supports only one placeholder")
+	}
+	if strings.Contains(value, "%02d") {
+		return value, true, nil
+	}
+
+	wildcard := -1
+	for i, ch := range value {
+		if !strings.ContainsRune("*?+$:.%", ch) {
+			continue
+		}
+		if wildcard >= 0 {
+			return "", false, fmt.Errorf("attach-as supports only one wildcard")
+		}
+		wildcard = i
+	}
+	if wildcard < 0 {
+		return value, false, nil
+	}
+
+	return value[:wildcard] + "%02d" + value[wildcard+1:], true, nil
 }

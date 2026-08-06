@@ -28,5 +28,21 @@
         "url": "https://n.tkte.ch/h/1234/abcd1234?payload=%0307%5B%21%5D%03+%02Apprise%0F%3A+body%0F"
       }
     ]
+  },
+  {
+    "name": "self-hosted",
+    "requests": [
+      {
+        "body": "",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic dXNlcjpwYXNz",
+          "content-type": "application/x-www-form-urlencoded; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "GET",
+        "url": "https://notifico.example.com/h/1234/abcdefhook?payload=%0310%5Bi%5D%03+%02Apprise%0F%3A+apprise+parity%0D%0Ahello+from+python%0F"
+      }
+    ]
   }
 ]

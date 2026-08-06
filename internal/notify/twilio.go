@@ -189,6 +189,8 @@ func (t *TwilioTarget) BuildRequest(body, title string, notifyType NotifyType) (
 }
 
 func (t *TwilioTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	targets := t.targets
 	sourceDigits := strings.TrimPrefix(t.source, "+")
 	if len(targets) == 0 {
@@ -245,14 +247,12 @@ func (t *TwilioTarget) Send(body, title string, notifyType NotifyType) error {
 			},
 			Body: payload.Encode(),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func parseTwilioModeAndNumber(raw string) (twilioMessageMode, bool, string, bool) {
@@ -311,7 +311,7 @@ func init() {
 					"type":     "string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -357,7 +357,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

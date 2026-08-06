@@ -1,0 +1,23 @@
+[
+  {
+    "name": "default",
+    "url": "viber://authtoken123/receiver1",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "multiple-receivers",
+    "url": "viber://authtoken123/receiver1/receiver2",
+    "body": "body",
+    "title": "",
+    "type": "info"
+  },
+  {
+    "name": "sender-and-avatar",
+    "url": "viber://authtoken123/receiver1?from=BotName&avatar=https://example.com/a.png",
+    "body": "body",
+    "title": "title",
+    "type": "warning"
+  }
+]

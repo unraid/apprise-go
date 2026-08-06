@@ -38,7 +38,9 @@ func NewEmbyTarget(target *ParsedURL) (*EmbyTarget, error) {
 	if user == "" {
 		return nil, fmt.Errorf("missing user")
 	}
-	secure := strings.EqualFold(target.Scheme, "embys")
+	// Jellyfin is a fork that kept Emby's endpoints, so it shares this target
+	// and only differs by scheme name.
+	secure := strings.EqualFold(target.Scheme, "embys") || strings.EqualFold(target.Scheme, "jellyfins")
 	port := target.Port
 	if port == 0 {
 		port = embyDefaultPort
@@ -83,6 +85,8 @@ func (e *EmbyTarget) BuildRequest(body, title string, notifyType NotifyType) (Re
 }
 
 func (e *EmbyTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if e.user == "" {
 		return fmt.Errorf("missing user")
 	}
@@ -125,14 +129,12 @@ func (e *EmbyTarget) Send(body, title string, notifyType NotifyType) error {
 			},
 			Body: string(payloadData),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (e *EmbyTarget) isAuthenticated() bool {
@@ -320,7 +322,7 @@ func init() {
 		"details": map[string]any{
 			"args": map[string]any{
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -362,7 +364,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

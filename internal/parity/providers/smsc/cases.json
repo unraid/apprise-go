@@ -1,0 +1,26 @@
+[
+  {
+    "name": "default",
+    "url": "smsc://login:password@15551234567",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "sender-and-translit",
+    "url": "smsc://login:password@15551234567/15559876543?sender=Apprise&translit=yes",
+    "body": "body",
+    "title": "",
+    "type": "info"
+  },
+  {
+    "name": "attachment",
+    "url": "smsc://login:password@15551234567",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png"
+    ]
+  }
+]

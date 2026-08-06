@@ -1,8 +1,10 @@
 package testutil
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -10,8 +12,33 @@ import (
 )
 
 type pythonCapturePayload struct {
-	Requests []notify.RequestSpec `json:"requests"`
-	Success  *bool                `json:"success"`
+	Requests []capturedRequest `json:"requests"`
+	Success  *bool             `json:"success"`
+}
+
+// capturedRequest is a RequestSpec that may also carry its body as base64.
+// A binary body cannot be represented as JSON text without being mangled, so
+// the capture records both and the base64 is authoritative.
+type capturedRequest struct {
+	notify.RequestSpec
+
+	BodyBase64 string `json:"body_b64"`
+}
+
+// specs returns the requests with any base64 body decoded back to bytes.
+func (p pythonCapturePayload) specs() []notify.RequestSpec {
+	out := make([]notify.RequestSpec, 0, len(p.Requests))
+	for _, request := range p.Requests {
+		spec := request.RequestSpec
+		if request.BodyBase64 != "" {
+			if decoded, err := base64.StdEncoding.DecodeString(request.BodyBase64); err == nil {
+				spec.Body = string(decoded)
+			}
+		}
+		out = append(out, spec)
+	}
+
+	return out
 }
 
 func CapturePythonRequests(t *testing.T, url, body, title string) []notify.RequestSpec {
@@ -24,7 +51,7 @@ func CapturePythonRequests(t *testing.T, url, body, title string) []notify.Reque
 func CapturePythonRequestsWithType(t *testing.T, url, body, title string, notifyType notify.NotifyType) []notify.RequestSpec {
 	t.Helper()
 
-	specs, _ := CapturePythonRequestsWithTypeResult(t, url, body, title, notifyType)
+	specs, _ := CapturePythonRequestsWithTypeResult(t, url, body, title, "", notifyType)
 	return specs
 }
 
@@ -41,10 +68,20 @@ func CapturePythonRequestsWithFormatAndTypeResult(t *testing.T, url, body, title
 	return CapturePythonRequestsWithFormatTypeAndAttachmentsResult(t, url, body, title, bodyFormat, notifyType, nil)
 }
 
-func CapturePythonRequestsWithAttachments(t *testing.T, url, body, title string, attachments []string) []notify.RequestSpec {
+// CapturePythonRequestsWithAttachments captures what upstream sends for a
+// notification carrying attachments, so the Go side can be diffed against it
+// rather than checked against a hand-written expectation.
+func CapturePythonRequestsWithAttachments(
+	t *testing.T,
+	url, body, title string,
+	notifyType notify.NotifyType,
+	attachments []string,
+) []notify.RequestSpec {
 	t.Helper()
 
-	specs, _ := CapturePythonRequestsWithFormatTypeAndAttachmentsResult(t, url, body, title, "", notify.NotifyInfo, attachments)
+	specs, _ := CapturePythonRequestsWithFormatTypeAndAttachmentsResult(
+		t, url, body, title, "", notifyType, attachments)
+
 	return specs
 }
 
@@ -70,7 +107,8 @@ func CapturePythonRequestsWithFormatTypeAndAttachmentsResult(t *testing.T, url, 
 	}
 
 	payload := parsePythonCapturePayload(t, stdout)
-	return payload.Requests, payload.Success
+
+	return payload.specs(), payload.Success
 }
 
 func CapturePythonRequestsResult(t *testing.T, url, body, title string) ([]notify.RequestSpec, *bool) {
@@ -83,27 +121,38 @@ func CapturePythonRequestsResult(t *testing.T, url, body, title string) ([]notif
 	}
 
 	payload := parsePythonCapturePayload(t, stdout)
-	return payload.Requests, payload.Success
+
+	return payload.specs(), payload.Success
 }
 
-func CapturePythonRequestsWithTypeResult(t *testing.T, url, body, title string, notifyType notify.NotifyType) ([]notify.RequestSpec, *bool) {
+// CapturePythonRequestsWithTypeResult captures upstream's requests. bodyFormat
+// is the format the caller declares the body is in, which several plugins
+// branch on independently of their own ?format=.
+func CapturePythonRequestsWithTypeResult(t *testing.T, url, body, title, bodyFormat string, notifyType notify.NotifyType, attachments ...string) ([]notify.RequestSpec, *bool) {
 	t.Helper()
 
-	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
-	stdout, stderr, err := RunPythonScript(
-		t,
-		script,
+	args := []string{
 		"--url", url,
 		"--body", body,
 		"--title", title,
 		"--type", string(notifyType),
-	)
+	}
+	if bodyFormat != "" {
+		args = append(args, "--body-format", bodyFormat)
+	}
+	for _, attachment := range attachments {
+		args = append(args, "--attach", attachment)
+	}
+
+	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
+	stdout, stderr, err := RunPythonScript(t, script, args...)
 	if err != nil {
 		t.Fatalf("capture request failed: %v (stderr: %s)", err, strings.TrimSpace(stderr))
 	}
 
 	payload := parsePythonCapturePayload(t, stdout)
-	return payload.Requests, payload.Success
+
+	return payload.specs(), payload.Success
 }
 
 func parsePythonCapturePayload(t *testing.T, stdout string) pythonCapturePayload {
@@ -114,11 +163,64 @@ func parsePythonCapturePayload(t *testing.T, stdout string) pythonCapturePayload
 		return payload
 	}
 
-	var specs []notify.RequestSpec
+	var specs []capturedRequest
 	if err := json.Unmarshal([]byte(stdout), &specs); err != nil {
 		t.Fatalf("parse request specs: %v (output: %s)", err, strings.TrimSpace(stdout))
 	}
 
 	payload.Requests = specs
+
 	return payload
+}
+
+// CapturePythonRequestsWithFailures captures what upstream sends when the
+// first failures requests are answered with a 500, so a retry path can be
+// compared. Without it every mock answers 200 and nothing re-sends.
+func CapturePythonRequestsWithFailures(
+	t *testing.T,
+	url, body, title string,
+	failures int,
+) []notify.RequestSpec {
+	t.Helper()
+
+	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
+	args := []string{
+		"--url", url,
+		"--body", body,
+		"--title", title,
+		"--type", string(notify.NotifyInfo),
+		"--fail-first", strconv.Itoa(failures),
+	}
+
+	stdout, stderr, err := RunPythonScript(t, script, args...)
+	if err != nil {
+		t.Fatalf("capture request with failures failed: %v (stderr: %s)",
+			err, strings.TrimSpace(stderr))
+	}
+
+	return parsePythonCapturePayload(t, stdout).specs()
+}
+
+// CapturePythonRequestsWithFailuresResult is CapturePythonRequestsWithFailures
+// but also reports whether upstream considered the notification a success,
+// which is the point when every request is being rejected.
+func CapturePythonRequestsWithFailuresResult(
+	t *testing.T,
+	url, body, title string,
+	failures int,
+) ([]notify.RequestSpec, *bool) {
+	t.Helper()
+
+	script := filepath.Join(RepoRoot(t), "internal", "testutil", "scripts", "capture_request.py")
+	stdout, stderr, err := RunPythonScript(t, script,
+		"--url", url, "--body", body, "--title", title,
+		"--type", string(notify.NotifyInfo),
+		"--fail-first", strconv.Itoa(failures))
+	if err != nil {
+		t.Fatalf("capture with failures: %v (stderr: %s)", err, strings.TrimSpace(stderr))
+	}
+
+	payload := parsePythonCapturePayload(t, stdout)
+
+	return payload.specs(), payload.Success
 }

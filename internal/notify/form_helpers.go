@@ -16,9 +16,16 @@ func encodeFormPairs(pairs []formPair) string {
 		if i > 0 {
 			b.WriteByte('&')
 		}
-		b.WriteString(url.QueryEscape(pair.key))
+		b.WriteString(percentEncode(pair.key))
 		b.WriteByte('=')
-		b.WriteString(url.QueryEscape(pair.value))
+		b.WriteString(percentEncode(pair.value))
 	}
 	return b.String()
+}
+
+// percentEncode matches upstream's urlencode, which quotes a space as %20
+// rather than +. AWS SigV4 signs the raw payload string, so the difference
+// changes the signature even though both forms decode identically.
+func percentEncode(value string) string {
+	return strings.ReplaceAll(url.QueryEscape(value), "+", "%20")
 }

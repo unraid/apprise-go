@@ -1,0 +1,50 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "{\"title\": \"apprise parity\", \"body\": \"hello from python\", \"severity\": \"info\", \"type\": \"info\", \"source\": \"apprise\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-api-key": "apikey123"
+        },
+        "method": "POST",
+        "url": "https://flowtriq.example.com/hooks/inbound"
+      }
+    ]
+  },
+  {
+    "name": "insecure-port",
+    "requests": [
+      {
+        "body": "{\"title\": \"title\", \"body\": \"body\", \"severity\": \"warning\", \"type\": \"warning\", \"source\": \"apprise\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-api-key": "apikey123"
+        },
+        "method": "POST",
+        "url": "http://flowtriq.example.com:8080/inbound"
+      }
+    ]
+  },
+  {
+    "name": "failure-severity",
+    "requests": [
+      {
+        "body": "{\"title\": \"title\", \"body\": \"body\", \"severity\": \"critical\", \"type\": \"failure\", \"source\": \"apprise\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-api-key": "apikey123"
+        },
+        "method": "POST",
+        "url": "https://flowtriq.example.com/hooks/inbound"
+      }
+    ]
+  }
+]

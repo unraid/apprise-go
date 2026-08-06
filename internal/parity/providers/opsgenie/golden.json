@@ -25,5 +25,142 @@
         "url": "https://api.eu.opsgenie.com/v2/alerts"
       }
     ]
+  },
+  {
+    "name": "map-info-is-a-note-so-nothing-is-sent",
+    "requests": []
+  },
+  {
+    "name": "map-warning-creates-an-alert",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"user\", \"username\": \"user\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.opsgenie.com/v2/alerts"
+      }
+    ]
+  },
+  {
+    "name": "mapping-override-makes-info-create",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"info\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"user\", \"username\": \"user\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.opsgenie.com/v2/alerts"
+      }
+    ]
+  },
+  {
+    "name": "mapping-override-prefix-match",
+    "requests": []
+  },
+  {
+    "name": "batch-off-splits-responders",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"team\", \"name\": \"teamtwo\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.opsgenie.com/v2/alerts"
+      },
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"schedule\", \"name\": \"sched\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.opsgenie.com/v2/alerts"
+      },
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"user\", \"username\": \"one\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.opsgenie.com/v2/alerts"
+      },
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"escalation\", \"name\": \"esc\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.opsgenie.com/v2/alerts"
+      }
+    ]
+  },
+  {
+    "name": "batch-on-groups-responders",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"team\", \"name\": \"teamtwo\"}, {\"type\": \"schedule\", \"name\": \"sched\"}, {\"type\": \"user\", \"username\": \"one\"}, {\"type\": \"escalation\", \"name\": \"esc\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.opsgenie.com/v2/alerts"
+      }
+    ]
+  },
+  {
+    "name": "no-targets-and-long-title",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"this title is deliberately longer than the one hundred and thirty character message limit that upstream applies before it trunc...\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.opsgenie.com/v2/alerts"
+      }
+    ]
+  },
+  {
+    "name": "uuid-target-is-an-id",
+    "requests": [
+      {
+        "body": "{\"source\": \"Apprise Notifications\", \"message\": \"t\", \"description\": \"body\", \"details\": {\"type\": \"warning\"}, \"priority\": \"P3\", \"responders\": [{\"type\": \"user\", \"id\": \"8b8d1b3e-1a4f-4c2a-9f3e-2c7d5a6b1e90\"}]}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "GenieKey apikey",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.opsgenie.com/v2/alerts"
+      }
+    ]
   }
 ]

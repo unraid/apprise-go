@@ -4,5 +4,13 @@
     "url": "twist://password:user@example.com/123:456",
     "body": "hello",
     "title": "Test Subject"
+  },
+  {
+    "name": "body-format-html",
+    "url": "twist://password:user@example.com/123:456",
+    "body": "<b>bold</b> and <a href='https://example.com'>link</a> plus <code>code</code>.",
+    "title": "over",
+    "type": "info",
+    "body_format": "html"
   }
 ]

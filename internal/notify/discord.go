@@ -10,16 +10,22 @@ import (
 
 const discordWebhookBase = "https://discord.com/api/webhooks"
 
+// Discord accepts at most this many files in one message.
+const discordMaxAttachments = 10
+
 type DiscordTarget struct {
-	webhookID    string
-	webhookToken string
-	username     string
-	tts          bool
-	avatar       bool
-	avatarURL    string
-	threadID     string
-	flags        int
-	format       string
+	webhookID      string
+	webhookToken   string
+	username       string
+	tts            bool
+	avatar         bool
+	avatarURL      string
+	threadID       string
+	flags          int
+	format         string
+	batch          bool
+	templatePath   string
+	templateTokens map[string]string
 }
 
 func NewDiscordTarget(target *ParsedURL) (*DiscordTarget, error) {
@@ -59,6 +65,12 @@ func NewDiscordTarget(target *ParsedURL) (*DiscordTarget, error) {
 		flags = value
 	}
 
+	// :key=value pairs are substituted into the template.
+	templateTokens := map[string]string{}
+	for key, value := range target.QueryPayload {
+		templateTokens[key] = value
+	}
+
 	return &DiscordTarget{
 		webhookID:    webhookID,
 		webhookToken: webhookToken,
@@ -69,10 +81,15 @@ func NewDiscordTarget(target *ParsedURL) (*DiscordTarget, error) {
 		threadID:     threadID,
 		flags:        flags,
 		format:       format,
+		// Batching only affects how attachments are grouped, which this port
+		// does not send; it is accepted so the URL round-trips.
+		batch:          parseBoolWithDefault(target.Query["batch"], true),
+		templatePath:   strings.TrimSpace(target.Query["template"]),
+		templateTokens: templateTokens,
 	}, nil
 }
 
-func (d *DiscordTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+func (d *DiscordTarget) buildPayload(body, title string, notifyType NotifyType) (map[string]any, error) {
 	payload := map[string]any{
 		"tts":  d.tts,
 		"wait": !d.tts,
@@ -94,7 +111,17 @@ func (d *DiscordTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		payload["username"] = d.username
 	}
 
-	if d.format == "markdown" {
+	// A template defines the whole message, so the embed and content the
+	// plugin would otherwise build are skipped entirely.
+	if d.templatePath != "" {
+		rendered, err := renderNotifyTemplate(d.templatePath, d.templateTokens, body, title, notifyType, "256x256")
+		if err != nil {
+			return nil, err
+		}
+		for key, value := range rendered {
+			payload[key] = value
+		}
+	} else if d.format == "markdown" {
 		embed := map[string]any{
 			"author": map[string]any{
 				"name": "Apprise",
@@ -113,15 +140,44 @@ func (d *DiscordTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		}
 	}
 
-	data, err := json.Marshal(payload)
+	return payload, nil
+}
+
+func (d *DiscordTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+	return d.buildRequest(body, title, notifyType, nil)
+}
+
+func (d *DiscordTarget) buildRequest(body, title string, notifyType NotifyType, attachments []Attachment) (RequestSpec, error) {
+	payload, err := d.buildPayload(body, title, notifyType)
 	if err != nil {
 		return RequestSpec{}, err
 	}
 
+	requestBody := ""
+	contentType := "application/json; charset=utf-8"
+	if len(attachments) > 0 {
+		// With files present the payload moves into a multipart field, and
+		// the generated boundary decides the content type.
+		requestBody, contentType, err = discordStyleAttachmentBody(payload, attachments)
+		if err != nil {
+			return RequestSpec{}, err
+		}
+	} else {
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return RequestSpec{}, err
+		}
+		requestBody = string(data)
+	}
+
+	return d.specFor(requestBody, contentType)
+}
+
+func (d *DiscordTarget) specFor(requestBody, contentType string) (RequestSpec, error) {
 	headers := map[string]string{
 		"User-Agent":   "Apprise",
 		"Accept":       "*/*",
-		"Content-Type": "application/json; charset=utf-8",
+		"Content-Type": contentType,
 	}
 
 	targetURL := fmt.Sprintf("%s/%s/%s", discordWebhookBase, d.webhookID, d.webhookToken)
@@ -140,17 +196,63 @@ func (d *DiscordTarget) BuildRequest(body, title string, notifyType NotifyType) 
 		Method:  "POST",
 		URL:     targetURL,
 		Headers: headers,
-		Body:    string(data),
+		Body:    requestBody,
 	}, nil
 }
 
 func (d *DiscordTarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := d.BuildRequest(body, title, notifyType)
+	return d.SendWithAttachments(body, title, notifyType, nil)
+}
+
+// SendWithAttachments posts the message, then the files in a second request.
+// Discord does not carry them alongside the text: the attachment post reuses
+// the payload with the message content stripped out, so the body is not
+// repeated under each file.
+func (d *DiscordTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
+	spec, err := d.buildRequest(body, title, notifyType, nil)
 	if err != nil {
 		return err
 	}
+	outcome.record(SendRequest(spec))
 
-	return SendRequest(spec)
+	if len(attachments) == 0 {
+		return outcome.err()
+	}
+
+	payload, err := d.buildPayload(body, title, notifyType)
+	if err != nil {
+		return err
+	}
+	payload["tts"] = false
+	// Wait for the upload to post before continuing.
+	payload["wait"] = true
+	delete(payload, "content")
+	delete(payload, "embeds")
+	delete(payload, "allow_mentions")
+
+	// With batching off each file is its own message, which is the legacy
+	// one-per-message behavior.
+	perRequest := discordMaxAttachments
+	if !d.batch {
+		perRequest = 1
+	}
+
+	for start := 0; start < len(attachments); start += perRequest {
+		end := min(start+perRequest, len(attachments))
+		requestBody, contentType, err := discordStyleAttachmentBody(payload, attachments[start:end])
+		if err != nil {
+			return err
+		}
+		spec, err := d.specFor(requestBody, contentType)
+		if err != nil {
+			return err
+		}
+		outcome.record(SendRequest(spec))
+	}
+
+	return outcome.err()
 }
 
 func defaultImageURL(notifyType NotifyType) string {

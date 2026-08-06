@@ -12,5 +12,23 @@
     "body": "hello",
     "title": "",
     "type": "warning"
+  },
+  {
+    "name": "attachment",
+    "url": "brevo://key:sender@example.com/user@example.com",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/report.pdf"
+    ]
+  },
+  {
+    "name": "body-format-markdown",
+    "url": "brevo://apikey:sender@domain.com/recipient@domain.com",
+    "body": "**bold** and [link](https://example.com) plus `code`.",
+    "title": "over",
+    "type": "info",
+    "body_format": "markdown"
   }
 ]

@@ -1,0 +1,62 @@
+[
+  {
+    "name": "basic-source-in-user-field",
+    "url": "ringc://15551234567:secretpass@myclientid/myclientsecret/15559876543",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "basic-source-in-path",
+    "url": "ringc://secretpass@myclientid/myclientsecret/15551234567/15559876543",
+    "body": "body",
+    "title": "",
+    "type": "warning"
+  },
+  {
+    "name": "no-targets-loops-back-to-source",
+    "url": "ringc://15551234567:secretpass@myclientid/myclientsecret",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "multiple-targets",
+    "url": "ringc://15551234567:secretpass@myclientid/myclientsecret/15559876543/15551112222",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "sandbox-environment",
+    "url": "ringc://15551234567:secretpass@myclientid/myclientsecret/15559876543?env=sandbox",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "jwt-mode-detected-from-token-length",
+    "url": "ringc://15551234567:eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4iLCJpYXQiOjE1MTYyMzkwMjJ9.abcdefghijklmnop@myclientid/myclientsecret/15559876543",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "to-alias-and-explicit-source",
+    "url": "ringc://secretpass@myclientid/myclientsecret?from=15551234567&to=15559876543,15551112222",
+    "body": "body",
+    "title": "t",
+    "type": "info"
+  },
+  {
+    "name": "attachment-mms",
+    "url": "ringc://15551234567:secretpass@myclientid/myclientsecret/15559876543",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png",
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ]
+  }
+]

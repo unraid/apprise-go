@@ -80,6 +80,8 @@ func (f *FortySixElksTarget) BuildRequest(body, title string, notifyType NotifyT
 }
 
 func (f *FortySixElksTarget) Send(body, title string, notifyType NotifyType) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(f.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
@@ -90,14 +92,12 @@ func (f *FortySixElksTarget) Send(body, title string, notifyType NotifyType) err
 		if err != nil {
 			return err
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
 func (f *FortySixElksTarget) buildRequest(target, message string) (RequestSpec, error) {
@@ -144,7 +144,7 @@ func init() {
 		"details": map[string]any{
 			"args": map[string]any{
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -181,7 +181,7 @@ func init() {
 					"values":   []string{"split", "truncate", "upstream"},
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,
@@ -218,7 +218,7 @@ func init() {
 				},
 			},
 			"kwargs":    map[string]any{},
-			"templates": []string{"{schema}://{user}:{password}@/{from_phone}", "{schema}://{user}:{password}@/{from_phone}/{targets}"},
+			"templates": []string{"{schema}://{user}:{password}@{from_phone}", "{schema}://{user}:{password}@{from_phone}/{targets}"},
 			"tokens": map[string]any{
 				"from_phone": map[string]any{
 					"map_to":   "source",

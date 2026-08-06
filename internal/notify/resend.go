@@ -121,7 +121,7 @@ func (r *ResendTarget) BuildRequest(body, title string, notifyType NotifyType) (
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
 
-	payload := r.buildPayload(body, title, r.targets[0])
+	payload := r.buildPayload(body, title, r.targets[0], nil)
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
@@ -146,12 +146,18 @@ func (r *ResendTarget) BuildRequest(body, title string, notifyType NotifyType) (
 }
 
 func (r *ResendTarget) Send(body, title string, notifyType NotifyType) error {
+	return r.SendWithAttachments(body, title, notifyType, nil)
+}
+
+func (r *ResendTarget) SendWithAttachments(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	// Upstream keeps going after a failed target; see sendOutcome.
+	var outcome sendOutcome
 	if len(r.targets) == 0 {
 		return fmt.Errorf("missing targets")
 	}
 
 	for _, target := range r.targets {
-		payload := r.buildPayload(body, title, target)
+		payload := r.buildPayload(body, title, target, attachments)
 		data, err := json.Marshal(payload)
 		if err != nil {
 			return err
@@ -171,17 +177,15 @@ func (r *ResendTarget) Send(body, title string, notifyType NotifyType) error {
 			},
 			Body: string(data),
 		}
-		if err := SendRequest(spec); err != nil {
-			return err
-		}
+		outcome.record(SendRequest(spec))
 	}
 
 	_ = notifyType
 
-	return nil
+	return outcome.err()
 }
 
-func (r *ResendTarget) buildPayload(body, title, target string) map[string]any {
+func (r *ResendTarget) buildPayload(body, title, target string, attachments []Attachment) map[string]any {
 	subject := title
 	if strings.TrimSpace(subject) == "" {
 		subject = resendDefaultSubject
@@ -210,6 +214,10 @@ func (r *ResendTarget) buildPayload(body, title, target string) map[string]any {
 		payload["reply_to"] = formatEmailList(replyTo, r.names)
 	}
 
+	if len(attachments) > 0 {
+		payload["attachments"] = attachmentsSendGridStyle(attachments)
+	}
+
 	return payload
 }
 
@@ -230,7 +238,7 @@ func init() {
 			"args": map[string]any{
 				"apikey": map[string]any{
 					"map_to":   "apikey",
-					"name":     "apikey",
+					"name":     "API Key",
 					"private":  false,
 					"required": false,
 					"type":     "string",
@@ -254,7 +262,7 @@ func init() {
 					"type":     "list:string",
 				},
 				"cto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "cto",
 					"name":     "Socket Connect Timeout",
 					"private":  false,
@@ -280,7 +288,7 @@ func init() {
 				},
 				"from": map[string]any{
 					"map_to":   "from_addr",
-					"name":     "from",
+					"name":     "From Address",
 					"private":  false,
 					"required": false,
 					"type":     "string",
@@ -311,7 +319,7 @@ func init() {
 					"type":     "list:string",
 				},
 				"rto": map[string]any{
-					"default":  4,
+					"default":  4.0,
 					"map_to":   "rto",
 					"name":     "Socket Read Timeout",
 					"private":  false,

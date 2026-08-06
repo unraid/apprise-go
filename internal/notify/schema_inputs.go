@@ -204,18 +204,6 @@ func adjustSchemaValues(specs schemaSpecs, target *ParsedURL, values map[string]
 		if _, ok := values["fullpath"]; !ok {
 			values["fullpath"] = schemaValueAny("/")
 		}
-	case "mmost", "mmosts":
-		if _, ok := values["channels"]; !ok {
-			values["channels"] = schemaValueList([]string{})
-		}
-	case "msteams":
-		if _, ok := values["version"]; !ok {
-			if spec, ok := specs.args["version"]; ok {
-				if def, ok := specDefault(spec); ok {
-					values["version"] = schemaValueInt(coerceInt(def))
-				}
-			}
-		}
 	case "napi", "notificationapi", "sendpulse":
 		if _, ok := values["from_addr"]; !ok {
 			values["from_addr"] = schemaValueAny(nil)
@@ -254,7 +242,67 @@ func adjustSchemaValues(specs schemaSpecs, target *ParsedURL, values map[string]
 				values["link"] = schemaValueAny(baseURL)
 			}
 		}
+	case "pover":
+		// Pushover's own parse_url stores e2ee without coercing it, so the
+		// raw query value survives where a framework-handled bool would not.
+		if raw, ok := target.Query["e2ee"]; ok && strings.TrimSpace(raw) != "" {
+			values["e2ee"] = schemaValueAny(raw)
+		}
+	case "notifico", "notificos":
+		// project is derived from the host by the generic fallback, but
+		// Notifico names no such token upstream.
+		delete(values, "project")
+	case "octopush":
+		// api_login comes from the URL's own credentials rather than a
+		// template token, so upstream never reports it as an input.
+		delete(values, "api_login")
+	case "hassio", "hassios":
+		// Home Assistant takes its access token from the last path segment
+		// and never reads targets from the path, so only ?to= can supply
+		// them.
+		if strings.TrimSpace(target.Query["to"]) == "" {
+			values["targets"] = schemaValueList([]string{})
+		}
+	case "matrix", "matrixs":
+		// The generic inputs comparison maps the URL's own path component
+		// onto the path argument when ?path= is absent, so webhook_path comes
+		// out as the directory part of the URL rather than the arg default.
+		if _, ok := values["webhook_path"]; !ok {
+			if directory, ok := urlDirectoryPath(target.Path); ok {
+				values["webhook_path"] = schemaValueAny(directory)
+			}
+		}
+	case "ringc":
+		// Upstream always resolves a mode while parsing, guessing from the
+		// token's length when ?mode= is absent, so it is never unset.
+		if _, ok := values["mode"]; !ok {
+			token := target.Password
+			if !target.HasPassword || token == "" {
+				token = target.User
+			}
+			if override := strings.TrimSpace(target.Query["token"]); override != "" {
+				token = override
+			}
+			if mode, err := ringCentralMode("", token); err == nil {
+				values["mode"] = schemaValueAny(mode)
+			}
+		}
 	}
+}
+
+// urlDirectoryPath returns the directory portion of a URL path, matching what
+// apprise reports as "path" alongside its "fullpath".
+func urlDirectoryPath(path string) (string, bool) {
+	if strings.TrimSpace(path) == "" {
+		return "", false
+	}
+
+	index := strings.LastIndex(path, "/")
+	if index < 0 {
+		return "", false
+	}
+
+	return path[:index+1], true
 }
 
 func (s SchemaInputs) ValuesMap() map[string]any {
@@ -797,7 +845,10 @@ func applyTokenDefaults(specs map[string]map[string]any, templates []string, val
 		if isListType(spec) {
 			continue
 		}
-		if mapTo == "targets" || mapTo == "channels" {
+		// These are filled in from the path by the plugin rather than named
+		// by any template, so upstream never emits them as an unset token.
+		switch mapTo {
+		case "targets", "channels", "workflow_path":
 			continue
 		}
 		values[name] = nil

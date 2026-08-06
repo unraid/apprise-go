@@ -1,0 +1,34 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "From=15550000000&Body=apprise+parity%0D%0Ahello+from+python&EncodingType=unicode&Priority=normal&To=15551234567",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic c2lkMTIzOnRva2VuNDU2",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.exotel.com/v1/Accounts/sid123/Sms/send"
+      }
+    ]
+  },
+  {
+    "name": "india-region-high-priority",
+    "requests": [
+      {
+        "body": "From=15550000000&Body=body&EncodingType=plain&Priority=high&To=15551234567",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Basic c2lkMTIzOnRva2VuNDU2",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.in.exotel.com/v1/Accounts/sid123/Sms/send"
+      }
+    ]
+  }
+]

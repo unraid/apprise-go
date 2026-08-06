@@ -1,0 +1,45 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "login=login&psw=password&phones=15551234567&fmt=3&mes=apprise+parity%0D%0Ahello+from+python",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "method": "POST",
+        "url": "https://smsc.ru/sys/send.php"
+      }
+    ]
+  },
+  {
+    "name": "sender-and-translit",
+    "requests": [
+      {
+        "body": "login=login&psw=password&phones=15551234567%2C15559876543&fmt=3&sender=Apprise&translit=1&mes=body",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded"
+        },
+        "method": "POST",
+        "url": "https://smsc.ru/sys/send.php"
+      }
+    ]
+  },
+  {
+    "name": "attachment",
+    "requests": [
+      {
+        "body": "--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"login\"\r\n\r\nlogin\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"psw\"\r\n\r\npassword\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"phones\"\r\n\r\n15551234567\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"fmt\"\r\n\r\n3\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"mes\"\r\n\r\ntitle\r\nbody\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"mms\"\r\n\r\n1\r\n--APPRISE-PARITY-BOUNDARY\r\nContent-Disposition: form-data; name=\"mes0\"; filename=\"pixel.png\"\r\nContent-Type: image/png\r\n\r\n\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\b\u0006\u0000\u0000\u0000\u001f\u0015\u0109\u0000\u0000\u0000\rIDATx\ufffdc\ufffd\ufffd\ufffdP\u000f\u0000\u0004\ufffd\u0001\ufffd\ufffd\ufffd\ufffd!\u0000\u0000\u0000\u0000IEND\ufffdB`\ufffd\r\n--APPRISE-PARITY-BOUNDARY--\r\n",
+        "body_b64": "LS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJsb2dpbiINCg0KbG9naW4NCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlkNCkNvbnRlbnQtRGlzcG9zaXRpb246IGZvcm0tZGF0YTsgbmFtZT0icHN3Ig0KDQpwYXNzd29yZA0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJwaG9uZXMiDQoNCjE1NTUxMjM0NTY3DQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZDQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9ImZtdCINCg0KMw0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJtZXMiDQoNCnRpdGxlDQpib2R5DQotLUFQUFJJU0UtUEFSSVRZLUJPVU5EQVJZDQpDb250ZW50LURpc3Bvc2l0aW9uOiBmb3JtLWRhdGE7IG5hbWU9Im1tcyINCg0KMQ0KLS1BUFBSSVNFLVBBUklUWS1CT1VOREFSWQ0KQ29udGVudC1EaXNwb3NpdGlvbjogZm9ybS1kYXRhOyBuYW1lPSJtZXMwIjsgZmlsZW5hbWU9InBpeGVsLnBuZyINCkNvbnRlbnQtVHlwZTogaW1hZ2UvcG5nDQoNColQTkcNChoKAAAADUlIRFIAAAABAAAAAQgGAAAAHxXEiQAAAA1JREFUeNpj/M/AUA8ABIUBgISpjCEAAAAASUVORK5CYIINCi0tQVBQUklTRS1QQVJJVFktQk9VTkRBUlktLQ0K",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "multipart/form-data; boundary=APPRISE-PARITY-BOUNDARY"
+        },
+        "method": "POST",
+        "url": "https://smsc.ru/sys/send.php"
+      }
+    ]
+  }
+]

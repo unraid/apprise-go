@@ -224,7 +224,8 @@ func TestRunAttachJSONMatchesPythonApprise(t *testing.T) {
 	targetURL := "json://example.com/notify"
 	body := "hello"
 	title := "Greeting"
-	pythonSpecs := testutil.CapturePythonRequestsWithAttachments(t, targetURL, body, title, []string{attachment})
+	pythonSpecs := testutil.CapturePythonRequestsWithAttachments(
+		t, targetURL, body, title, notify.NotifyInfo, []string{attachment})
 
 	goSpecs := testutil.CaptureGoRequests(t, func() error {
 		stdout := &bytes.Buffer{}

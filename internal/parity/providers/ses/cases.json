@@ -4,5 +4,33 @@
     "url": "ses://sender@example.com/access123/secret123/us-east-1/target@example.com",
     "body": "hello",
     "title": "Test Subject"
+  },
+  {
+    "name": "session-token",
+    "url": "ses://sender:sessiontoken123@example.com/access123/secret123/us-east-1/target@example.com",
+    "body": "hello",
+    "title": "Test Subject"
+  },
+  {
+    "name": "attachment",
+    "url": "ses://sender@example.com/access123/secret123/us-east-1/target@example.com",
+    "body": "body",
+    "title": "title",
+    "type": "info",
+    "attachments": [
+      "%7Brepo%7D/internal/parity/fixtures/pixel.png",
+      "%7Brepo%7D/internal/parity/fixtures/notes.txt"
+    ],
+    "volatile_headers": [
+      "authorization"
+    ]
+  },
+  {
+    "name": "body-format-markdown",
+    "url": "ses://sender@example.com/access123/secret123/us-east-1/target@example.com",
+    "body": "**bold** and [link](https://example.com) plus `code`.",
+    "title": "over",
+    "type": "info",
+    "body_format": "markdown"
   }
 ]
