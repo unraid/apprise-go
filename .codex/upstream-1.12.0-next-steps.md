@@ -203,6 +203,45 @@ fail on demand, `wait` is a sleep, `cto`/`rto` need a server that stalls, and
 
 Do not remove these; each one exists because something got through.
 
+- `url_vector_parity_test.go` — runs every URL in upstream's own
+  `tests/test_plugin_*.py` whose schema this port implements, 1377 of them, and
+  compares accept-or-reject. The golden fixtures can only cover URL shapes
+  someone here thought to write down; these were written by the people who
+  wrote the plugins and are dense with the malformed and half-specified. The
+  URL list comes from the test files, but the expected answer comes from
+  calling `Apprise.instantiate()`, so the oracle is upstream's parser rather
+  than a reading of a declaration. It found 144 disagreements. The known-gap
+  file is empty and is a ratchet: an unlisted disagreement fails the build, and
+  a listed one that starts passing fails too, so it cannot quietly grow.
+- Five probe-generated tables decide what a malformed argument or credential
+  does: `choice_args.json`, `int_args.json`, `arg_rules.json`,
+  `token_formats.json`, `host_requirements.json`. Each has a drift test that
+  re-probes upstream and fails when the two disagree, because every fixture
+  uses valid values and nothing else would notice a table going stale.
+
+  The rule they encode is that **a declaration is not enforcement**. Upstream
+  declares roughly 950 validations and applies about 300. Enforcing every
+  declaration rejects URLs upstream accepts; enforcing none lets `?mode=webook`
+  pick the default and send anyway. Three separate times a reading of the
+  declarations was wrong in a way that would have rejected working URLs —
+  slack puts a different token in the host depending on the URL form, wxpusher
+  puts an app id there when `?token=` carries the credential, and resend's
+  apikey is in the host of one template and the user of another. The guard that
+  caught all three is testing each candidate rule against upstream's own
+  accepted URLs before recording it. Keep that step.
+- `partial_failure_parity_test.go` — rejects the *first* request of a
+  multi-target send and compares which requests were then issued.
+  `TestFailureHandlingParity` rejects everything, so both sides take the same
+  path and a provider that abandons the send looks identical to one that
+  carries on. 38 providers abandoned the notification on the first failed
+  target: same overall verdict, so no success/failure comparison could see it,
+  and every remaining recipient silently got nothing. Home Assistant is the one
+  provider left stopping early, because that is what upstream does there.
+- An empty target list is reported on the send path, not at parse. Upstream
+  builds the object and fails when the send is attempted; both make no request
+  and both report failure, and matching it keeps the rest of a configuration
+  file behaving the same either way. Moving those checks exposed two bugs they
+  had been masking, so do not move them back without re-running the vectors.
 - `registry_consistency_test.go` — the three-way registration check.
 - `internal/notify/unsupported.go` declares the schemas the port does not
   implement, and every suite defers to it, so the reasoning lives in one place
