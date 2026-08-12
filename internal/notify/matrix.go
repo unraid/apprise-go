@@ -13,14 +13,13 @@ import (
 )
 
 const (
-	matrixWebhookPath        = "/api/v1/matrix/hook"
-	matrixV2APIPath          = "/_matrix/client/r0"
-	matrixV3APIPath          = "/_matrix/client/v3"
-	matrixV2MediaPath        = "/_matrix/media/r0"
-	matrixV3MediaPath        = "/_matrix/media/v3"
-	matrixT2BotWebhookURL    = "https://webhooks.t2bot.io/api/v1/matrix/hook/"
-	matrixDefaultUserAgent   = "Apprise"
-	matrixFixedTransactionID = "00000000-0000-4000-8000-000000000000"
+	matrixWebhookPath      = "/api/v1/matrix/hook"
+	matrixV2APIPath        = "/_matrix/client/r0"
+	matrixV3APIPath        = "/_matrix/client/v3"
+	matrixV2MediaPath      = "/_matrix/media/r0"
+	matrixV3MediaPath      = "/_matrix/media/v3"
+	matrixT2BotWebhookURL  = "https://webhooks.t2bot.io/api/v1/matrix/hook/"
+	matrixDefaultUserAgent = "Apprise"
 )
 
 const (
@@ -231,7 +230,7 @@ func (m *MatrixTarget) SendWithAttachments(body, title string, notifyType Notify
 func (m *MatrixTarget) sendServer(body, title string, notifyType NotifyType, attachments []Attachment) error {
 	if m.accessToken == "" && m.password != "" && m.user == "" {
 		m.accessToken = m.password
-		m.transactionIDString = matrixFixedTransactionID
+		m.transactionIDString = newUUIDv4()
 	}
 
 	if m.accessToken == "" {
