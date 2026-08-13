@@ -16,7 +16,11 @@ jobs:
     if: vars.DISABLE_UPSTREAM_VERSION_SYNC != 'true'
     runs-on: ubuntu-latest
     env:
-      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+      # Only whether the webhook is configured belongs at job scope: a step
+      # `if:` cannot read the `secrets` context, but the secret itself has no
+      # business in the environment of steps that install and run upstream
+      # code. The notification steps map the secret in themselves.
+      DISCORD_CONFIGURED: ${{ secrets.DISCORD_WEBHOOK != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -136,8 +140,9 @@ jobs:
       # payload is built with jq because the report text is not ours to trust
       # as JSON.
       - name: Announce the new upstream release
-        if: steps.upstream.outputs.changed == 'true' && env.DISCORD_WEBHOOK != ''
+        if: steps.upstream.outputs.changed == 'true' && env.DISCORD_CONFIGURED == 'true'
         env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           UPSTREAM_TAG: ${{ steps.upstream.outputs.tag }}
           PINNED: ${{ steps.upstream.outputs.pinned }}
           PR_URL: ${{ steps.pr.outputs.pull-request-url }}
@@ -158,7 +163,9 @@ jobs:
       # Without this the checker can break silently and the pin just quietly
       # stops moving, which is the failure the checker exists to prevent.
       - name: Notify Discord on sync failure
-        if: failure() && env.DISCORD_WEBHOOK != ''
+        if: failure() && env.DISCORD_CONFIGURED == 'true'
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         run: |
           run_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           payload=$(printf '{"content":"upstream version sync failed for %s: %s"}' "$GITHUB_REPOSITORY" "$run_url")
