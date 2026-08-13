@@ -25,14 +25,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: TEMP failing step with continue-on-error
-        continue-on-error: true
-        run: exit 1
-
-      - name: TEMP does failure() fire
-        if: failure()
-        run: echo "FAILURE-CONTEXT-FIRED"
-
       - name: Fetch latest upstream release
         id: upstream
         run: |
