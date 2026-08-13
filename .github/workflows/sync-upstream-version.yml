@@ -25,11 +25,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: TEMP probe
-        run: |
-          echo "DISCORD_CONFIGURED=[${DISCORD_CONFIGURED}]"
-          if [ "${DISCORD_CONFIGURED}" = "true" ]; then echo "GUARD-WOULD-FIRE"; else echo "GUARD-WOULD-NOT-FIRE"; fi
-
       - name: Fetch latest upstream release
         id: upstream
         run: |
