@@ -15,6 +15,8 @@ jobs:
     # to 'true' to stop it.
     if: vars.DISABLE_UPSTREAM_VERSION_SYNC != 'true'
     runs-on: ubuntu-latest
+    env:
+      DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -118,6 +120,7 @@ jobs:
           } > reports/pr_body.md
 
       - name: Create pull request
+        id: pr
         if: steps.upstream.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v8
         with:
@@ -127,3 +130,36 @@ jobs:
           title: "chore: sync upstream apprise version to ${{ steps.upstream.outputs.tag }}"
           body-path: reports/pr_body.md
           add-paths: internal/version/version.go
+
+      # A sync PR nobody looks at is the same as no sync at all, so the release
+      # and the gap it opens get announced rather than left in the PR list. The
+      # payload is built with jq because the report text is not ours to trust
+      # as JSON.
+      - name: Announce the new upstream release
+        if: steps.upstream.outputs.changed == 'true' && env.DISCORD_WEBHOOK != ''
+        env:
+          UPSTREAM_TAG: ${{ steps.upstream.outputs.tag }}
+          PINNED: ${{ steps.upstream.outputs.pinned }}
+          PR_URL: ${{ steps.pr.outputs.pull-request-url }}
+        run: |
+          set -euo pipefail
+          summary=""
+          if [ -f reports/parity_report.md ]; then
+            summary="$(sed -n '/## Summary/,$p' reports/parity_report.md | head -c 1200)"
+          fi
+          if [ -z "$summary" ]; then
+            summary="Parity report not generated; see the run log."
+          fi
+          content="$(printf 'upstream apprise %s is out (pinned: %s).\n%s\n\n%s' \
+            "$UPSTREAM_TAG" "$PINNED" "${PR_URL:-no sync PR was opened}" "$summary")"
+          jq -n --arg content "$content" '{content: $content}' \
+            | curl -sS -X POST -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK"
+
+      # Without this the checker can break silently and the pin just quietly
+      # stops moving, which is the failure the checker exists to prevent.
+      - name: Notify Discord on sync failure
+        if: failure() && env.DISCORD_WEBHOOK != ''
+        run: |
+          run_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          payload=$(printf '{"content":"upstream version sync failed for %s: %s"}' "$GITHUB_REPOSITORY" "$run_url")
+          curl -sS -X POST -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK"
