@@ -3,6 +3,12 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.3.1 (2026-08-13)
+
+### Fixes
+
+- generate a unique transaction ID for access-token sends (#87)
+
 ## 0.3.0 (2026-08-06)
 
 ### Breaking Changes
