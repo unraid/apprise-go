@@ -25,14 +25,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: TEMP failing step with continue-on-error
-        continue-on-error: true
-        run: exit 1
-
-      - name: TEMP does failure() fire
-        if: failure()
-        run: echo "FAILURE-CONTEXT-FIRED"
-
       - name: Fetch latest upstream release
         id: upstream
         run: |
@@ -149,11 +141,6 @@ jobs:
       # as JSON.
       - name: Announce the new upstream release
         if: steps.upstream.outputs.changed == 'true' && env.DISCORD_CONFIGURED == 'true'
-        # The pin has moved and the PR is open by this point, so a webhook that
-        # rejects us is not a failed sync. It also must not reach the failure
-        # notifier below, which posts to this same webhook and would fail the
-        # same way.
-        continue-on-error: true
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           UPSTREAM_TAG: ${{ steps.upstream.outputs.tag }}
@@ -163,12 +150,7 @@ jobs:
           set -euo pipefail
           summary=""
           if [ -f reports/parity_report.md ]; then
-            # Truncated after capture, not through `head`: closing the pipe
-            # early sends sed a SIGPIPE, which pipefail turns into a failed
-            # step once the report outgrows the pipe buffer -- that is, exactly
-            # when the gap is big enough to be worth announcing.
-            summary="$(sed -n '/## Summary/,$p' reports/parity_report.md)"
-            summary="${summary:0:1200}"
+            summary="$(sed -n '/## Summary/,$p' reports/parity_report.md | head -c 1200)"
           fi
           if [ -z "$summary" ]; then
             summary="Parity report not generated; see the run log."
@@ -176,8 +158,7 @@ jobs:
           content="$(printf 'upstream apprise %s is out (pinned: %s).\n%s\n\n%s' \
             "$UPSTREAM_TAG" "$PINNED" "${PR_URL:-no sync PR was opened}" "$summary")"
           jq -n --arg content "$content" '{content: $content}' \
-            | curl -sS --fail --connect-timeout 10 --max-time 30 \
-                -X POST -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK"
+            | curl -sS -X POST -H "Content-Type: application/json" -d @- "$DISCORD_WEBHOOK"
 
       # Without this the checker can break silently and the pin just quietly
       # stops moving, which is the failure the checker exists to prevent.
@@ -188,5 +169,4 @@ jobs:
         run: |
           run_url="https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           payload=$(printf '{"content":"upstream version sync failed for %s: %s"}' "$GITHUB_REPOSITORY" "$run_url")
-          curl -sS --fail --connect-timeout 10 --max-time 30 \
-            -X POST -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK"
+          curl -sS -X POST -H "Content-Type: application/json" -d "$payload" "$DISCORD_WEBHOOK"
