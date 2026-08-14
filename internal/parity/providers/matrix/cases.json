@@ -42,5 +42,12 @@
       "%7Brepo%7D/internal/parity/fixtures/pixel.png",
       "%7Brepo%7D/internal/parity/fixtures/notes.txt"
     ]
+  },
+  {
+    "name": "multi-room",
+    "url": "matrixs://user:pass@matrix.example.com/%23room1:example.com/%23room2:example.com?e2ee=no",
+    "body": "body",
+    "title": "t",
+    "type": "info"
   }
 ]
