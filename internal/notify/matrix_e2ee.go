@@ -641,7 +641,10 @@ func (m *MatrixTarget) transactionValue() string {
 // advanceTransaction moves the counter on, keeping it in storage so a later
 // process does not reuse an id the server has already seen.
 func (m *MatrixTarget) advanceTransaction() {
+	// The token path carries its id as a uuid string; there is no counter to
+	// persist, so it advances by generating the next one.
 	if m.transactionIDString != "" {
+		m.transactionIDString = newUUIDv4()
 		return
 	}
 

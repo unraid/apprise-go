@@ -50,3 +50,91 @@ func TestMatrixAccessTokenTransactionIDIsUnique(t *testing.T) {
 		t.Fatalf("transaction id is the deterministic placeholder %q rather than a generated value", first)
 	}
 }
+
+// sendTransactionIDs returns the transaction id of every m.room.message send
+// issued by one notification, in order.
+func sendTransactionIDs(t *testing.T, specs []notify.RequestSpec) []string {
+	t.Helper()
+
+	const marker = "/send/m.room.message/"
+	ids := []string{}
+	for _, spec := range specs {
+		if idx := strings.Index(spec.URL, marker); idx >= 0 {
+			ids = append(ids, spec.URL[idx+len(marker):])
+		}
+	}
+	return ids
+}
+
+// assertUniqueTransactionIDs fails when a notification reuses an id, naming
+// the collision rather than only reporting that one happened.
+func assertUniqueTransactionIDs(t *testing.T, ids []string, want int) {
+	t.Helper()
+
+	if len(ids) != want {
+		t.Fatalf("expected %d m.room.message sends, got %d", want, len(ids))
+	}
+
+	seen := map[string]int{}
+	for i, id := range ids {
+		if first, ok := seen[id]; ok {
+			t.Fatalf("sends %d and %d share transaction id %q; a homeserver is "+
+				"entitled to treat the later one as a retransmission and drop it",
+				first, i, id)
+		}
+		seen[id] = i
+	}
+}
+
+// TestMatrixMultiRoomTransactionIDsAreUnique covers a notification addressed
+// to more than one room.
+//
+// Synapse tolerates a repeat here, because it keys idempotency on the request
+// path and that carries the room id. The spec is the stricter of the two --
+// it asks for an id unique across requests sharing an access token -- so this
+// pins the behavior a homeserver keying on the token alone would need.
+func TestMatrixMultiRoomTransactionIDsAreUnique(t *testing.T) {
+	t.Setenv("APPRISE_FIXED_TIME", "")
+	notify.ConfigureStorage("", 8, nil)
+	t.Cleanup(func() { notify.ConfigureStorage("", 8, nil) })
+
+	specs := testutil.CaptureGoRequests(t, func() error {
+		return notify.SendTargetURL(
+			"matrixs://tokenabc123@matrix.example.com/%23room1:example.com/%23room2:example.com?e2ee=no",
+			"body", "title", "", notify.NotifyInfo)
+	})
+
+	assertUniqueTransactionIDs(t, sendTransactionIDs(t, specs), 2)
+}
+
+// TestMatrixAttachmentTransactionIDsAreUnique covers the several events a
+// single room receives when files are attached: one per file, then the text.
+//
+// This is the case that fails against a real homeserver: same room, so same
+// request path, so a repeated id is a retransmission. It costs the message
+// body itself, since the text is sent last and is what gets discarded.
+func TestMatrixAttachmentTransactionIDsAreUnique(t *testing.T) {
+	t.Setenv("APPRISE_FIXED_TIME", "")
+	notify.ConfigureStorage("", 8, nil)
+	t.Cleanup(func() { notify.ConfigureStorage("", 8, nil) })
+
+	specs := testutil.CaptureGoRequests(t, func() error {
+		target, err := notify.ParseURL("matrixs://tokenabc123@matrix.example.com/%23room1:example.com?e2ee=no")
+		if err != nil {
+			return err
+		}
+		sender, err := notify.NewTarget(target)
+		if err != nil {
+			return err
+		}
+
+		return notify.DispatchSend(sender, "body", "title", notify.NotifyInfo,
+			[]notify.Attachment{
+				{Name: "one.txt", MIMEType: "text/plain", Data: []byte("first")},
+				{Name: "two.txt", MIMEType: "text/plain", Data: []byte("second")},
+			})
+	})
+
+	// Two attachment events plus the text message.
+	assertUniqueTransactionIDs(t, sendTransactionIDs(t, specs), 3)
+}

@@ -409,9 +409,25 @@ func (m *MatrixTarget) uploadFetch(attachment Attachment, params url.Values) (bo
 
 // advanceMessageTransaction moves to the next transaction id, which upstream
 // does after every event so a retry is not mistaken for a retransmission.
+//
+// A notification can produce several events in one room -- a file per
+// attachment, then the text -- and an id that does not move between them is
+// what the homeserver uses to recognize a retransmission, so everything after
+// the first event is dropped. The spec asks for an id unique across requests
+// sharing an access token, so this advances per event rather than per room.
 func (m *MatrixTarget) advanceMessageTransaction() {
-	if m.version == matrixVersionV3 && m.accessToken != "" &&
-		m.accessToken != m.password && m.transactionIDString == "" {
+	if m.version != matrixVersionV3 || m.accessToken == "" {
+		return
+	}
+
+	// The token path carries its id as a uuid string rather than a counter,
+	// so it advances by generating the next one.
+	if m.transactionIDString != "" {
+		m.transactionIDString = newUUIDv4()
+		return
+	}
+
+	if m.accessToken != m.password {
 		m.transactionID++
 	}
 }
@@ -727,8 +743,8 @@ func (m *MatrixTarget) sendMessage(roomID, body, title string, notifyType Notify
 
 	path := m.messagePath(roomID)
 	ok, _, _ := m.fetch(path, payload, nil, m.messageMethod(), "")
-	if ok && m.version == matrixVersionV3 && m.accessToken != "" && m.accessToken != m.password && m.transactionIDString == "" {
-		m.transactionID++
+	if ok {
+		m.advanceMessageTransaction()
 	}
 	_ = notifyType
 	return ok
