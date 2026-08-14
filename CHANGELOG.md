@@ -3,6 +3,12 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.3.2 (2026-08-14)
+
+### Fixes
+
+- advance the transaction ID between events within a notification (#91)
+
 ## 0.3.1 (2026-08-13)
 
 ### Fixes
