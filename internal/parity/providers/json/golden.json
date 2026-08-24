@@ -60,5 +60,20 @@
         "url": "http://localhost/"
       }
     ]
+  },
+  {
+    "name": "rfc3986-path",
+    "requests": [
+      {
+        "body": "{\"version\": \"1.0\", \"title\": \"apprise parity\", \"message\": \"hello from python\", \"attachments\": [], \"type\": \"info\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://host/a@b/x!y%2Cz/"
+      }
+    ]
   }
 ]

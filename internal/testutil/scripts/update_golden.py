@@ -38,6 +38,7 @@ DEFAULT_ENV = {
     "APPRISE_VAPID_TEST_PUBLIC_KEY": "parity-public-key",
     "APPRISE_VAPID_TEST_ENCRYPTED": "cGFyaXR5LXZhcGlk",
     "APPRISE_SIMPLEPUSH_TEST_IV": "00112233445566778899AABBCCDDEEFF",
+    "APPRISE_BARK_TEST_IV": "paritybark12",
 }
 UPSTREAM_ASSET_BASE = (
     "https://github.com/caronc/apprise/raw/master/apprise/assets/themes/default/"

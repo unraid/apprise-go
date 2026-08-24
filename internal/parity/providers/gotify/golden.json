@@ -46,5 +46,21 @@
         "url": "https://example.com/message"
       }
     ]
+  },
+  {
+    "name": "rfc3986-path",
+    "requests": [
+      {
+        "body": "{\"priority\": 5, \"title\": \"apprise parity\", \"message\": \"hello from python\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise",
+          "x-gotify-key": "tokentoken1"
+        },
+        "method": "POST",
+        "url": "http://host/mnt@1/x!y/message"
+      }
+    ]
   }
 ]

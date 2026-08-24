@@ -1,0 +1,30 @@
+[
+  {
+    "name": "default-channel",
+    "url": "trigv://trgv_abcd1234_abcdefabcdefabcdefabcdefabcdefab",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "channels-urgency",
+    "url": "trigv://trgv_abcd1234_abcdefabcdefabcdefabcdefabcdefab/deploys/alerts?urgency=time_sensitive&url=https%3A%2F%2Fexample.com&event_type=deploy",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "success"
+  },
+  {
+    "name": "failure-default-urgency",
+    "url": "trigv://trgv_abcd1234_abcdefabcdefabcdefabcdefabcdefab/ops?image_url=https%3A%2F%2Fexample.com%2Fimg.png&priority=2",
+    "body": "hello from python",
+    "title": "",
+    "type": "failure"
+  },
+  {
+    "name": "custom-host",
+    "url": "trigvs://trgv_abcd1234_abcdefabcdefabcdefabcdefabcdefab@ingest.example.com:8443/ops",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "warning"
+  }
+]

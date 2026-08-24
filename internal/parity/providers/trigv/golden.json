@@ -1,0 +1,77 @@
+[
+  {
+    "name": "default-channel",
+    "requests": [
+      {
+        "body": "{\"channel\": \"general\", \"title\": \"apprise parity\", \"level\": \"info\", \"description\": \"hello from python\", \"delivery_urgency\": \"standard\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer trgv_abcd1234_abcdefabcdefabcdefabcdefabcdefab",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.trigv.com/api/v1/events"
+      }
+    ]
+  },
+  {
+    "name": "channels-urgency",
+    "requests": [
+      {
+        "body": "{\"channel\": \"alerts\", \"title\": \"apprise parity\", \"level\": \"success\", \"description\": \"hello from python\", \"url\": \"https://example.com\", \"event_type\": \"deploy\", \"delivery_urgency\": \"time_sensitive\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer trgv_abcd1234_abcdefabcdefabcdefabcdefabcdefab",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.trigv.com/api/v1/events"
+      },
+      {
+        "body": "{\"channel\": \"deploys\", \"title\": \"apprise parity\", \"level\": \"success\", \"description\": \"hello from python\", \"url\": \"https://example.com\", \"event_type\": \"deploy\", \"delivery_urgency\": \"time_sensitive\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer trgv_abcd1234_abcdefabcdefabcdefabcdefabcdefab",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.trigv.com/api/v1/events"
+      }
+    ]
+  },
+  {
+    "name": "failure-default-urgency",
+    "requests": [
+      {
+        "body": "{\"channel\": \"ops\", \"title\": \"Apprise Notifications\", \"level\": \"error\", \"description\": \"hello from python\", \"image_url\": \"https://example.com/img.png\", \"delivery_urgency\": \"time_sensitive\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer trgv_abcd1234_abcdefabcdefabcdefabcdefabcdefab",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.trigv.com/api/v1/events"
+      }
+    ]
+  },
+  {
+    "name": "custom-host",
+    "requests": [
+      {
+        "body": "{\"channel\": \"ops\", \"title\": \"apprise parity\", \"level\": \"warning\", \"description\": \"hello from python\", \"delivery_urgency\": \"standard\"}",
+        "headers": {
+          "accept": "application/json",
+          "authorization": "Bearer trgv_abcd1234_abcdefabcdefabcdefabcdefabcdefab",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://ingest.example.com:8443/api/v1/events"
+      }
+    ]
+  }
+]

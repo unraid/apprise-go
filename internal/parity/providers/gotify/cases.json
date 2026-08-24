@@ -19,5 +19,12 @@
     "body": "hello from python",
     "title": "apprise parity",
     "type": "info"
+  },
+  {
+    "name": "rfc3986-path",
+    "url": "gotify://host/mnt@1/x!y/tokentoken1",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]

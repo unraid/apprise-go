@@ -1,0 +1,7 @@
+{
+  "blocks": [
+    {"type": "header", "text": "{{app_title}}"},
+    {"type": "text", "text": "{{app_body}}"},
+    {"type": "footer", "text": "{{app_desc}} ({{app_type}})", "color": "{{app_color}}", "custom": "{{mytoken}}"}
+  ]
+}

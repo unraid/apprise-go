@@ -1,0 +1,7 @@
+{
+  "name": "trigv",
+  "schemas": [
+    "trigv",
+    "trigvs"
+  ]
+}

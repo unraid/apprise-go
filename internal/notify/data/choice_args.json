@@ -344,40 +344,6 @@
    ]
   }
  },
- "napi": {
-  "mode": {
-   "aliases": [],
-   "values": [
-    "message",
-    "template"
-   ]
-  },
-  "region": {
-   "aliases": [],
-   "values": [
-    "us",
-    "ca",
-    "eu"
-   ]
-  }
- },
- "notificationapi": {
-  "mode": {
-   "aliases": [],
-   "values": [
-    "message",
-    "template"
-   ]
-  },
-  "region": {
-   "aliases": [],
-   "values": [
-    "us",
-    "ca",
-    "eu"
-   ]
-  }
- },
  "notifyre": {
   "mode": {
    "aliases": [],
@@ -499,6 +465,23 @@
     "all",
     "ios",
     "android"
+   ]
+  }
+ },
+ "pingram": {
+  "mode": {
+   "aliases": [],
+   "values": [
+    "message",
+    "template"
+   ]
+  },
+  "region": {
+   "aliases": [],
+   "values": [
+    "us",
+    "ca",
+    "eu"
    ]
   }
  },
@@ -1000,6 +983,24 @@
     "private",
     "unlisted",
     "public"
+   ]
+  }
+ },
+ "trigv": {
+  "urgency": {
+   "aliases": [],
+   "values": [
+    "standard",
+    "time_sensitive"
+   ]
+  }
+ },
+ "trigvs": {
+  "urgency": {
+   "aliases": [],
+   "values": [
+    "standard",
+    "time_sensitive"
    ]
   }
  },

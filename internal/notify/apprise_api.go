@@ -95,6 +95,9 @@ func (a *AppriseTarget) buildRequest(body, title string, notifyType NotifyType, 
 		Scheme: scheme,
 		Host:   host,
 		Path:   endpoint,
+		// Upstream leaves RFC 3986 path characters literal; see
+		// pythonQuotePath.
+		RawPath: pythonQuotePath(endpoint),
 	}
 
 	headers := cloneMap(a.headers)

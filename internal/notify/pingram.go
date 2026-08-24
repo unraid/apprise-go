@@ -8,45 +8,48 @@ import (
 )
 
 const (
-	notificationAPIRegionUS = "us"
-	notificationAPIRegionCA = "ca"
-	notificationAPIRegionEU = "eu"
+	pingramRegionUS = "us"
+	pingramRegionCA = "ca"
+	pingramRegionEU = "eu"
 )
 
 const (
-	notificationAPIModeTemplate = "template"
-	notificationAPIModeMessage  = "message"
+	pingramModeTemplate = "template"
+	pingramModeMessage  = "message"
 )
 
-var notificationAPIRegionURLs = map[string]string{
-	notificationAPIRegionUS: "https://api.notificationapi.com",
-	notificationAPIRegionCA: "https://api.ca.notificationapi.com",
-	notificationAPIRegionEU: "https://api.eu.notificationapi.com",
+var pingramRegionURLs = map[string]string{
+	pingramRegionUS: "https://api.pingram.io",
+	pingramRegionCA: "https://api.ca.pingram.io",
+	pingramRegionEU: "https://api.eu.pingram.io",
 }
 
-var notificationAPIChannels = map[string]struct{}{
+var pingramChannels = map[string]struct{}{
 	"email":       {},
 	"sms":         {},
 	"inapp":       {},
 	"web_push":    {},
 	"mobile_push": {},
 	"slack":       {},
+	"call":        {},
 }
 
-type notificationAPITargetEntry struct {
+var pingramAPIKeyRe = regexp.MustCompile(`(?i)^pingram_(sk|pk)_[\w-]+$`)
+
+type pingramTargetEntry struct {
 	id     string
 	email  string
 	number string
 }
 
-type NotificationAPITarget struct {
-	clientID     string
-	clientSecret string
+type PingramTarget struct {
+	apiKey       string
 	messageType  string
 	mode         string
+	notifyFormat string
 	region       string
 	channels     []string
-	targets      []notificationAPITargetEntry
+	targets      []pingramTargetEntry
 	cc           map[string]struct{}
 	bcc          map[string]struct{}
 	fromAddr     string
@@ -54,29 +57,20 @@ type NotificationAPITarget struct {
 	tokens       map[string]string
 }
 
-func NewNotificationAPITarget(target *ParsedURL) (*NotificationAPITarget, error) {
+func NewPingramTarget(target *ParsedURL) (*PingramTarget, error) {
 	entries := []string{}
 	if strings.TrimSpace(target.Host) != "" {
 		entries = append(entries, target.Host)
 	}
 	entries = append(entries, splitPath(target.Path)...)
 
-	clientID := strings.TrimSpace(target.Query["id"])
-	if clientID == "" && len(entries) > 0 {
-		clientID = strings.TrimSpace(entries[0])
+	apiKey := strings.TrimSpace(target.Query["apikey"])
+	if apiKey == "" && len(entries) > 0 {
+		apiKey = strings.TrimSpace(entries[0])
 		entries = entries[1:]
 	}
-	if clientID == "" {
-		return nil, fmt.Errorf("missing client id")
-	}
-
-	clientSecret := strings.TrimSpace(target.Query["secret"])
-	if clientSecret == "" && len(entries) > 0 {
-		clientSecret = strings.TrimSpace(entries[0])
-		entries = entries[1:]
-	}
-	if clientSecret == "" {
-		return nil, fmt.Errorf("missing client secret")
+	if !pingramAPIKeyRe.MatchString(apiKey) {
+		return nil, fmt.Errorf("invalid api key: %s", apiKey)
 	}
 
 	fromAddr := strings.TrimSpace(target.Query["from"])
@@ -93,15 +87,15 @@ func NewNotificationAPITarget(target *ParsedURL) (*NotificationAPITarget, error)
 	}
 
 	mode := strings.ToLower(strings.TrimSpace(target.Query["mode"]))
-	if mode != "" && mode != notificationAPIModeTemplate && mode != notificationAPIModeMessage {
+	if mode != "" && mode != pingramModeTemplate && mode != pingramModeMessage {
 		return nil, fmt.Errorf("invalid mode: %s", mode)
 	}
 
 	if mode == "" {
 		if messageType == "" {
-			mode = notificationAPIModeMessage
+			mode = pingramModeMessage
 		} else {
-			mode = notificationAPIModeTemplate
+			mode = pingramModeTemplate
 		}
 	}
 
@@ -111,9 +105,9 @@ func NewNotificationAPITarget(target *ParsedURL) (*NotificationAPITarget, error)
 
 	region := strings.ToLower(strings.TrimSpace(target.Query["region"]))
 	if region == "" {
-		region = notificationAPIRegionUS
+		region = pingramRegionUS
 	}
-	if _, ok := notificationAPIRegionURLs[region]; !ok {
+	if _, ok := pingramRegionURLs[region]; !ok {
 		return nil, fmt.Errorf("invalid region: %s", region)
 	}
 
@@ -124,7 +118,7 @@ func NewNotificationAPITarget(target *ParsedURL) (*NotificationAPITarget, error)
 			if entry == "" {
 				continue
 			}
-			if _, ok := notificationAPIChannels[entry]; !ok {
+			if _, ok := pingramChannels[entry]; !ok {
 				return nil, fmt.Errorf("invalid channel: %s", entry)
 			}
 			channelSet[entry] = struct{}{}
@@ -135,10 +129,7 @@ func NewNotificationAPITarget(target *ParsedURL) (*NotificationAPITarget, error)
 		entries = append(entries, parseDelimitedList(toValue)...)
 	}
 
-	targets, err := parseNotificationAPITargets(entries, channelSet)
-	if err != nil {
-		return nil, err
-	}
+	targets := parsePingramTargets(entries, channelSet)
 
 	cc := map[string]struct{}{}
 	if ccValue := strings.TrimSpace(target.Query["cc"]); ccValue != "" {
@@ -178,9 +169,14 @@ func NewNotificationAPITarget(target *ParsedURL) (*NotificationAPITarget, error)
 		tokens[key] = value
 	}
 
-	return &NotificationAPITarget{
-		clientID:     clientID,
-		clientSecret: clientSecret,
+	notifyFormat := normalizeNotifyFormat(target.Query["format"])
+	if notifyFormat == "" {
+		notifyFormat = "text"
+	}
+
+	return &PingramTarget{
+		apiKey:       apiKey,
+		notifyFormat: notifyFormat,
 		messageType:  messageType,
 		mode:         mode,
 		region:       region,
@@ -194,25 +190,35 @@ func NewNotificationAPITarget(target *ParsedURL) (*NotificationAPITarget, error)
 	}, nil
 }
 
-func (n *NotificationAPITarget) Send(body, title string, notifyType NotifyType) error {
-	spec, err := n.BuildRequest(body, title, notifyType)
-	if err != nil {
-		return err
+func (n *PingramTarget) Send(body, title string, notifyType NotifyType) error {
+	if len(n.targets) == 0 {
+		return fmt.Errorf("missing targets")
 	}
-	return SendRequest(spec)
+	var outcome sendOutcome
+	for _, target := range n.targets {
+		spec, err := n.buildRequestFor(body, title, notifyType, target)
+		if err != nil {
+			return err
+		}
+		outcome.record(SendRequest(spec))
+	}
+	return outcome.err()
 }
 
-func (n *NotificationAPITarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
+func (n *PingramTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
 	if len(n.targets) == 0 {
 		return RequestSpec{}, fmt.Errorf("missing targets")
 	}
+	return n.buildRequestFor(body, title, notifyType, n.targets[0])
+}
 
-	baseURL, ok := notificationAPIRegionURLs[n.region]
+func (n *PingramTarget) buildRequestFor(body, title string, notifyType NotifyType, target pingramTargetEntry) (RequestSpec, error) {
+	baseURL, ok := pingramRegionURLs[n.region]
 	if !ok {
 		return RequestSpec{}, fmt.Errorf("invalid region: %s", n.region)
 	}
 
-	payload := n.buildPayload(body, title, notifyType, n.targets[0])
+	payload := n.buildPayload(body, title, notifyType, target)
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return RequestSpec{}, err
@@ -220,25 +226,22 @@ func (n *NotificationAPITarget) BuildRequest(body, title string, notifyType Noti
 
 	return RequestSpec{
 		Method: "POST",
-		URL:    fmt.Sprintf("%s/%s/sender", baseURL, n.clientID),
+		URL:    baseURL + "/send",
 		Headers: map[string]string{
-			"User-Agent":   "Apprise",
-			"Content-Type": "application/json",
-			"Authorization": basicAuthHeader(
-				n.clientID,
-				n.clientSecret,
-			),
+			"User-Agent":    "Apprise",
+			"Content-Type":  "application/json",
+			"Authorization": "Bearer " + n.apiKey,
 		},
 		Body: string(data),
 	}, nil
 }
 
-func (n *NotificationAPITarget) buildPayload(body, title string, notifyType NotifyType, target notificationAPITargetEntry) map[string]any {
+func (n *PingramTarget) buildPayload(body, title string, notifyType NotifyType, target pingramTargetEntry) map[string]any {
 	payload := map[string]any{
 		"type": n.messageType,
 	}
 
-	if n.mode == notificationAPIModeTemplate {
+	if n.mode == pingramModeTemplate {
 		parameters := map[string]any{}
 		for key, value := range n.tokens {
 			parameters[key] = value
@@ -248,21 +251,25 @@ func (n *NotificationAPITarget) buildPayload(body, title string, notifyType Noti
 		parameters["appTitle"] = title
 		parameters["appType"] = string(notifyType)
 		parameters["appId"] = "Apprise"
-		parameters["appDescription"] = "Apprise Notifications"
+		parameters["appDescription"] = appriseAppDesc
 		parameters["appColor"] = appriseColor(notifyType)
 		parameters["appImageUrl"] = appriseImageURL(notifyType, "72x72")
-		parameters["appUrl"] = "https://github.com/unraid/apprise-go"
+		parameters["appUrl"] = appriseAppURL
 		payload["parameters"] = parameters
 	} else {
+		// Acquire the text version of the body when it arrived as HTML.
 		textBody := body
+		if n.notifyFormat == "html" {
+			textBody = htmlToText(body)
+		}
 		for _, channel := range n.channels {
 			switch channel {
-			case "sms":
+			case "sms", "call":
 				message := textBody
 				if title != "" {
 					message = title + "\n" + textBody
 				}
-				payload["sms"] = map[string]any{
+				payload[channel] = map[string]any{
 					"message": message,
 				}
 			case "email":
@@ -270,9 +277,13 @@ func (n *NotificationAPITarget) buildPayload(body, title string, notifyType Noti
 				if subject == "" {
 					subject = "Apprise"
 				}
+				htmlBody := body
+				if n.notifyFormat != "html" {
+					htmlBody = textToHTML(body)
+				}
 				payload["email"] = map[string]any{
 					"subject": subject,
-					"html":    body,
+					"html":    htmlBody,
 				}
 				if n.fromAddr != "" {
 					payload["email"].(map[string]any)["senderEmail"] = n.fromAddr
@@ -331,8 +342,9 @@ func (n *NotificationAPITarget) buildPayload(body, title string, notifyType Noti
 		}
 	}
 
-	to := map[string]any{
-		"id": target.id,
+	to := map[string]any{}
+	if target.id != "" {
+		to["id"] = target.id
 	}
 	if target.email != "" {
 		to["email"] = target.email
@@ -360,9 +372,12 @@ func (n *NotificationAPITarget) buildPayload(body, title string, notifyType Noti
 	return payload
 }
 
-func parseNotificationAPITargets(entries []string, channels map[string]struct{}) ([]notificationAPITargetEntry, error) {
-	targets := []notificationAPITargetEntry{}
-	current := notificationAPITargetEntry{}
+// parsePingramTargets mirrors upstream: a recipient id is always optional, so
+// a bare email or phone number is enough to identify a target on its own.
+// Invalid entries are dropped rather than failing the URL.
+func parsePingramTargets(entries []string, channels map[string]struct{}) []pingramTargetEntry {
+	targets := []pingramTargetEntry{}
+	current := pingramTargetEntry{}
 
 	for _, raw := range entries {
 		trimmed := strings.TrimSpace(raw)
@@ -378,15 +393,9 @@ func parseNotificationAPITargets(entries []string, channels map[string]struct{})
 				}
 				continue
 			}
-			if current.id != "" {
-				targets = append(targets, current)
-				current = notificationAPITargetEntry{email: trimmed}
-				if len(channels) == 0 {
-					channels["email"] = struct{}{}
-				}
-				continue
-			}
-			return nil, fmt.Errorf("too many emails for target")
+			targets = append(targets, current)
+			current = pingramTargetEntry{email: trimmed}
+			continue
 		}
 
 		if number, ok := normalizePhoneWithPlus(trimmed); ok {
@@ -397,36 +406,28 @@ func parseNotificationAPITargets(entries []string, channels map[string]struct{})
 				}
 				continue
 			}
-			if current.id != "" {
-				targets = append(targets, current)
-				current = notificationAPITargetEntry{number: number}
-				if len(channels) == 0 {
-					channels["sms"] = struct{}{}
-				}
-				continue
-			}
-			return nil, fmt.Errorf("too many phone numbers for target")
+			targets = append(targets, current)
+			current = pingramTargetEntry{number: number}
+			continue
 		}
 
-		if match := notificationAPIIDRe.FindStringSubmatch(trimmed); match != nil {
+		if match := pingramIDRe.FindStringSubmatch(trimmed); match != nil {
 			id := match[1]
 			if current.id == "" {
 				current.id = id
 				continue
 			}
 			targets = append(targets, current)
-			current = notificationAPITargetEntry{id: id}
+			current = pingramTargetEntry{id: id}
 			continue
 		}
 	}
 
-	if current.id != "" {
+	if current != (pingramTargetEntry{}) {
 		targets = append(targets, current)
-	} else if current.email != "" || current.number != "" {
-		return nil, fmt.Errorf("missing id for target")
 	}
 
-	return targets, nil
+	return targets
 }
 
 func setToList(values map[string]struct{}) []string {
@@ -453,7 +454,7 @@ func subtractSet(input map[string]struct{}, remove map[string]struct{}, item str
 	return out
 }
 
-var notificationAPIIDRe = regexp.MustCompile(`^\s*(?:@|%40)?([\w_-]+)\s*$`)
+var pingramIDRe = regexp.MustCompile(`^\s*(?:@|%40)?([\w_-]+)\s*$`)
 
 func init() {
 	RegisterSchemaEntryOrdered(32, SchemaEntry{
@@ -461,6 +462,9 @@ func init() {
 		"category":           "native",
 		"details": map[string]any{
 			"args": map[string]any{
+				"apikey": map[string]any{
+					"alias_of": "apikey",
+				},
 				"bcc": map[string]any{
 					"delim":    []string{",", " "},
 					"group":    []any{},
@@ -487,7 +491,7 @@ func init() {
 					"private":  false,
 					"required": false,
 					"type":     "list:string",
-					"values":   []string{"email", "inapp", "mobile_push", "slack", "sms", "web_push"},
+					"values":   []string{"call", "email", "inapp", "mobile_push", "slack", "sms", "web_push"},
 				},
 				"cto": map[string]any{
 					"default":  4.0,
@@ -521,9 +525,6 @@ func init() {
 					"required": false,
 					"type":     "string",
 				},
-				"id": map[string]any{
-					"alias_of": "client_id",
-				},
 				"mode": map[string]any{
 					"map_to":   "mode",
 					"name":     "Mode",
@@ -531,6 +532,14 @@ func init() {
 					"required": false,
 					"type":     "choice:string",
 					"values":   []string{"message", "template"},
+				},
+				"optional": map[string]any{
+					"default":  false,
+					"map_to":   "optional",
+					"name":     "Optional Service",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
 				},
 				"overflow": map[string]any{
 					"default":  "upstream",
@@ -540,6 +549,14 @@ func init() {
 					"required": false,
 					"type":     "choice:string",
 					"values":   []string{"split", "truncate", "upstream"},
+				},
+				"redirect": map[string]any{
+					"default":  true,
+					"map_to":   "redirect",
+					"name":     "Follow Redirects",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
 				},
 				"region": map[string]any{
 					"default":  "us",
@@ -557,6 +574,16 @@ func init() {
 					"required": false,
 					"type":     "string",
 				},
+				"retry": map[string]any{
+					"default":  0,
+					"map_to":   "retry",
+					"max":      10,
+					"min":      0,
+					"name":     "Service Retry",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
 				"rto": map[string]any{
 					"default":  4.0,
 					"map_to":   "rto",
@@ -564,9 +591,6 @@ func init() {
 					"private":  false,
 					"required": false,
 					"type":     "float",
-				},
-				"secret": map[string]any{
-					"alias_of": "client_secret",
 				},
 				"store": map[string]any{
 					"default":  true,
@@ -599,6 +623,16 @@ func init() {
 					"required": false,
 					"type":     "bool",
 				},
+				"wait": map[string]any{
+					"default":  0.0,
+					"map_to":   "wait",
+					"max":      20.0,
+					"min":      0.0,
+					"name":     "Inter-Retry Wait",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
 			},
 			"kwargs": map[string]any{
 				"tokens": map[string]any{
@@ -610,29 +644,24 @@ func init() {
 					"type":     "string",
 				},
 			},
-			"templates": []string{"{schema}://{client_id}/{client_secret}/{targets}", "{schema}://{type}@{client_id}/{client_secret}/{targets}"},
+			"templates": []string{"{schema}://{apikey}/{targets}", "{schema}://{type}@{apikey}/{targets}"},
 			"tokens": map[string]any{
-				"client_id": map[string]any{
-					"map_to":   "client_id",
-					"name":     "Client ID",
-					"private":  false,
-					"required": true,
-					"type":     "string",
-				},
-				"client_secret": map[string]any{
-					"map_to":   "client_secret",
-					"name":     "Client Secret",
+				"apikey": map[string]any{
+					"map_to":   "apikey",
+					"name":     "API Key",
 					"private":  true,
+					"regex":    []string{"^pingram_(sk|pk)_[\\w-]+$", "i"},
 					"required": true,
 					"type":     "string",
 				},
 				"schema": map[string]any{
+					"default":  "pingram",
 					"map_to":   "schema",
 					"name":     "Schema",
 					"private":  false,
 					"required": true,
 					"type":     "choice:string",
-					"values":   []string{"napi", "notificationapi"},
+					"values":   []string{"pingram"},
 				},
 				"target_email": map[string]any{
 					"map_to":   "targets",
@@ -644,6 +673,7 @@ func init() {
 				"target_id": map[string]any{
 					"map_to":   "targets",
 					"name":     "Target ID",
+					"prefix":   "@",
 					"private":  false,
 					"required": false,
 					"type":     "string",
@@ -661,7 +691,7 @@ func init() {
 					"map_to":   "targets",
 					"name":     "Targets",
 					"private":  false,
-					"required": true,
+					"required": false,
 					"type":     "list:string",
 				},
 				"type": map[string]any{
@@ -669,7 +699,7 @@ func init() {
 					"name":     "Message Type",
 					"private":  false,
 					"regex":    []string{"^[A-Z0-9_-]+$", "i"},
-					"required": true,
+					"required": false,
 					"type":     "string",
 				},
 			},
@@ -681,9 +711,9 @@ func init() {
 			"packages_recommended": []any{},
 			"packages_required":    []any{},
 		},
-		"secure_protocols": []string{"napi", "notificationapi"},
-		"service_name":     "NotificationAPI",
-		"service_url":      "https://www.notificationapi.com/",
-		"setup_url":        "https://appriseit.com/services/notificationapi/",
+		"secure_protocols": []string{"pingram"},
+		"service_name":     "Pingram",
+		"service_url":      "https://www.pingram.io/",
+		"setup_url":        "https://appriseit.com/services/pingram/",
 	})
 }

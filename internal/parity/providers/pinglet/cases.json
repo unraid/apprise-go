@@ -1,0 +1,23 @@
+[
+  {
+    "name": "default",
+    "url": "pinglets://apikey123@app.pinglet.co.uk/acme/deploys",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "priority-badges",
+    "url": "pinglets://apikey123@app.pinglet.co.uk/acme/deploys?priority=urgent&:CPU=95%25&+region=eu-west",
+    "body": "hello from python",
+    "title": "",
+    "type": "failure"
+  },
+  {
+    "name": "insecure-port-path",
+    "url": "pinglet://apikey123@my.host:8080/mount/acme/deploys?priority=s",
+    "body": "body",
+    "title": "apprise parity",
+    "type": "success"
+  }
+]

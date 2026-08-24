@@ -1,0 +1,30 @@
+[
+  {
+    "name": "template",
+    "url": "pingram://pingram_sk_abc123/@john?mode=template",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "message-email",
+    "url": "pingram://pingram_sk_abc123/john@example.com",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "message-sms-region",
+    "url": "pingram://pingram_pk_abc123/+15551234567?region=eu",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "warning"
+  },
+  {
+    "name": "message-channels",
+    "url": "pingram://pingram_sk_abc123/@john?channels=slack,inapp",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "success"
+  }
+]

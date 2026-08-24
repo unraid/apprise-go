@@ -269,7 +269,7 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 	} else if req.URL.Host == "wxpusher.zjiecode.com" && req.URL.Path == "/api/send/message" {
 		responseBody = `{"code":1000,"msg":"ok"}`
 		contentType = "application/json"
-	} else if strings.HasSuffix(req.URL.Host, "notificationapi.com") {
+	} else if strings.HasSuffix(req.URL.Host, "pingram.io") {
 		responseBody = `{"ok":true}`
 		contentType = "application/json"
 	} else if req.URL.Host == "api.sendpulse.com" && strings.HasSuffix(req.URL.Path, "/smtp/emails") {

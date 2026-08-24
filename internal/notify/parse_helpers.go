@@ -1,6 +1,7 @@
 package notify
 
 import (
+	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -116,4 +117,24 @@ func normalizeNotifyFormat(raw string) string {
 	default:
 		return format
 	}
+}
+
+// pythonQuotePath percent-encodes a URL path the way upstream's
+// quote(..., safe=URL_PATH_SAFE_CHARS) does: RFC 3986 pchar sub-delims stay
+// literal, minus comma and semicolon, which Apprise reserves as its own list
+// delimiters. Go's net/url escaping keeps a different set (it leaves , and ;
+// alone and escapes ! ' ( ) *), so the request path has to be built here.
+func pythonQuotePath(path string) string {
+	const safe = "/:@!$&'()*+="
+	var out strings.Builder
+	for i := 0; i < len(path); i++ {
+		c := path[i]
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') ||
+			c == '-' || c == '_' || c == '.' || c == '~' || strings.IndexByte(safe, c) >= 0 {
+			out.WriteByte(c)
+			continue
+		}
+		out.WriteString(fmt.Sprintf("%%%02X", c))
+	}
+	return out.String()
 }

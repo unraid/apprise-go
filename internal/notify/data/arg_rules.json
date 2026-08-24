@@ -135,13 +135,6 @@
    "pattern": "^[0-9\\s)(+-]+$"
   }
  },
- "napi": {
-  "type": {
-   "ignorecase": true,
-   "kind": "regex",
-   "pattern": "^[A-Z0-9_-]+$"
-  }
- },
  "nexmo": {
   "from": {
    "ignorecase": true,
@@ -157,13 +150,6 @@
    "ignorecase": true,
    "kind": "regex",
    "pattern": "^[a-z0-9]+$"
-  }
- },
- "notificationapi": {
-  "type": {
-   "ignorecase": true,
-   "kind": "regex",
-   "pattern": "^[A-Z0-9_-]+$"
   }
  },
  "notifico": {
@@ -195,6 +181,18 @@
    "ignorecase": true,
    "kind": "regex",
    "pattern": "^[a-z0-9-]+$"
+  }
+ },
+ "pingram": {
+  "apikey": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^pingram_(sk|pk)_[\\w-]+$"
+  },
+  "type": {
+   "ignorecase": true,
+   "kind": "regex",
+   "pattern": "^[A-Z0-9_-]+$"
   }
  },
  "plivo": {
@@ -440,6 +438,11 @@
    "kind": "regex",
    "pattern": "^[A-Z0-9_-]+$"
   },
+  "route": {
+   "ignorecase": false,
+   "kind": "regex",
+   "pattern": "^[0-9]+$"
+  },
   "sig": {
    "ignorecase": true,
    "kind": "regex",
@@ -451,6 +454,11 @@
    "ignorecase": true,
    "kind": "regex",
    "pattern": "^[A-Z0-9_-]+$"
+  },
+  "route": {
+   "ignorecase": false,
+   "kind": "regex",
+   "pattern": "^[0-9]+$"
   },
   "sig": {
    "ignorecase": true,

@@ -284,8 +284,6 @@ func TargetSchemaName(schema string) string {
 		return "xbmc"
 	case "hassios":
 		return "hassio"
-	case "napi":
-		return "notificationapi"
 	case "parseps":
 		return "parsep"
 	case "synologys":
@@ -525,9 +523,6 @@ var targetBuilders = map[string]buildTargetFunc{
 	"msgbird": func(parsed *ParsedURL) (Sender, error) {
 		return NewMessageBirdTarget(parsed)
 	},
-	"napi": func(parsed *ParsedURL) (Sender, error) {
-		return NewNotificationAPITarget(parsed)
-	},
 	"ncloud": func(parsed *ParsedURL) (Sender, error) {
 		return NewNextcloudTarget(parsed)
 	},
@@ -551,9 +546,6 @@ var targetBuilders = map[string]buildTargetFunc{
 	},
 	"notifiarr": func(parsed *ParsedURL) (Sender, error) {
 		return NewNotifiarrTarget(parsed)
-	},
-	"notificationapi": func(parsed *ParsedURL) (Sender, error) {
-		return NewNotificationAPITarget(parsed)
 	},
 	"notificos": func(parsed *ParsedURL) (Sender, error) {
 		return NewNotificoTarget(parsed)
@@ -626,6 +618,15 @@ var targetBuilders = map[string]buildTargetFunc{
 	},
 	"pbul": func(parsed *ParsedURL) (Sender, error) {
 		return NewPushbulletTarget(parsed)
+	},
+	"pinglet": func(parsed *ParsedURL) (Sender, error) {
+		return NewPingletTarget(parsed)
+	},
+	"pinglets": func(parsed *ParsedURL) (Sender, error) {
+		return NewPingletTarget(parsed)
+	},
+	"pingram": func(parsed *ParsedURL) (Sender, error) {
+		return NewPingramTarget(parsed)
 	},
 	"pjet": func(parsed *ParsedURL) (Sender, error) {
 		return NewPushjetTarget(parsed)
@@ -858,6 +859,12 @@ var targetBuilders = map[string]buildTargetFunc{
 	},
 	"toots": func(parsed *ParsedURL) (Sender, error) {
 		return NewMastodonTarget(parsed)
+	},
+	"trigv": func(parsed *ParsedURL) (Sender, error) {
+		return NewTrigvTarget(parsed)
+	},
+	"trigvs": func(parsed *ParsedURL) (Sender, error) {
+		return NewTrigvTarget(parsed)
 	},
 	"tweet": func(parsed *ParsedURL) (Sender, error) {
 		return NewTwitterTarget(parsed)

@@ -39,5 +39,12 @@
     "title": "over",
     "type": "info",
     "body_format": "html"
+  },
+  {
+    "name": "rich-template",
+    "url": "tgram://123456789:abcdefg_hijklmnop/12345678?template=%7Brepo%7D%2Finternal%2Fparity%2Ffixtures%2Ftelegram_rich_template.json&:mytoken=hello",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]
