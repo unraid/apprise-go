@@ -134,7 +134,7 @@ func pythonQuotePath(path string) string {
 			out.WriteByte(c)
 			continue
 		}
-		out.WriteString(fmt.Sprintf("%%%02X", c))
+		fmt.Fprintf(&out, "%%%02X", c)
 	}
 	return out.String()
 }

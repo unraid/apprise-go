@@ -28,7 +28,7 @@ func renderNotifyTemplate(
 }
 
 // renderNotifyTemplateWithImageURL is the variant for plugins whose
-// app_image_url token honours ?image=; an empty imageURL renders the token
+// app_image_url token honors ?image=; an empty imageURL renders the token
 // as an empty string, the way upstream stringifies its None.
 func renderNotifyTemplateWithImageURL(
 	path string,
