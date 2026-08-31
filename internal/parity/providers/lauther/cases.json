@@ -1,0 +1,32 @@
+[
+  {
+    "name": "default",
+    "url": "lauther://lpt_abc123",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "priority-and-options",
+    "url": "lauther://lpt_abc123?priority=emergency&sound=default&click=https%3A%2F%2Fexample.com%2Fincident&icon=https%3A%2F%2Fexample.com%2Ficon.png&color=%23D9EF00&group=orders&route=%2Forders%2F123",
+    "body": "hello from python",
+    "title": "urgent",
+    "type": "failure"
+  },
+  {
+    "name": "query-token",
+    "url": "lauther://?token=lpt_query456&priority=lowest",
+    "body": "query token",
+    "title": "query form",
+    "type": "success"
+  },
+  {
+    "name": "attachment-ignored",
+    "url": "lauther://lpt_attach123",
+    "body": "body with attachment",
+    "title": "attachment",
+    "type": "info",
+    "attachments": ["{repo}/internal/parity/fixtures/pixel.png"],
+    "attachment_dropped": true
+  }
+]

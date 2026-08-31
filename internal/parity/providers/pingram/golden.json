@@ -62,5 +62,21 @@
         "url": "https://api.pingram.io/send"
       }
     ]
+  },
+  {
+    "name": "jwt-api-key",
+    "requests": [
+      {
+        "body": "{\"sms\": {\"message\": \"jwt parity\\njwt key\"}, \"to\": {\"number\": \"+15551235553\"}, \"type\": \"apprise\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer pingram_sk_aaaa.bbbb.cccc",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.pingram.io/send"
+      }
+    ]
   }
 ]

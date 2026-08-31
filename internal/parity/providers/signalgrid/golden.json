@@ -1,0 +1,107 @@
+[
+  {
+    "name": "single-channel",
+    "requests": [
+      {
+        "body": "client_key=CLIENTKEY&channel=CHANNEL1&title=apprise+parity&body=hello+from+python&type=INFO&critical=false",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.signalgrid.co/v1/push"
+      }
+    ]
+  },
+  {
+    "name": "multi-channel-critical",
+    "requests": [
+      {
+        "body": "client_key=CLIENTKEY&channel=CHANNEL1&title=urgent&body=server+down&type=CRIT&critical=true",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.signalgrid.co/v1/push"
+      },
+      {
+        "body": "client_key=CLIENTKEY&channel=CHANNEL2&title=urgent&body=server+down&type=CRIT&critical=true",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.signalgrid.co/v1/push"
+      }
+    ]
+  },
+  {
+    "name": "query-channels",
+    "requests": [
+      {
+        "body": "client_key=CLIENTKEY&channel=CHANNEL1&title=warning&body=query+targets&type=WARN&critical=true",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.signalgrid.co/v1/push"
+      },
+      {
+        "body": "client_key=CLIENTKEY&channel=CHANNEL2&title=warning&body=query+targets&type=WARN&critical=true",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.signalgrid.co/v1/push"
+      },
+      {
+        "body": "client_key=CLIENTKEY&channel=CHANNEL3&title=warning&body=query+targets&type=WARN&critical=true",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.signalgrid.co/v1/push"
+      }
+    ]
+  },
+  {
+    "name": "query-client-key",
+    "requests": [
+      {
+        "body": "client_key=OVERRIDE&channel=CHANNEL1&title=override&body=query+key&type=SUCCESS&critical=false",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.signalgrid.co/v1/push"
+      }
+    ]
+  },
+  {
+    "name": "attachment-ignored",
+    "requests": [
+      {
+        "body": "client_key=CLIENTKEY&channel=CHANNEL1&title=attachment&body=body+with+attachment&type=INFO&critical=false",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.signalgrid.co/v1/push"
+      }
+    ]
+  }
+]

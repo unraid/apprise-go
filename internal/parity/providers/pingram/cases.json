@@ -26,5 +26,12 @@
     "body": "hello from python",
     "title": "apprise parity",
     "type": "success"
+  },
+  {
+    "name": "jwt-api-key",
+    "url": "pingram://pingram_sk_aaaa.bbbb.cccc/+15551235553",
+    "body": "jwt key",
+    "title": "jwt parity",
+    "type": "info"
   }
 ]
