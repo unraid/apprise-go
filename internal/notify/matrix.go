@@ -1243,7 +1243,7 @@ func init() {
 				"version": map[string]any{
 					"default":  "3",
 					"map_to":   "version",
-					"name":     "Matrix API Verion",
+					"name":     "Matrix API Version",
 					"private":  false,
 					"required": false,
 					"type":     "choice:string",
