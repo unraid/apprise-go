@@ -3,7 +3,7 @@
     "name": "template",
     "requests": [
       {
-        "body": "{\"type\": \"apprise\", \"parameters\": {\"appBody\": \"hello from python\", \"appTitle\": \"apprise parity\", \"appType\": \"info\", \"appId\": \"Apprise\", \"appDescription\": \"Apprise Notifications\", \"appColor\": \"#3AA3E3\", \"appImageUrl\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-72x72.png\", \"appUrl\": \"https://github.com/unraid/apprise-go\"}, \"to\": {\"id\": \"john\"}}",
+        "body": "{\"parameters\": {\"appBody\": \"hello from python\", \"appColor\": \"#3AA3E3\", \"appDescription\": \"Apprise Notifications\", \"appId\": \"Apprise\", \"appImageUrl\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-72x72.png\", \"appTitle\": \"apprise parity\", \"appType\": \"info\", \"appUrl\": \"https://github.com/unraid/apprise-go\"}, \"to\": {\"id\": \"john\"}, \"type\": \"apprise\"}",
         "headers": {
           "accept": "*/*",
           "authorization": "Bearer pingram_sk_abc123",
@@ -19,7 +19,7 @@
     "name": "message-email",
     "requests": [
       {
-        "body": "{\"type\": \"apprise\", \"email\": {\"subject\": \"apprise parity\", \"html\": \"hello&nbsp;from&nbsp;python\"}, \"to\": {\"email\": \"john@example.com\"}}",
+        "body": "{\"email\": {\"html\": \"hello&nbsp;from&nbsp;python\", \"subject\": \"apprise parity\"}, \"to\": {\"email\": \"john@example.com\"}, \"type\": \"apprise\"}",
         "headers": {
           "accept": "*/*",
           "authorization": "Bearer pingram_sk_abc123",
@@ -35,7 +35,7 @@
     "name": "message-sms-region",
     "requests": [
       {
-        "body": "{\"type\": \"apprise\", \"sms\": {\"message\": \"apprise parity\\nhello from python\"}, \"to\": {\"number\": \"+15551234567\"}}",
+        "body": "{\"sms\": {\"message\": \"apprise parity\\nhello from python\"}, \"to\": {\"number\": \"+15551234567\"}, \"type\": \"apprise\"}",
         "headers": {
           "accept": "*/*",
           "authorization": "Bearer pingram_pk_abc123",
@@ -51,7 +51,7 @@
     "name": "message-channels",
     "requests": [
       {
-        "body": "{\"type\": \"apprise\", \"slack\": {\"text\": \"apprise parity\\nhello from python\"}, \"inapp\": {\"title\": \"apprise parity\", \"image\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-success-72x72.png\"}, \"to\": {\"id\": \"john\"}}",
+        "body": "{\"inapp\": {\"image\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-success-72x72.png\", \"title\": \"apprise parity\"}, \"slack\": {\"text\": \"apprise parity\\nhello from python\"}, \"to\": {\"id\": \"john\"}, \"type\": \"apprise\"}",
         "headers": {
           "accept": "*/*",
           "authorization": "Bearer pingram_sk_abc123",

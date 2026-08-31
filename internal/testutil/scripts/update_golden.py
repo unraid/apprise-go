@@ -93,6 +93,33 @@ def normalize_multipart(specs):
     return specs
 
 
+def normalize_json_bodies(specs):
+    """Canonicalize JSON object keys without changing arrays or values."""
+    for spec in specs:
+        headers = spec.get("headers") or {}
+        content_type = next(
+            (
+                value
+                for key, value in headers.items()
+                if key.lower() == "content-type"
+            ),
+            "",
+        )
+        if content_type.split(";", 1)[0].strip().lower() != "application/json":
+            continue
+
+        body = spec.get("body")
+        if not isinstance(body, str) or not body.strip():
+            continue
+        try:
+            parsed = json.loads(body)
+        except (TypeError, json.JSONDecodeError):
+            continue
+        spec["body"] = json.dumps(parsed, sort_keys=True)
+
+    return specs
+
+
 def apply_default_env():
     for key, value in DEFAULT_ENV.items():
         os.environ.setdefault(key, value)
@@ -171,12 +198,16 @@ def main():
         # is pinned by a vector test instead.
         manifest_path = provider_dir / "manifest.json"
         volatile_headers = set()
+        canonicalize_json_bodies = False
         if manifest_path.exists():
             manifest = json.loads(manifest_path.read_text())
             volatile_headers = {
                 str(h).strip().lower()
                 for h in (manifest.get("volatile_headers") or [])
             }
+            canonicalize_json_bodies = bool(
+                manifest.get("canonicalize_json_bodies")
+            )
 
         golden_cases = []
         for case in cases:
@@ -202,6 +233,8 @@ def main():
                 case_attach or None,
             )
             specs = normalize_multipart(rewrite_values(payload.get("requests", [])))
+            if canonicalize_json_bodies:
+                specs = normalize_json_bodies(specs)
             if volatile_headers:
                 for spec in specs:
                     headers = spec.get("headers") or {}
