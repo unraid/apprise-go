@@ -1,0 +1,66 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "{\"message\": \"hello from python\", \"priority\": 0, \"title\": \"apprise parity\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer lpt_abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.lauther.id/v1/push"
+      }
+    ]
+  },
+  {
+    "name": "priority-and-options",
+    "requests": [
+      {
+        "body": "{\"color\": \"#D9EF00\", \"icon\": \"https://example.com/icon.png\", \"message\": \"hello from python\", \"path\": \"/orders/123\", \"priority\": 2, \"sound\": \"default\", \"tag\": \"orders\", \"title\": \"urgent\", \"url\": \"https://example.com/incident\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer lpt_abc123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.lauther.id/v1/push"
+      }
+    ]
+  },
+  {
+    "name": "query-token",
+    "requests": [
+      {
+        "body": "{\"message\": \"query token\", \"priority\": -2, \"title\": \"query form\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer lpt_query456",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.lauther.id/v1/push"
+      }
+    ]
+  },
+  {
+    "name": "attachment-ignored",
+    "requests": [
+      {
+        "body": "{\"message\": \"body with attachment\", \"priority\": 0, \"title\": \"attachment\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer lpt_attach123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.lauther.id/v1/push"
+      }
+    ]
+  }
+]

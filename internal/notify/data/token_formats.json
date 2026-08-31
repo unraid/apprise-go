@@ -151,6 +151,16 @@
    "token": "token"
   }
  },
+	"lauther": {
+	 "host": {
+	  "ignorecase": true,
+	  "override_args": [
+	   "token"
+	  ],
+	  "pattern": "^lpt_[a-z0-9]+$",
+	  "token": "token"
+	 }
+	},
  "mailersend": {
   "user": {
    "ignorecase": true,
@@ -209,7 +219,7 @@
    "override_args": [
     "apikey"
    ],
-   "pattern": "^pingram_(sk|pk)_[\\w-]+$",
+   "pattern": "^pingram_(sk|pk)_[\\w.-]+$",
    "token": "apikey"
   },
   "user": {

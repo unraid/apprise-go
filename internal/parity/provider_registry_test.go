@@ -30,6 +30,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"lark": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewLarkTarget(parsed)
 	},
+	"lauther": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewLautherTarget(parsed)
+	},
 	"webex": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewWebexTeamsTarget(parsed)
 	},
@@ -131,6 +134,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	},
 	"signal": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewSignalTarget(parsed)
+	},
+	"signalgrid": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewSignalgridTarget(parsed)
 	},
 	"whatsapp": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewWhatsAppTarget(parsed)

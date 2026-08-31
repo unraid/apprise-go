@@ -34,7 +34,7 @@ var pingramChannels = map[string]struct{}{
 	"call":        {},
 }
 
-var pingramAPIKeyRe = regexp.MustCompile(`(?i)^pingram_(sk|pk)_[\w-]+$`)
+var pingramAPIKeyRe = regexp.MustCompile(`(?i)^pingram_(sk|pk)_[\w.-]+$`)
 
 type pingramTargetEntry struct {
 	id     string
@@ -650,7 +650,7 @@ func init() {
 					"map_to":   "apikey",
 					"name":     "API Key",
 					"private":  true,
-					"regex":    []string{"^pingram_(sk|pk)_[\\w-]+$", "i"},
+					"regex":    []string{"^pingram_(sk|pk)_[\\w.-]+$", "i"},
 					"required": true,
 					"type":     "string",
 				},

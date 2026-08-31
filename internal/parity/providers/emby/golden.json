@@ -8,7 +8,7 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.13.0\""
+          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.13.1\""
         },
         "method": "POST",
         "url": "http://emby.local:8096/Users/AuthenticateByName"
@@ -19,7 +19,7 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.13.0\", UserId=\"user\"",
+          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.13.1\", UserId=\"user\"",
           "x-mediabrowser-token": "token"
         },
         "method": "GET",
@@ -31,7 +31,7 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.13.0\", UserId=\"user\"",
+          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.13.1\", UserId=\"user\"",
           "x-mediabrowser-token": "token"
         },
         "method": "POST",
@@ -48,7 +48,7 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.13.0\""
+          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.13.1\""
         },
         "method": "POST",
         "url": "https://emby.local:8096/Users/AuthenticateByName"
@@ -59,7 +59,7 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.13.0\", UserId=\"user\"",
+          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.13.1\", UserId=\"user\"",
           "x-mediabrowser-token": "token"
         },
         "method": "GET",
@@ -71,7 +71,7 @@
           "accept": "*/*",
           "content-type": "application/json",
           "user-agent": "Apprise",
-          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.13.0\", UserId=\"user\"",
+          "x-emby-authorization": "MediaBrowser Client=\"Apprise\", Device=\"Apprise\", DeviceId=\"48df9504-6843-49be-9f2d-a685e25a0bc8\", Version=\"1.13.1\", UserId=\"user\"",
           "x-mediabrowser-token": "token"
         },
         "method": "POST",

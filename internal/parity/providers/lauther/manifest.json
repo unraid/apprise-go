@@ -1,0 +1,5 @@
+{
+  "name": "lauther",
+  "canonicalize_json_bodies": true,
+  "schemas": ["lauther"]
+}

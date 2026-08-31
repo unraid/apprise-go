@@ -1,0 +1,39 @@
+[
+  {
+    "name": "single-channel",
+    "url": "signalgrid://CLIENTKEY/CHANNEL1",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "multi-channel-critical",
+    "url": "signalgrid://CLIENTKEY/CHANNEL1/CHANNEL2?critical=yes",
+    "body": "server down",
+    "title": "urgent",
+    "type": "failure"
+  },
+  {
+    "name": "query-channels",
+    "url": "signalgrid://CLIENTKEY/CHANNEL1?to=CHANNEL2%2CCHANNEL3&critical=on",
+    "body": "query targets",
+    "title": "warning",
+    "type": "warning"
+  },
+  {
+    "name": "query-client-key",
+    "url": "signalgrid://ignored/CHANNEL1?client_key=OVERRIDE",
+    "body": "query key",
+    "title": "override",
+    "type": "success"
+  },
+  {
+    "name": "attachment-ignored",
+    "url": "signalgrid://CLIENTKEY/CHANNEL1",
+    "body": "body with attachment",
+    "title": "attachment",
+    "type": "info",
+    "attachments": ["{repo}/internal/parity/fixtures/pixel.png"],
+    "attachment_dropped": true
+  }
+]
