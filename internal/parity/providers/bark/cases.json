@@ -12,5 +12,12 @@
     "body": "body",
     "title": "",
     "type": "warning"
+  },
+  {
+    "name": "encrypted",
+    "url": "barks://example.com/device1?key=0123456789abcdef&sound=bell&level=active&image=no",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]

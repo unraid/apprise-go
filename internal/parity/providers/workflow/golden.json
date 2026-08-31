@@ -43,5 +43,20 @@
         "url": "https://example.com/workflows/WORKFLOWID/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=SIGNATURE"
       }
     ]
+  },
+  {
+    "name": "pa-cu-route",
+    "requests": [
+      {
+        "body": "{\"type\": \"message\", \"attachments\": [{\"contentType\": \"application/vnd.microsoft.card.adaptive\", \"contentUrl\": null, \"content\": {\"$schema\": \"http://adaptivecards.io/schemas/adaptive-card.json\", \"type\": \"AdaptiveCard\", \"version\": \"1.4\", \"body\": [{\"type\": \"Image\", \"url\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-info-32x32.png\", \"height\": \"32px\", \"altText\": \"info\"}, {\"type\": \"TextBlock\", \"text\": \"apprise parity\", \"style\": \"heading\", \"weight\": \"Bolder\", \"size\": \"Large\", \"id\": \"title\"}, {\"type\": \"TextBlock\", \"text\": \"hello from python\", \"style\": \"default\", \"wrap\": true, \"id\": \"body\"}], \"msteams\": {\"width\": \"full\"}}}]}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://prod-01.westus.logic.azure.com/powerautomate/automations/direct/cu/19/workflows/AbCdEf012345/triggers/manual/paths/invoke?api-version=2022-03-01-preview&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=aBcDeF67890sig"
+      }
+    ]
   }
 ]

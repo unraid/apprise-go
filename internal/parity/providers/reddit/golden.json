@@ -8,7 +8,7 @@
           "accept": "*/*",
           "authorization": "Basic YXBwaWQ6YXBwc2VjcmV0",
           "content-type": "application/x-www-form-urlencoded",
-          "user-agent": "Apprise v1.12.0"
+          "user-agent": "Apprise v1.13.0"
         },
         "method": "POST",
         "url": "https://www.reddit.com/api/v1/access_token"
@@ -19,7 +19,7 @@
           "accept": "*/*",
           "authorization": "Bearer token",
           "content-type": "application/x-www-form-urlencoded",
-          "user-agent": "Apprise v1.12.0"
+          "user-agent": "Apprise v1.13.0"
         },
         "method": "POST",
         "url": "https://oauth.reddit.com/api/submit"
@@ -35,10 +35,21 @@
           "accept": "*/*",
           "authorization": "Basic YXBwaWQ6YXBwc2VjcmV0",
           "content-type": "application/x-www-form-urlencoded",
-          "user-agent": "Apprise v1.12.0"
+          "user-agent": "Apprise v1.13.0"
         },
         "method": "POST",
         "url": "https://www.reddit.com/api/v1/access_token"
+      },
+      {
+        "body": "ad=False&api_type=json&extension=json&sr=testsub&title=over&kind=self&nsfw=False&resubmit=False&sendreplies=True&spoiler=False&text=%2A%2Abold%2A%2A+and+%5Blink%5D%28%3Chttps%3A%2F%2Fexample.com%3E%29+plus+%60code%60.",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer token",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Apprise v1.13.0"
+        },
+        "method": "POST",
+        "url": "https://oauth.reddit.com/api/submit"
       }
     ]
   }

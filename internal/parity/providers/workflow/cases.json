@@ -20,5 +20,12 @@
     "title": "over",
     "type": "info",
     "body_format": "html"
+  },
+  {
+    "name": "pa-cu-route",
+    "url": "workflow://prod-01.westus.logic.azure.com/AbCdEf012345/aBcDeF67890sig?pa=yes&route=19",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]

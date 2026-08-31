@@ -74,5 +74,20 @@
         "url": "https://api.telegram.org/bot123456:abcdef/sendMessage"
       }
     ]
+  },
+  {
+    "name": "rich-template",
+    "requests": [
+      {
+        "body": "{\"chat_id\": 12345678, \"rich_message\": {\"blocks\": [{\"type\": \"header\", \"text\": \"apprise parity\"}, {\"type\": \"text\", \"text\": \"hello from python\"}, {\"type\": \"footer\", \"text\": \"Apprise Notifications (info)\", \"color\": \"#3AA3E3\", \"custom\": \"hello\"}]}, \"link_preview_options\": {\"is_disabled\": true}}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://api.telegram.org/bot123456789:abcdefg_hijklmnop/sendRichMessage"
+      }
+    ]
   }
 ]

@@ -112,6 +112,8 @@ func (j *JSONTarget) buildRequest(body, title string, notifyType NotifyType, att
 	if u.Path == "" {
 		u.Path = "/"
 	}
+	// Upstream leaves RFC 3986 path characters literal; see pythonQuotePath.
+	u.RawPath = pythonQuotePath(u.Path)
 
 	if len(j.params) > 0 {
 		values := url.Values{}

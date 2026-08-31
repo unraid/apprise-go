@@ -19,6 +19,7 @@ const (
 var workflowsWorkflowRe = regexp.MustCompile(`(?i)^[A-Z0-9_-]+$`)
 var workflowsSignatureRe = regexp.MustCompile(`(?i)^[a-z0-9_-]+$`)
 var workflowsTemplateTokenRe = regexp.MustCompile(`(?i)\{\{\s*([a-z0-9_]+)\s*\}\}`)
+var workflowsRoutingIDRe = regexp.MustCompile(`^[0-9]+$`)
 
 type WorkflowsTarget struct {
 	host           string
@@ -27,6 +28,7 @@ type WorkflowsTarget struct {
 	signature      string
 	includeImage   bool
 	powerAutomate  bool
+	routingID      string
 	wrap           bool
 	apiVersion     string
 	templatePath   string
@@ -72,6 +74,15 @@ func NewWorkflowsTarget(target *ParsedURL) (*WorkflowsTarget, error) {
 		powerAutomate = parseBoolWithDefault(raw, powerAutomate)
 	}
 
+	// Microsoft may provide a CU routing ID in native Power Automate URLs.
+	routingID := strings.TrimSpace(target.Query["route"])
+	if routingID == "" {
+		routingID = strings.TrimSpace(target.Query["routeid"])
+	}
+	if routingID != "" && !workflowsRoutingIDRe.MatchString(routingID) {
+		return nil, fmt.Errorf("invalid routing id: %s", routingID)
+	}
+
 	wrap := parseBoolWithDefault(target.Query["wrap"], true)
 
 	apiVersion := strings.TrimSpace(target.Query["api-version"])
@@ -104,6 +115,7 @@ func NewWorkflowsTarget(target *ParsedURL) (*WorkflowsTarget, error) {
 		signature:      signature,
 		includeImage:   includeImage,
 		powerAutomate:  powerAutomate,
+		routingID:      routingID,
 		wrap:           wrap,
 		apiVersion:     apiVersion,
 		templatePath:   templatePath,
@@ -152,6 +164,9 @@ func (w *WorkflowsTarget) buildURL() string {
 	path := ""
 	if w.powerAutomate {
 		path = "/powerautomate/automations/direct"
+		if w.routingID != "" {
+			path += "/cu/" + w.routingID
+		}
 	}
 	path += fmt.Sprintf("/workflows/%s/triggers/manual/paths/invoke", w.workflowID)
 
@@ -329,6 +344,14 @@ func init() {
 					"required": false,
 					"type":     "bool",
 				},
+				"optional": map[string]any{
+					"default":  false,
+					"map_to":   "optional",
+					"name":     "Optional Service",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
 				"overflow": map[string]any{
 					"default":  "upstream",
 					"map_to":   "overflow",
@@ -348,6 +371,35 @@ func init() {
 				},
 				"powerautomate": map[string]any{
 					"alias_of": "pa",
+				},
+				"redirect": map[string]any{
+					"default":  true,
+					"map_to":   "redirect",
+					"name":     "Follow Redirects",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"retry": map[string]any{
+					"default":  0,
+					"map_to":   "retry",
+					"max":      10,
+					"min":      0,
+					"name":     "Service Retry",
+					"private":  false,
+					"required": false,
+					"type":     "int",
+				},
+				"route": map[string]any{
+					"map_to":   "routing_id",
+					"name":     "Power Automate Routing ID",
+					"private":  false,
+					"regex":    []string{"^[0-9]+$", ""},
+					"required": false,
+					"type":     "string",
+				},
+				"routeid": map[string]any{
+					"alias_of": "route",
 				},
 				"rto": map[string]any{
 					"default":  4.0,
@@ -397,6 +449,16 @@ func init() {
 					"private":  false,
 					"required": false,
 					"type":     "bool",
+				},
+				"wait": map[string]any{
+					"default":  0.0,
+					"map_to":   "wait",
+					"max":      20.0,
+					"min":      0.0,
+					"name":     "Inter-Retry Wait",
+					"private":  false,
+					"required": false,
+					"type":     "float",
 				},
 				"wrap": map[string]any{
 					"default":  true,

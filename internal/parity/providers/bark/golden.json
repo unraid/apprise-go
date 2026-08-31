@@ -3,7 +3,7 @@
     "name": "default-no-image",
     "requests": [
       {
-        "body": "{\"title\": \"apprise parity\", \"body\": \"hello from python\", \"device_key\": \"device1\"}",
+        "body": "{\"device_key\": \"device1\", \"title\": \"apprise parity\", \"body\": \"hello from python\"}",
         "headers": {
           "accept": "*/*",
           "content-type": "application/json; charset=utf-8",
@@ -18,7 +18,7 @@
     "name": "image-options",
     "requests": [
       {
-        "body": "{\"title\": \"Apprise Notifications\", \"body\": \"body\", \"icon\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-128x128.png\", \"sound\": \"minuet.caf\", \"url\": \"https://example.com\", \"badge\": 2, \"level\": \"passive\", \"category\": \"alerts\", \"group\": \"ops\", \"volume\": 3, \"device_key\": \"device1\"}",
+        "body": "{\"device_key\": \"device1\", \"title\": \"Apprise Notifications\", \"body\": \"body\", \"icon\": \"https://raw.githubusercontent.com/unraid/apprise-go/main/assets/themes/default/apprise-warning-128x128.png\", \"sound\": \"minuet.caf\", \"url\": \"https://example.com\", \"badge\": 2, \"level\": \"passive\", \"category\": \"alerts\", \"group\": \"ops\", \"volume\": 3}",
         "headers": {
           "accept": "*/*",
           "authorization": "Basic dXNlcjpwYXNz",
@@ -27,6 +27,21 @@
         },
         "method": "POST",
         "url": "https://example.com:8443/push"
+      }
+    ]
+  },
+  {
+    "name": "encrypted",
+    "requests": [
+      {
+        "body": "{\"device_key\": \"device1\", \"ciphertext\": \"STj5mQxC1nBcUi9CzSb7A5N8zwWa5mKbP1/IZxYSAYfbi28XmAytd6K07CXTB91kVSNgqWb6MUSm2RuP2tYklATOiqiZmgE3Dt7cP9xB1XPwpp6Gi/PlY8lMnFDafZ9w2qHgKGDGB/Rq\", \"iv\": \"paritybark12\"}",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json; charset=utf-8",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://example.com/push"
       }
     ]
   }

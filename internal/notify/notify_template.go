@@ -22,6 +22,21 @@ func renderNotifyTemplate(
 	notifyType NotifyType,
 	imageSize string,
 ) (map[string]any, error) {
+	return renderNotifyTemplateWithImageURL(
+		path, extra, body, title, notifyType,
+		appriseImageURL(notifyType, imageSize))
+}
+
+// renderNotifyTemplateWithImageURL is the variant for plugins whose
+// app_image_url token honors ?image=; an empty imageURL renders the token
+// as an empty string, the way upstream stringifies its None.
+func renderNotifyTemplateWithImageURL(
+	path string,
+	extra map[string]string,
+	body, title string,
+	notifyType NotifyType,
+	imageURL string,
+) (map[string]any, error) {
 	path = strings.TrimPrefix(strings.TrimSpace(path), "file://")
 	if path == "" {
 		return nil, fmt.Errorf("missing template path")
@@ -51,7 +66,7 @@ func renderNotifyTemplate(
 	// app_color_int, which embeds require.
 	tokens["app_color_hex"] = appriseColor(notifyType)
 	tokens["app_color_int"] = strconv.Itoa(appriseColorInt(notifyType))
-	tokens["app_image_url"] = appriseImageURL(notifyType, imageSize)
+	tokens["app_image_url"] = imageURL
 	tokens["app_url"] = appriseAppURL
 	// Templates are always JSON, so substitutions are JSON-escaped.
 	tokens["app_mode"] = "json"

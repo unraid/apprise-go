@@ -28,6 +28,12 @@ type TelegramTarget struct {
 	preview      bool
 	detect       bool
 	includeImage bool
+
+	// templatePath switches the send to Telegram's Rich Message endpoint;
+	// the template defines the whole message and body/title only feed its
+	// substitution tokens.
+	templatePath   string
+	templateTokens map[string]string
 }
 
 func NewTelegramTarget(target *ParsedURL) (*TelegramTarget, error) {
@@ -87,16 +93,23 @@ func NewTelegramTarget(target *ParsedURL) (*TelegramTarget, error) {
 		format = "html"
 	}
 
+	templateTokens := map[string]string{}
+	for key, value := range target.QueryPayload {
+		templateTokens[key] = value
+	}
+
 	return &TelegramTarget{
-		botToken:     botToken,
-		content:      telegramContentPlacement(target.Query["content"]),
-		targets:      targets,
-		notifyFormat: format,
-		markdownMode: telegramMarkdownMode(target.Query["mdv"]),
-		silent:       parseBoolValue(target.Query["silent"], false),
-		preview:      parseBoolValue(target.Query["preview"], false),
-		detect:       detect,
-		includeImage: parseBoolValue(target.Query["image"], false),
+		templatePath:   strings.TrimSpace(target.Query["template"]),
+		templateTokens: templateTokens,
+		botToken:       botToken,
+		content:        telegramContentPlacement(target.Query["content"]),
+		targets:        targets,
+		notifyFormat:   format,
+		markdownMode:   telegramMarkdownMode(target.Query["mdv"]),
+		silent:         parseBoolValue(target.Query["silent"], false),
+		preview:        parseBoolValue(target.Query["preview"], false),
+		detect:         detect,
+		includeImage:   parseBoolValue(target.Query["image"], false),
 	}, nil
 }
 
@@ -143,6 +156,12 @@ func (t *TelegramTarget) SendWithAttachments(body, title string, notifyType Noti
 			return SendRequest(t.buildDetectSpec())
 		}
 		return nil
+	}
+
+	if t.templatePath != "" {
+		// A Rich Message template bypasses the normal text/markdown/HTML
+		// handling entirely -- the template itself defines the content.
+		return t.sendRichMessage(body, title, notifyType, attachments)
 	}
 
 	message := formatTelegramMessage(title, body, t.notifyFormat, t.markdownMode)
@@ -194,6 +213,82 @@ func (t *TelegramTarget) SendWithAttachments(body, title string, notifyType Noti
 	}
 
 	_ = notifyType
+
+	return outcome.err()
+}
+
+// sendRichMessage sends a Telegram Rich Message built from the configured
+// template to every target, followed by any attachments exactly as they would
+// be sent for a normal notification.
+func (t *TelegramTarget) sendRichMessage(body, title string, notifyType NotifyType, attachments []Attachment) error {
+	imageURL := ""
+	if t.includeImage {
+		imageURL = appriseImageURL(notifyType, "256x256")
+	}
+	richMessage, err := renderNotifyTemplateWithImageURL(
+		t.templatePath, t.templateTokens, body, title, notifyType, imageURL)
+	if err != nil {
+		return err
+	}
+
+	// The template must describe a Rich Message: a non-empty 'blocks' list
+	// whose every entry is an object with a 'type' string.
+	blocks, ok := richMessage["blocks"].([]any)
+	if !ok || len(blocks) == 0 {
+		return fmt.Errorf("telegram rich message template must contain a non-empty 'blocks' list")
+	}
+	for _, block := range blocks {
+		entry, ok := block.(map[string]any)
+		if !ok {
+			return fmt.Errorf("telegram rich message template contains a block missing a 'type' string")
+		}
+		if _, ok := entry["type"].(string); !ok {
+			return fmt.Errorf("telegram rich message template contains a block missing a 'type' string")
+		}
+	}
+
+	var outcome sendOutcome
+	for _, recipient := range t.targets {
+		payload := map[string]any{
+			"rich_message": richMessage,
+		}
+		if recipient.isNumeric {
+			payload["chat_id"] = recipient.chatIDInt
+		} else {
+			payload["chat_id"] = recipient.chatID
+		}
+		if recipient.messageTopic > 0 {
+			payload["message_thread_id"] = recipient.messageTopic
+		}
+		if !t.preview {
+			payload["link_preview_options"] = map[string]any{"is_disabled": true}
+		}
+
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return err
+		}
+
+		outcome.record(SendRequest(RequestSpec{
+			Method: "POST",
+			URL:    telegramAPIBase + t.botToken + "/sendRichMessage",
+			Headers: map[string]string{
+				"User-Agent":   "Apprise",
+				"Content-Type": "application/json",
+			},
+			Body: string(data),
+		}))
+
+		// Attachments are untouched by Rich Message mode -- they are always
+		// sent afterward, exactly as a normal notification would send them.
+		for index, attachment := range attachments {
+			spec, err := t.buildAttachmentSpec(recipient, attachment, "", index)
+			if err != nil {
+				return err
+			}
+			outcome.record(SendRequest(spec))
+		}
+	}
 
 	return outcome.err()
 }
@@ -537,6 +632,14 @@ func init() {
 					"type":     "choice:string",
 					"values":   []string{"v1", "v2"},
 				},
+				"optional": map[string]any{
+					"default":  false,
+					"map_to":   "optional",
+					"name":     "Optional Service",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
 				"overflow": map[string]any{
 					"default":  "upstream",
 					"map_to":   "overflow",
@@ -553,6 +656,24 @@ func init() {
 					"private":  false,
 					"required": false,
 					"type":     "bool",
+				},
+				"redirect": map[string]any{
+					"default":  true,
+					"map_to":   "redirect",
+					"name":     "Follow Redirects",
+					"private":  false,
+					"required": false,
+					"type":     "bool",
+				},
+				"retry": map[string]any{
+					"default":  0,
+					"map_to":   "retry",
+					"max":      10,
+					"min":      0,
+					"name":     "Service Retry",
+					"private":  false,
+					"required": false,
+					"type":     "int",
 				},
 				"rto": map[string]any{
 					"default":  4.0,
@@ -577,6 +698,13 @@ func init() {
 					"private":  false,
 					"required": false,
 					"type":     "bool",
+				},
+				"template": map[string]any{
+					"map_to":   "template",
+					"name":     "Rich Message Template Path",
+					"private":  true,
+					"required": false,
+					"type":     "string",
 				},
 				"thread": map[string]any{
 					"alias_of": "topic",
@@ -608,8 +736,27 @@ func init() {
 					"required": false,
 					"type":     "bool",
 				},
+				"wait": map[string]any{
+					"default":  0.0,
+					"map_to":   "wait",
+					"max":      20.0,
+					"min":      0.0,
+					"name":     "Inter-Retry Wait",
+					"private":  false,
+					"required": false,
+					"type":     "float",
+				},
 			},
-			"kwargs":    map[string]any{},
+			"kwargs": map[string]any{
+				"tokens": map[string]any{
+					"map_to":   "tokens",
+					"name":     "Template Tokens",
+					"prefix":   ":",
+					"private":  false,
+					"required": false,
+					"type":     "string",
+				},
+			},
 			"templates": []string{"{schema}://{bot_token}", "{schema}://{bot_token}/{targets}"},
 			"tokens": map[string]any{
 				"bot_token": map[string]any{

@@ -1,0 +1,7 @@
+{
+  "name": "pingram",
+  "canonicalize_json_bodies": true,
+  "schemas": [
+    "pingram"
+  ]
+}

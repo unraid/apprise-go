@@ -177,16 +177,6 @@
    "token": "apikey"
   }
  },
- "napi": {
-  "user": {
-   "ignorecase": true,
-   "override_args": [
-    "type"
-   ],
-   "pattern": "^[A-Z0-9_-]+$",
-   "token": "type"
-  }
- },
  "nexmo": {
   "host": {
    "ignorecase": true,
@@ -213,7 +203,15 @@
    "token": "apikey"
   }
  },
- "notificationapi": {
+ "pingram": {
+  "host": {
+   "ignorecase": true,
+   "override_args": [
+    "apikey"
+   ],
+   "pattern": "^pingram_(sk|pk)_[\\w-]+$",
+   "token": "apikey"
+  },
   "user": {
    "ignorecase": true,
    "override_args": [
@@ -412,6 +410,20 @@
    "ignorecase": true,
    "pattern": "^(bot)?(?P<key>[0-9]+:[a-z0-9_-]+)$",
    "token": "bot_token"
+  }
+ },
+ "trigv": {
+  "user": {
+   "ignorecase": true,
+   "pattern": "^trgv_[a-zA-Z0-9]{8}_[a-zA-Z0-9]{32}$",
+   "token": "api_key"
+  }
+ },
+ "trigvs": {
+  "user": {
+   "ignorecase": true,
+   "pattern": "^trgv_[a-zA-Z0-9]{8}_[a-zA-Z0-9]{32}$",
+   "token": "api_key"
   }
  },
  "twilio": {

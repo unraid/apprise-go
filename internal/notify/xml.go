@@ -162,6 +162,8 @@ func (x *XMLTarget) buildRequest(body, title string, notifyType NotifyType, atta
 	if u.Path == "" {
 		u.Path = "/"
 	}
+	// Upstream leaves RFC 3986 path characters literal; see pythonQuotePath.
+	u.RawPath = pythonQuotePath(u.Path)
 
 	headers := map[string]string{
 		"User-Agent":   "Apprise",

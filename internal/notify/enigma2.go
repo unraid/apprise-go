@@ -118,7 +118,7 @@ func (e *Enigma2Target) buildURL() string {
 		trimmed = ""
 	}
 
-	return base + trimmed + "/api/message"
+	return base + pythonQuotePath(trimmed) + "/api/message"
 }
 
 func enigma2MessageType(notifyType NotifyType) int {

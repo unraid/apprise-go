@@ -75,9 +75,10 @@ func (g *GotifyTarget) BuildRequest(body, title string, notifyType NotifyType) (
 	}
 
 	u := url.URL{
-		Scheme: scheme,
-		Host:   host,
-		Path:   fmt.Sprintf("%smessage", g.fullpath),
+		Scheme:  scheme,
+		Host:    host,
+		Path:    fmt.Sprintf("%smessage", g.fullpath),
+		RawPath: pythonQuotePath(fmt.Sprintf("%smessage", g.fullpath)),
 	}
 
 	payload := map[string]any{

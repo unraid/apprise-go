@@ -363,8 +363,14 @@ var providerBuilders = map[string]buildTargetFunc{
 	"notifiarr": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewNotifiarrTarget(parsed)
 	},
-	"notificationapi": func(parsed *notify.ParsedURL) (requestSender, error) {
-		return notify.NewNotificationAPITarget(parsed)
+	"pinglet": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewPingletTarget(parsed)
+	},
+	"pingram": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewPingramTarget(parsed)
+	},
+	"trigv": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewTrigvTarget(parsed)
 	},
 	"onesignal": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewOneSignalTarget(parsed)

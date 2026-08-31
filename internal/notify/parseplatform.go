@@ -120,7 +120,7 @@ func (p *ParsePlatformTarget) buildURL() string {
 	}
 
 	path := strings.TrimRight(p.fullpath, "/")
-	return base + path + parsePlatformPushSuffix
+	return base + pythonQuotePath(path) + parsePlatformPushSuffix
 }
 
 func parsePlatformDevices(device string) ([]string, bool) {

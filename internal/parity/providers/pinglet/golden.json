@@ -1,0 +1,50 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "body": "{\"message\": \"hello from python\", \"priority\": \"normal\", \"level\": \"info\", \"title\": \"apprise parity\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer apikey123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://app.pinglet.co.uk/acme/deploys"
+      }
+    ]
+  },
+  {
+    "name": "priority-badges",
+    "requests": [
+      {
+        "body": "{\"message\": \"hello from python\", \"priority\": \"urgent\", \"level\": \"error\", \"badges\": {\"CPU\": \"95%\"}, \"data\": {\"region\": \"eu-west\"}}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer apikey123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "https://app.pinglet.co.uk/acme/deploys"
+      }
+    ]
+  },
+  {
+    "name": "insecure-port-path",
+    "requests": [
+      {
+        "body": "{\"message\": \"body\", \"priority\": \"silent\", \"level\": \"success\", \"title\": \"apprise parity\"}",
+        "headers": {
+          "accept": "*/*",
+          "authorization": "Bearer apikey123",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "method": "POST",
+        "url": "http://my.host:8080/mount/acme/deploys"
+      }
+    ]
+  }
+]

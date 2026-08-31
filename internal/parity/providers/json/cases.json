@@ -29,5 +29,12 @@
     "attachments": [
       "%7Brepo%7D/internal/parity/fixtures/report.pdf"
     ]
+  },
+  {
+    "name": "rfc3986-path",
+    "url": "json://host/a@b/x!y,z/",
+    "body": "hello from python",
+    "title": "apprise parity",
+    "type": "info"
   }
 ]

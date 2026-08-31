@@ -351,6 +351,7 @@ def cache_key(url, body, title, notify_type, body_format, attach=None):
             "APPRISE_SIMPLEPUSH_TEST_IV": os.environ.get(
                 "APPRISE_SIMPLEPUSH_TEST_IV", ""
             ),
+            "APPRISE_BARK_TEST_IV": os.environ.get("APPRISE_BARK_TEST_IV", ""),
         },
     }
     payload = json.dumps(key, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -584,6 +585,20 @@ def apply_simplepush_fixes():
         pass
 
 
+def apply_bark_fixes():
+    iv = os.environ.get("APPRISE_BARK_TEST_IV")
+    if not iv:
+        return
+    try:
+        import types
+
+        import apprise.plugins.bark as bark
+
+        bark.secrets = types.SimpleNamespace(token_urlsafe=lambda n, _iv=iv: _iv)
+    except Exception:
+        pass
+
+
 def capture_request(url, body, title, notify_type, body_format=None, attach=None):
     cached, cache_path = load_cache(url, body, title, notify_type, body_format, attach)
     if cached is not None:
@@ -595,6 +610,7 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
     apply_oauth_fixes()
     apply_vapid_fixes()
     apply_simplepush_fixes()
+    apply_bark_fixes()
 
     captured = []
 
@@ -865,7 +881,7 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
         ):
             # Viber always answers 200; status 0 in the body means success
             response._content = b'{"status":0,"status_message":"ok"}'
-        elif parsed.netloc.endswith("notificationapi.com"):
+        elif parsed.netloc.endswith("pingram.io"):
             response._content = b'{"ok":true}'
         elif parsed.netloc == "api.sendpulse.com" and parsed.path.endswith(
             "/smtp/emails"

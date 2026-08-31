@@ -70,6 +70,7 @@ Current status
 - Added PagerTree notifier with parity cases.
 - Added Home Assistant, Synology Chat, Emby, Kumulos, Nextcloud Talk, Streamlabs, Threema, PushSafer, Telegram, LaMetric, BlueSky, Nextcloud (server), and Mastodon notifiers with parity cases.
 - Updated request-capture stubs for Emby multi-request flows (login + sessions).
+- Synced to upstream v1.13.0: replaced NotificationAPI (`napi`/`notificationapi`) with Pingram (`pingram`), added Pinglet (`pinglet`/`pinglets`) and Trigv (`trigv`/`trigvs`) notifiers with parity cases, ported Bark AES-GCM encryption (`?key=`, deterministic IV via `APPRISE_BARK_TEST_IV`), Telegram Rich Message templates (`?template=` posting to `sendRichMessage`), the Microsoft Workflows CU routing ID (`?route=`), Matrix's per-mode dynamic body limits, and upstream's RFC 3986 path quoting (safe set `/:@!$&'()*+=`) for request URLs.
 
 Environment setup
 1) Python apprise for parity checks:
