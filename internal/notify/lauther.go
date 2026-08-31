@@ -83,15 +83,15 @@ func parseLautherPriority(raw string) (int, error) {
 		}
 	}
 
-	priority, err := strconv.Atoi(raw)
-	if err != nil {
-		// Upstream falls back to normal for a non-numeric, non-name value.
-		return 0, nil
+	priority, parseErr := strconv.Atoi(raw)
+	if parseErr == nil {
+		if _, ok := lautherPriorityNames[priority]; !ok {
+			return 0, fmt.Errorf("invalid Lauther priority: %s", raw)
+		}
+		return priority, nil
 	}
-	if _, ok := lautherPriorityNames[priority]; !ok {
-		return 0, fmt.Errorf("invalid Lauther priority: %s", raw)
-	}
-	return priority, nil
+	// Upstream falls back to normal for a non-numeric, non-name value.
+	return 0, nil
 }
 
 func (l *LautherTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
