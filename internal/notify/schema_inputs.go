@@ -200,7 +200,7 @@ func adjustSchemaValues(specs schemaSpecs, target *ParsedURL, values map[string]
 		if _, ok := values["smtp_host"]; !ok {
 			values["smtp_host"] = schemaValueAny("")
 		}
-	case "gotify", "gotifys":
+	case "gotify", "gotifys", "pinglet", "pinglets":
 		if _, ok := values["fullpath"]; !ok {
 			values["fullpath"] = schemaValueAny("/")
 		}
@@ -917,7 +917,9 @@ func ensureListDefaults(specs schemaSpecs, values map[string]SchemaValue) {
 
 func ensureEmptyKwargs(specs schemaSpecs, kwargs map[string]map[string]string) {
 	defaultMapTos := map[string]struct{}{
+		"badges":           {},
 		"custom":           {},
+		"data":             {},
 		"data_kwargs":      {},
 		"details":          {},
 		"headers":          {},
