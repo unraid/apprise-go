@@ -183,11 +183,18 @@
    "pattern": "^[a-z0-9-]+$"
   }
  },
+	"lauther": {
+	 "token": {
+	  "ignorecase": true,
+	  "kind": "regex",
+	  "pattern": "^lpt_[a-z0-9]+$"
+	 }
+	},
  "pingram": {
   "apikey": {
    "ignorecase": true,
    "kind": "regex",
-   "pattern": "^pingram_(sk|pk)_[\\w-]+$"
+   "pattern": "^pingram_(sk|pk)_[\\w.-]+$"
   },
   "type": {
    "ignorecase": true,

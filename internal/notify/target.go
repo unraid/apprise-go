@@ -472,6 +472,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"lark": func(parsed *ParsedURL) (Sender, error) {
 		return NewLarkTarget(parsed)
 	},
+	"lauther": func(parsed *ParsedURL) (Sender, error) {
+		return NewLautherTarget(parsed)
+	},
 	"line": func(parsed *ParsedURL) (Sender, error) {
 		return NewLineTarget(parsed)
 	},
@@ -721,6 +724,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	},
 	"signal": func(parsed *ParsedURL) (Sender, error) {
 		return NewSignalTarget(parsed)
+	},
+	"signalgrid": func(parsed *ParsedURL) (Sender, error) {
+		return NewSignalgridTarget(parsed)
 	},
 	"signals": func(parsed *ParsedURL) (Sender, error) {
 		return NewSignalTarget(parsed)
