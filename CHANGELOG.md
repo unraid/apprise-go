@@ -3,6 +3,13 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.3.3 (2026-08-31)
+
+### Features
+
+- restore provider parity with upstream apprise v1.13.0 (#96)
+- port upstream Apprise v1.13.1 fixes (#98)
+
 ## 0.3.2 (2026-08-14)
 
 ### Fixes
