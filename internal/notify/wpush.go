@@ -125,6 +125,15 @@ func (w *WPushTarget) BuildRequest(body, title string, notifyType NotifyType) (R
 }
 
 func (w *WPushTarget) Send(body, title string, notifyType NotifyType) error {
+	// Credential-bearing JSON body must not follow redirects: a 307/308 can
+	// resend apikey to another host. Keep the DispatchSend timeouts, only
+	// force followRedirect off for this request.
+	currentHTTPOptionsMu.RLock()
+	options := currentHTTPOptions
+	currentHTTPOptionsMu.RUnlock()
+	options.followRedirect = false
+	defer withHTTPOptions(options)()
+
 	spec, err := w.BuildRequest(body, title, notifyType)
 	if err != nil {
 		return err

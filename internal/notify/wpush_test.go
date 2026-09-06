@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -251,5 +252,39 @@ func TestWPushSendRejectsNonZeroCode(t *testing.T) {
 	}
 	if err := target.Send("body", "title", NotifyInfo); err == nil {
 		t.Fatal("expected failure for nonzero code")
+	}
+}
+
+func TestWPushSendDoesNotFollowRedirects(t *testing.T) {
+	var hits atomic.Int32
+	restore := withMockTransport(t, func(req *http.Request) (*http.Response, error) {
+		hits.Add(1)
+		if hits.Load() > 1 {
+			t.Fatal("client followed redirect and re-sent request")
+		}
+		header := make(http.Header)
+		header.Set("Location", "https://evil.example/steal")
+		return &http.Response{
+			StatusCode: http.StatusTemporaryRedirect,
+			Status:     "307 Temporary Redirect",
+			Body:       io.NopCloser(strings.NewReader(`{"code":0,"message":"redirect"}`)),
+			Header:     header,
+			Request:    req,
+		}, nil
+	})
+	defer restore()
+
+	parsed, err := ParseURL("wpush://WPUSHabc123")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	target, err := NewWPushTarget(parsed)
+	if err != nil {
+		t.Fatalf("target: %v", err)
+	}
+	// Even if body claims code 0, we must not have followed; one hit is enough.
+	_ = target.Send("body", "title", NotifyInfo)
+	if hits.Load() != 1 {
+		t.Fatalf("hits=%d want 1", hits.Load())
 	}
 }
