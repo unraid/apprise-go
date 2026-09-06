@@ -241,7 +241,8 @@ class NotifyWPush(NotifyBase):
                 return False
 
             api_code = content.get("code")
-            if api_code != 0:
+            # json.loads maps JSON false -> False, and False == 0 in Python.
+            if isinstance(api_code, bool) or api_code != 0:
                 error_str = content.get("message", "Unknown error")
                 status_str = NotifyWPush.http_response_code_lookup(
                     r.status_code

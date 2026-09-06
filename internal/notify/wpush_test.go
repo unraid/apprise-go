@@ -2,6 +2,8 @@ package notify
 
 import (
 	"encoding/json"
+	"io"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -102,5 +104,67 @@ func TestWPushBuildRequest(t *testing.T) {
 	}
 	if !strings.Contains(spec.Body, `"apikey"`) {
 		t.Fatalf("body missing apikey: %s", spec.Body)
+	}
+}
+
+func withMockTransport(t *testing.T, roundTrip func(*http.Request) (*http.Response, error)) func() {
+	t.Helper()
+	previous := http.DefaultTransport
+	http.DefaultTransport = roundTripFunc(roundTrip)
+	return func() { http.DefaultTransport = previous }
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+func TestWPushSendCode0DespiteNon2xx(t *testing.T) {
+	restore := withMockTransport(t, func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusCreated,
+			Status:     "201 Created",
+			Body:       io.NopCloser(strings.NewReader(`{"code":0,"message":"ok"}`)),
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	})
+	defer restore()
+
+	parsed, err := ParseURL("wpush://WPUSHabc123")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	target, err := NewWPushTarget(parsed)
+	if err != nil {
+		t.Fatalf("target: %v", err)
+	}
+	if err := target.Send("body", "title", NotifyInfo); err != nil {
+		t.Fatalf("expected success on non-2xx with code 0: %v", err)
+	}
+}
+
+func TestWPushSendRejectsBooleanCode(t *testing.T) {
+	// Regression: Python treats False == 0; Go must still fail on {"code":false}.
+	restore := withMockTransport(t, func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader(`{"code":false,"message":"nope"}`)),
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	})
+	defer restore()
+
+	parsed, err := ParseURL("wpush://WPUSHabc123")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	target, err := NewWPushTarget(parsed)
+	if err != nil {
+		t.Fatalf("target: %v", err)
+	}
+	if err := target.Send("body", "title", NotifyInfo); err == nil {
+		t.Fatal("expected failure for boolean code")
 	}
 }
