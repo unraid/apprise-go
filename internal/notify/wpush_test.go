@@ -168,3 +168,88 @@ func TestWPushSendRejectsBooleanCode(t *testing.T) {
 		t.Fatal("expected failure for boolean code")
 	}
 }
+
+func TestWPushSendAcceptsExplicitCode0(t *testing.T) {
+	restore := withMockTransport(t, func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader(`{"code":0,"message":"ok"}`)),
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	})
+	defer restore()
+
+	parsed, err := ParseURL("wpush://WPUSHabc123")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	target, err := NewWPushTarget(parsed)
+	if err != nil {
+		t.Fatalf("target: %v", err)
+	}
+	if err := target.Send("body", "title", NotifyInfo); err != nil {
+		t.Fatalf("expected success for explicit code 0: %v", err)
+	}
+}
+
+func TestWPushSendRejectsMissingCode(t *testing.T) {
+	for _, body := range []string{
+		`{}`,
+		`{"message":"rejected"}`,
+		`{"code":null,"message":"null code"}`,
+		`null`,
+	} {
+		body := body
+		t.Run(body, func(t *testing.T) {
+			restore := withMockTransport(t, func(req *http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Status:     "200 OK",
+					Body:       io.NopCloser(strings.NewReader(body)),
+					Header:     make(http.Header),
+					Request:    req,
+				}, nil
+			})
+			defer restore()
+
+			parsed, err := ParseURL("wpush://WPUSHabc123")
+			if err != nil {
+				t.Fatalf("parse: %v", err)
+			}
+			target, err := NewWPushTarget(parsed)
+			if err != nil {
+				t.Fatalf("target: %v", err)
+			}
+			if err := target.Send("body", "title", NotifyInfo); err == nil {
+				t.Fatalf("expected failure for body %s", body)
+			}
+		})
+	}
+}
+
+func TestWPushSendRejectsNonZeroCode(t *testing.T) {
+	restore := withMockTransport(t, func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Status:     "200 OK",
+			Body:       io.NopCloser(strings.NewReader(`{"code":401,"message":"bad key"}`)),
+			Header:     make(http.Header),
+			Request:    req,
+		}, nil
+	})
+	defer restore()
+
+	parsed, err := ParseURL("wpush://WPUSHabc123")
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	target, err := NewWPushTarget(parsed)
+	if err != nil {
+		t.Fatalf("target: %v", err)
+	}
+	if err := target.Send("body", "title", NotifyInfo); err == nil {
+		t.Fatal("expected failure for nonzero code")
+	}
+}

@@ -7,10 +7,24 @@
     "reason": "JSON false must not equal numeric 0"
   },
   {
+    "name": "reject-missing-code",
+    "status": 200,
+    "body": {"message": "rejected"},
+    "expect_success": false,
+    "reason": "missing code must not default to success"
+  },
+  {
+    "name": "reject-null-code",
+    "status": 200,
+    "body": {"code": null, "message": "null code"},
+    "expect_success": false,
+    "reason": "null code must not default to success"
+  },
+  {
     "name": "accept-code-0-non-2xx",
     "status": 201,
     "body": {"code": 0, "message": "ok"},
     "expect_success": true,
-    "reason": "WPUSH success is application code === 0"
+    "reason": "WPUSH success is explicit application code === 0"
   }
 ]

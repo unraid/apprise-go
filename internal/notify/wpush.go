@@ -146,11 +146,12 @@ func (w *WPushTarget) Send(body, title string, notifyType NotifyType) error {
 		return err
 	}
 
-	// WPUSH defines success as JSON code === 0. Decode the body first so a
+	// WPUSH defines success as an explicit JSON code === 0. Decode first so a
 	// non-2xx response that still carries code:0 is not rejected by the
-	// generic HTTP-status helper.
+	// generic HTTP-status helper. Code must be a pointer so missing/null
+	// fields are not confused with numeric zero.
 	var response struct {
-		Code    int    `json:"code"`
+		Code    *int   `json:"code"`
 		Message string `json:"message"`
 	}
 	if err := json.Unmarshal(raw, &response); err != nil {
@@ -159,12 +160,15 @@ func (w *WPushTarget) Send(body, title string, notifyType NotifyType) error {
 		}
 		return fmt.Errorf("wpush invalid json response: %w", err)
 	}
-	if response.Code != 0 {
+	if response.Code == nil || *response.Code != 0 {
 		msg := response.Message
 		if msg == "" {
 			msg = "Unknown error"
 		}
-		return fmt.Errorf("wpush api code=%d: %s", response.Code, msg)
+		if response.Code == nil {
+			return fmt.Errorf("wpush api code missing: %s", msg)
+		}
+		return fmt.Errorf("wpush api code=%d: %s", *response.Code, msg)
 	}
 
 	return nil
