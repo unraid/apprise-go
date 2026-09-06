@@ -3,6 +3,8 @@ package notify
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"regexp"
 	"strings"
 )
@@ -128,12 +130,34 @@ func (w *WPushTarget) Send(body, title string, notifyType NotifyType) error {
 		return err
 	}
 
+	req, err := spec.HTTPRequest()
+	if err != nil {
+		return err
+	}
+
+	resp, err := httpClient().Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	raw, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	// WPUSH defines success as JSON code === 0. Decode the body first so a
+	// non-2xx response that still carries code:0 is not rejected by the
+	// generic HTTP-status helper.
 	var response struct {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
 	}
-	if err := doJSONRequest(spec, &response); err != nil {
-		return err
+	if err := json.Unmarshal(raw, &response); err != nil {
+		if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+			return &HTTPStatusError{StatusCode: resp.StatusCode}
+		}
+		return fmt.Errorf("wpush invalid json response: %w", err)
 	}
 	if response.Code != 0 {
 		msg := response.Message

@@ -195,62 +195,70 @@ class NotifyWPush(NotifyBase):
             self.notify_url,
             self.verify_certificate,
         )
-        self.logger.debug("WPUSH Payload: %r", payload)
+        # Never log apikey; keep a redacted payload for diagnostics.
+        safe_payload = dict(payload)
+        if "apikey" in safe_payload:
+            safe_payload["apikey"] = self.pprint(
+                self.apikey, privacy=True, mode=PrivacyMode.Secret, safe=""
+            )
+        self.logger.debug("WPUSH Payload: %r", safe_payload)
 
         self.throttle()
 
         try:
+            # Credential-bearing JSON body must not follow redirects.
             r = requests.post(
                 self.notify_url,
                 headers=headers,
                 data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
                 verify=self.verify_certificate,
                 timeout=self.request_timeout,
-                allow_redirects=self.redirects,
+                allow_redirects=False,
             )
-
-            if r.status_code != requests.codes.ok:
-                status_str = NotifyWPush.http_response_code_lookup(
-                    r.status_code
-                )
-                self.logger.warning(
-                    "Failed to send WPUSH notification: "
-                    "{}{}error={}.".format(
-                        status_str,
-                        ", " if status_str else "",
-                        r.status_code,
-                    )
-                )
-                self.logger.debug(
-                    "Response Details:\r\n%r",
-                    (r.content or b"")[:2000],
-                )
-                return False
 
             try:
                 content = json.loads(r.content)
             except (AttributeError, TypeError, ValueError):
-                content = {}
+                content = None
                 self.logger.debug(
                     "Failed to parse WPUSH JSON response; body: %r",
                     (r.content or b"")[:2000],
                 )
 
-            # WPUSH success is code === 0 (not PushPlus's 200)
-            api_code = content.get("code") if content else None
-            if api_code != 0:
-                error_str = (
-                    content.get("message", "Unknown error")
-                    if content
-                    else "Unknown error"
+            # Success is JSON code === 0 (HTTP status is diagnostic only).
+            if not isinstance(content, dict):
+                status_str = NotifyWPush.http_response_code_lookup(
+                    r.status_code
                 )
                 self.logger.warning(
                     "Failed to send WPUSH notification: "
-                    "code={}: {}.".format(api_code, error_str)
+                    "invalid JSON root{}{}error={}.".format(
+                        ", " if status_str else "",
+                        status_str,
+                        r.status_code,
+                    )
+                )
+                return False
+
+            api_code = content.get("code")
+            if api_code != 0:
+                error_str = content.get("message", "Unknown error")
+                status_str = NotifyWPush.http_response_code_lookup(
+                    r.status_code
+                )
+                self.logger.warning(
+                    "Failed to send WPUSH notification: "
+                    "code={}: {}{}{}error={}.".format(
+                        api_code,
+                        error_str,
+                        ", " if status_str else "",
+                        status_str,
+                        r.status_code,
+                    )
                 )
                 self.logger.debug(
                     "Response Details:\r\n%r",
-                    content if content else (r.content or b"")[:2000],
+                    content,
                 )
                 return False
 
