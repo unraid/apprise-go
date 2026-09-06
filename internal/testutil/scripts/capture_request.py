@@ -867,6 +867,9 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
             response._content = b'{"code":1000,"msg":"ok"}'
         elif parsed.netloc == "www.pushplus.plus" and parsed.path == "/send":
             response._content = b'{"code":200,"msg":"ok"}'
+        elif parsed.netloc == "api.wpush.cn" and parsed.path.startswith("/api/v1/send"):
+            # WPUSH success is JSON code === 0
+            response._content = b'{"code":0,"message":"ok"}'
         elif parsed.netloc == "api2.serwersms.pl" and "/messages/" in parsed.path:
             # SerwerSMS answers 200 and reports the outcome in the body
             response._content = b'{"success":true}'

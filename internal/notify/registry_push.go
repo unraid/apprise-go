@@ -47,6 +47,7 @@ var pushSchemas = map[string]struct{}{
 	"pushed":     {},
 	"pushme":     {},
 	"pushplus":   {},
+	"wpush":      {},
 	"pushward":   {},
 	"wecom":      {},
 	"pushy":      {},
