@@ -56,7 +56,10 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 
 	responseBody := "ok"
 	contentType := "text/plain"
-	if strings.Contains(req.URL.String(), "sendpulse.com/oauth/access_token") {
+	if req.URL.Host == "api.wpush.cn" && strings.HasPrefix(req.URL.Path, "/api/v1/send") {
+		responseBody = `{"code":0,"message":"ok"}`
+		contentType = "application/json"
+	} else if strings.Contains(req.URL.String(), "sendpulse.com/oauth/access_token") {
 		responseBody = `{"access_token":"token","expires_in":3600}`
 		contentType = "application/json"
 	} else if strings.Contains(req.URL.Path, "/api/v4/teams/") && strings.Contains(req.URL.Path, "/channels/name/") {

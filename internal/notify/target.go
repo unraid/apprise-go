@@ -674,6 +674,9 @@ var targetBuilders = map[string]buildTargetFunc{
 	"pushplus": func(parsed *ParsedURL) (Sender, error) {
 		return NewPushplusTarget(parsed)
 	},
+	"wpush": func(parsed *ParsedURL) (Sender, error) {
+		return NewWPushTarget(parsed)
+	},
 	"pushy": func(parsed *ParsedURL) (Sender, error) {
 		return NewPushyTarget(parsed)
 	},

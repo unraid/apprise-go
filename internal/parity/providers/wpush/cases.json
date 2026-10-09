@@ -1,0 +1,30 @@
+[
+  {
+    "name": "default",
+    "url": "wpush://WPUSHabc123def456",
+    "body": "hello from parity",
+    "title": "apprise parity",
+    "type": "info"
+  },
+  {
+    "name": "title-fallback",
+    "url": "wpush://WPUSHabc123def456",
+    "body": "hello",
+    "title": "",
+    "type": "info"
+  },
+  {
+    "name": "channel-topic",
+    "url": "wpush://WPUSHabc123def456?channel=feishu&topic_code=demo",
+    "body": "topic body",
+    "title": "topic title",
+    "type": "info"
+  },
+  {
+    "name": "query-apikey",
+    "url": "wpush://?apikey=WPUSHabc123def456&channel=app",
+    "body": "query key body",
+    "title": "query key",
+    "type": "info"
+  }
+]

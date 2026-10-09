@@ -578,6 +578,7 @@ var overflowLimitsBySchema = map[string]overflowLimits{
 	"windows":    {bodyMax: 32768, titleMax: 250, lineMax: 2, amalgamateTitle: false, buffer: 0, countThreshold: 130, maxCountWidth: 12, format: "text"},
 	"workflow":   {bodyMax: 1000, titleMax: 250, lineMax: 0, amalgamateTitle: false, buffer: 0, countThreshold: 130, maxCountWidth: 12, format: "markdown"},
 	"workflows":  {bodyMax: 1000, titleMax: 250, lineMax: 0, amalgamateTitle: false, buffer: 0, countThreshold: 130, maxCountWidth: 12, format: "markdown"},
+	"wpush":      {bodyMax: 10000, titleMax: 255, lineMax: 0, amalgamateTitle: false, buffer: 0, countThreshold: 130, maxCountWidth: 12, format: "text"},
 	"wxpusher":   {bodyMax: 32768, titleMax: 250, lineMax: 0, amalgamateTitle: false, buffer: 0, countThreshold: 130, maxCountWidth: 12, format: "text"},
 	"wxteams":    {bodyMax: -1, titleMax: 0, lineMax: 0, amalgamateTitle: false, buffer: 0, countThreshold: 130, maxCountWidth: 12, format: "markdown"},
 	"x":          {bodyMax: -1, titleMax: 0, lineMax: 0, amalgamateTitle: false, buffer: 0, countThreshold: 130, maxCountWidth: 12, format: "text"},

@@ -1,0 +1,62 @@
+[
+  {
+    "name": "default",
+    "requests": [
+      {
+        "method": "POST",
+        "url": "https://api.wpush.cn/api/v1/send",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "body": "{\"apikey\":\"WPUSHabc123def456\",\"title\":\"apprise parity\",\"content\":\"hello from parity\",\"channel\":\"wechat\"}"
+      }
+    ]
+  },
+  {
+    "name": "title-fallback",
+    "requests": [
+      {
+        "method": "POST",
+        "url": "https://api.wpush.cn/api/v1/send",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "body": "{\"apikey\":\"WPUSHabc123def456\",\"title\":\"hello\",\"content\":\"hello\",\"channel\":\"wechat\"}"
+      }
+    ]
+  },
+  {
+    "name": "channel-topic",
+    "requests": [
+      {
+        "method": "POST",
+        "url": "https://api.wpush.cn/api/v1/send",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "body": "{\"apikey\":\"WPUSHabc123def456\",\"title\":\"topic title\",\"content\":\"topic body\",\"channel\":\"feishu\",\"topic_code\":\"demo\"}"
+      }
+    ]
+  },
+  {
+    "name": "query-apikey",
+    "requests": [
+      {
+        "method": "POST",
+        "url": "https://api.wpush.cn/api/v1/send",
+        "headers": {
+          "accept": "*/*",
+          "content-type": "application/json",
+          "user-agent": "Apprise"
+        },
+        "body": "{\"apikey\":\"WPUSHabc123def456\",\"title\":\"query key\",\"content\":\"query key body\",\"channel\":\"app\"}"
+      }
+    ]
+  }
+]

@@ -327,6 +327,9 @@ var providerBuilders = map[string]buildTargetFunc{
 	"pushplus": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewPushplusTarget(parsed)
 	},
+	"wpush": func(parsed *notify.ParsedURL) (requestSender, error) {
+		return notify.NewWPushTarget(parsed)
+	},
 	"smtp2go": func(parsed *notify.ParsedURL) (requestSender, error) {
 		return notify.NewSMTP2GoTarget(parsed)
 	},
