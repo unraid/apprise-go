@@ -82,7 +82,7 @@ func NewPushplusTarget(target *ParsedURL) (*PushplusTarget, error) {
 	}
 	if channel == "" {
 		channel = pushplusChannelWeChat
-		if webhook != "" {
+		if strings.TrimSpace(target.User) != "" {
 			channel = pushplusChannelWebhook
 		}
 	}

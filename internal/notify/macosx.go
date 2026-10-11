@@ -1,5 +1,7 @@
 package notify
 
+import "runtime"
+
 func init() {
 	RegisterSchemaEntryOrdered(65, SchemaEntry{
 		"attachment_support": false,
@@ -109,7 +111,9 @@ func init() {
 				},
 			},
 		},
-		"enabled":   true,
+		// The notifier is available only on macOS, matching the constructor
+		// and upstream's platform-dependent capability flag.
+		"enabled":   runtime.GOOS == "darwin",
 		"protocols": []string{"macosx"},
 		"requirements": map[string]any{
 			"details":              "Only works with Mac OS X 10.8 and higher. Additionally  requires that /usr/local/bin/terminal-notifier is locally accessible.",

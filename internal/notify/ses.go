@@ -24,6 +24,7 @@ type SESTarget struct {
 	region       string
 	fromEmail    string
 	fromName     string
+	replyTo      emailEntry
 	targets      []string
 }
 
@@ -88,13 +89,14 @@ func NewSESTarget(target *ParsedURL) (*SESTarget, error) {
 	if !isSimpleEmail(fromEmail) {
 		return nil, fmt.Errorf("invalid from email")
 	}
-	// Upstream validates the reply-to address and raises; see brevo.go.
-	// Split on commas only: a display-name address carries spaces of its own,
-	// so treating whitespace as a separator turns "No One <a@b.ca>" into three
-	// broken addresses.
-	for _, entry := range strings.Split(strings.TrimSpace(target.Query["reply"]), ",") {
-		if entry = strings.TrimSpace(entry); entry != "" && !isEmailAddress(entry) {
-			return nil, fmt.Errorf("invalid reply-to address: %q", entry)
+	replyTo := emailEntry{}
+	if raw := strings.TrimSpace(target.Query["reply"]); raw != "" {
+		var ok bool
+		replyTo, ok = parseReplyEmailEntry(raw)
+		// Python formataddr requires an ASCII addr-spec in MIME headers;
+		// Unicode display names are encoded separately.
+		if !ok || !isASCII(replyTo.email) {
+			return nil, fmt.Errorf("invalid reply-to address: %q", raw)
 		}
 	}
 	if accessKey == "" {
@@ -130,6 +132,9 @@ func NewSESTarget(target *ParsedURL) (*SESTarget, error) {
 
 	fromName := strings.TrimSpace(target.Query["name"])
 	if fromName == "" {
+		fromName = replyTo.name
+	}
+	if fromName == "" {
 		fromName = sesDefaultFromName
 	}
 
@@ -140,6 +145,7 @@ func NewSESTarget(target *ParsedURL) (*SESTarget, error) {
 		region:       region,
 		fromEmail:    fromEmail,
 		fromName:     fromName,
+		replyTo:      replyTo,
 		targets:      targets,
 	}, nil
 }
@@ -199,7 +205,7 @@ func (s *SESTarget) signer() awsSigV4 {
 }
 
 func (s *SESTarget) buildPayload(body, title, target string, attachments []Attachment) string {
-	raw := buildSESMIME(s.fromName, s.fromEmail, target, body, title, fixedTime(), attachments)
+	raw := buildSESMIME(s.fromName, s.fromEmail, s.replyTo.email, target, body, title, fixedTime(), attachments)
 	message := base64.StdEncoding.EncodeToString([]byte(raw))
 
 	pairs := []formPair{
@@ -212,7 +218,7 @@ func (s *SESTarget) buildPayload(body, title, target string, attachments []Attac
 	return encodeFormPairs(pairs)
 }
 
-func buildSESMIME(fromName, fromEmail, toEmail, body, title string, now time.Time, attachments []Attachment) string {
+func buildSESMIME(fromName, fromEmail, replyEmail, toEmail, body, title string, now time.Time, attachments []Attachment) string {
 	subject := ""
 	if strings.TrimSpace(title) != "" {
 		subject = encodeRFC2047(title)
@@ -238,10 +244,15 @@ func buildSESMIME(fromName, fromEmail, toEmail, body, title string, now time.Tim
 		fmt.Sprintf("Subject: %s", subject),
 		fmt.Sprintf("From: %s", from),
 		fmt.Sprintf("To: %s", to),
+	}
+	if replyEmail != "" && replyEmail != fromEmail {
+		envelope = append(envelope, "Reply-To: "+formatMIMEAddress(fromName, replyEmail))
+	}
+	envelope = append(envelope,
 		"Cc: ",
 		fmt.Sprintf("Date: %s", date),
 		"X-Application: Apprise",
-	}
+	)
 
 	if len(attachments) == 0 {
 		return strings.Join(append(textHeaders, envelope...), "\n") + "\n\n" + encodedBody
@@ -305,6 +316,11 @@ func formatMIMEAddress(name, email string) string {
 		return email
 	}
 	if isASCII(name) {
+		if strings.ContainsAny(name, "[]\\()<>@,:;\".") {
+			name = strings.ReplaceAll(name, "\\", "\\\\")
+			name = strings.ReplaceAll(name, "\"", "\\\"")
+			name = "\"" + name + "\""
+		}
 		return fmt.Sprintf("%s <%s>", name, email)
 	}
 	return fmt.Sprintf("%s <%s>", mime.QEncoding.Encode("utf-8", name), email)
@@ -324,12 +340,13 @@ func awsQuote(value, safe string) string {
 	}
 
 	var b strings.Builder
-	for _, r := range value {
-		if isSafeAWSChar(r, safe) {
-			b.WriteRune(r)
+	for i := 0; i < len(value); i++ {
+		ch := value[i]
+		if isSafeAWSChar(rune(ch), safe) {
+			b.WriteByte(ch)
 			continue
 		}
-		fmt.Fprintf(&b, "%%%02X", r)
+		fmt.Fprintf(&b, "%%%02X", ch)
 	}
 	return b.String()
 }

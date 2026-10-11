@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"crypto/ecdh"
 	"encoding/json"
 	"sync"
 
@@ -23,7 +24,11 @@ var (
 
 func matrixE2EERecipient() *matrixolm.Account {
 	matrixE2EEOnce.Do(func() {
-		account, err := matrixolm.NewAccount()
+		identity, signing := make([]byte, 32), make([]byte, 32)
+		for i := range identity {
+			identity[i], signing[i] = byte(200-i), byte(255-i)
+		}
+		account, err := matrixolm.NewAccountFromKeys(identity, signing)
 		if err != nil {
 			panic("matrix e2ee mock: " + err.Error())
 		}
@@ -52,10 +57,23 @@ func matrixE2EEDeviceKeys() string {
 }
 
 func matrixE2EEClaimedKey() string {
-	keys, err := matrixE2EERecipient().GenerateOneTimeKeys(matrixE2EEUserID, matrixE2EEDeviceID, 1)
-	if err != nil {
-		return `{"one_time_keys":{}}`
+	// Synthetic receiver keys are known to the independent receipt verifier.
+	// Sender keys and ciphertext remain random and must actually decrypt.
+	seed := make([]byte, 32)
+	for i := range seed {
+		seed[i] = byte(50 + i)
 	}
+	key, err := ecdh.X25519().NewPrivateKey(seed)
+	if err != nil {
+		panic(err)
+	}
+	object := map[string]any{"key": matrixolm.EncodeBase64(key.PublicKey().Bytes())}
+	canonical, err := matrixolm.CanonicalJSON(object)
+	if err != nil {
+		panic(err)
+	}
+	object["signatures"] = map[string]any{matrixE2EEUserID: map[string]any{"ed25519:" + matrixE2EEDeviceID: matrixE2EERecipient().Sign(canonical)}}
+	keys := map[string]any{"signed_curve25519:fixture": object}
 
 	data, err := json.Marshal(map[string]any{
 		"one_time_keys": map[string]any{

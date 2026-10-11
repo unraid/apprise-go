@@ -67,10 +67,6 @@ func NewDotTarget(target *ParsedURL) (*DotTarget, error) {
 	ditherType := strings.TrimSpace(target.Query["dither_type"])
 	ditherKernel := strings.TrimSpace(target.Query["dither_kernel"])
 
-	if mode == dotModeText && imageData != "" {
-		imageData = ""
-	}
-
 	// Not refused here: upstream builds the object and reports this when the
 	// send is attempted. See the note in bark.go.
 	return &DotTarget{

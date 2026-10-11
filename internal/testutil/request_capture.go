@@ -198,6 +198,10 @@ func (c *captureTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 		}
 		responseBody = fmt.Sprintf(`{"access_token":"token","home_server":"%s","user_id":"@user:%s","device_id":"APPRISEDEVICE"}`, host, host)
 		contentType = "application/json"
+	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.HasSuffix(req.URL.Path, "/account/whoami") {
+		host := req.URL.Hostname()
+		responseBody = fmt.Sprintf(`{"user_id":"@user:%s","device_id":"APPRISEDEVICE"}`, host)
+		contentType = "application/json"
 	} else if strings.Contains(req.URL.Path, "/_matrix/client/") && strings.Contains(req.URL.Path, "/join/") {
 		host := req.URL.Hostname()
 		if host == "" {

@@ -109,7 +109,7 @@ Test notes
 - Capture stubs return canned responses for multi-request providers (e.g., SendPulse OAuth, Emby login/sessions); parity focuses on outbound request shape, not response payloads.
 - Python capture caching uses `.tmp/pycapture` by default; set `APPRISE_CAPTURE_CACHE=0` to disable or `APPRISE_CAPTURE_CACHE_DIR` to override.
 - Schema case caching uses `.tmp/pycases` by default; set `APPRISE_CASES_CACHE=0` to disable or `APPRISE_CASES_CACHE_DIR` to override.
-- Golden fixtures (`internal/parity/providers/<provider>/golden.json`) enable Python-free parity checks; regenerate with `internal/testutil/scripts/update_golden.py`.
+- Golden fixtures (`internal/parity/providers/<provider>/golden.json`) enable Python-free parity checks for most providers. Secure Matrix sequences containing device-key uploads also run the independent receipt verifier, requiring `.venv/bin/python` with `cryptography` installed. Regenerate fixtures with `internal/testutil/scripts/update_golden.py`.
 - Golden refresh example: `.venv/bin/python internal/testutil/scripts/update_golden.py`.
 - CI parity setup uses `scripts/ci/setup_parity_env.sh` and `scripts/ci/run_parity_tests.sh`.
 - Always run `go` commands with `GOCACHE=$PWD/.gocache` in this repo to avoid sandboxed cache permission errors.

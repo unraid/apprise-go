@@ -75,37 +75,8 @@ func NewMatrixTarget(target *ParsedURL) (*MatrixTarget, error) {
 		return nil, fmt.Errorf("missing host")
 	}
 
-	rooms := normalizeMatrixRooms(splitPath(target.Path))
-	if toValue := strings.TrimSpace(target.Query["to"]); toValue != "" {
-		rooms = append(rooms, normalizeMatrixRooms(parseDelimitedList(toValue))...)
-	}
-
-	user := strings.TrimSpace(target.User)
-	password := strings.TrimSpace(target.Password)
-	tokenQuery := strings.TrimSpace(target.Query["token"])
-	if tokenQuery != "" {
-		password = tokenQuery
-	}
-
-	mode := strings.ToLower(strings.TrimSpace(target.Query["mode"]))
-	if mode == "" && password == "" && len(rooms) == 0 {
-		mode = matrixModeT2Bot
-	}
-	if mode == matrixModeT2Bot {
-		password = strings.TrimSpace(host)
-		if tokenQuery != "" {
-			password = tokenQuery
-		}
-	}
-
-	if password == "" && user != "" {
-		password = user
-		user = ""
-	}
-
-	if mode == "" {
-		mode = matrixModeOff
-	}
+	rooms := matrixRoomsForURL(target)
+	user, password, mode := matrixCredentials(target, rooms)
 
 	switch mode {
 	case matrixModeOff, matrixModeMatrix, matrixModeSlack, matrixModeT2Bot, matrixModeHookshot:
@@ -202,6 +173,47 @@ func NewMatrixTarget(target *ParsedURL) (*MatrixTarget, error) {
 	return matrixTarget, nil
 }
 
+func matrixRoomsForURL(target *ParsedURL) []string {
+	rooms := normalizeMatrixRooms(splitPath(target.Path))
+	if toValue := strings.TrimSpace(target.Query["to"]); toValue != "" {
+		rooms = append(rooms, normalizeMatrixRooms(parseDelimitedList(toValue))...)
+	}
+
+	return rooms
+}
+
+// matrixCredentials resolves URL credentials once for both delivery and storage IDs.
+func matrixCredentials(target *ParsedURL, rooms []string) (user, password, mode string) {
+	user = strings.TrimSpace(target.User)
+	password = strings.TrimSpace(target.Password)
+	tokenQuery := strings.TrimSpace(target.Query["token"])
+	if tokenQuery != "" {
+		password = tokenQuery
+	}
+
+	mode = strings.ToLower(strings.TrimSpace(target.Query["mode"]))
+	if mode == "" && password == "" && len(rooms) == 0 {
+		mode = matrixModeT2Bot
+	}
+	if mode == matrixModeT2Bot {
+		password = strings.TrimSpace(target.Host)
+		if tokenQuery != "" {
+			password = tokenQuery
+		}
+	}
+
+	if password == "" && user != "" {
+		password = user
+		user = ""
+	}
+
+	if mode == "" {
+		mode = matrixModeOff
+	}
+
+	return user, password, mode
+}
+
 func (m *MatrixTarget) BuildRequest(body, title string, notifyType NotifyType) (RequestSpec, error) {
 	if m.mode == matrixModeOff {
 		return RequestSpec{}, fmt.Errorf("matrix server mode uses multiple requests")
@@ -240,12 +252,39 @@ func (m *MatrixTarget) sendServer(body, title string, notifyType NotifyType, att
 			}
 		}
 	}
+	if m.userID == "" {
+		ok, response, _ := m.fetch("/account/whoami", nil, nil, http.MethodGet, "")
+		if ok {
+			if userID, _ := response["user_id"].(string); userID != "" {
+				m.userID = userID
+			}
+			if deviceID, _ := response["device_id"].(string); deviceID != "" {
+				m.deviceID = deviceID
+			}
+		}
+	}
+	if m.homeServer == "" {
+		if _, homeServer, ok := strings.Cut(m.userID, ":"); ok {
+			m.homeServer = homeServer
+		}
+		if m.homeServer == "" {
+			m.homeServer = m.host
+		}
+	}
 
 	rooms := m.rooms
 	if len(rooms) == 0 {
 		rooms = m.joinedRooms()
 		if len(rooms) == 0 {
 			return nil
+		}
+	}
+	// Upstream falls back to plaintext for this send when key setup fails;
+	// keep the configured flag so later sends can retry encryption setup.
+	e2eeCapable := m.secure && m.e2ee
+	if e2eeCapable {
+		if _, err := m.e2eeAccount(); err != nil {
+			e2eeCapable = false
 		}
 	}
 
@@ -263,16 +302,19 @@ func (m *MatrixTarget) sendServer(body, title string, notifyType NotifyType, att
 			continue
 		}
 
-		if m.includeImage && m.version == matrixVersionV2 {
-			if ok := m.sendImage(roomID, title, notifyType); !ok {
-				outcome.record(fmt.Errorf("matrix image send failed"))
+		// Resolve state before sending any content. An indeterminate room
+		// fails independently, while confirmed plaintext rooms keep their
+		// existing delivery path.
+		var encrypted bool
+		if e2eeCapable {
+			var err error
+			encrypted, err = m.roomEncrypted(roomID)
+			if err != nil {
+				outcome.record(err)
 				continue
 			}
 		}
-
-		// Only an encrypted room gets encrypted traffic; anywhere else the
-		// plaintext path is what upstream uses too.
-		if m.e2ee && m.version == matrixVersionV3 && m.roomEncrypted(roomID) {
+		if encrypted {
 			if err := m.sendEncrypted(roomID, body, title); err != nil {
 				outcome.record(err)
 				continue
@@ -287,6 +329,12 @@ func (m *MatrixTarget) sendServer(body, title string, notifyType NotifyType, att
 			continue
 		}
 
+		if m.includeImage && m.version == matrixVersionV2 {
+			if ok := m.sendImage(roomID, title, notifyType); !ok {
+				outcome.record(fmt.Errorf("matrix image send failed"))
+				continue
+			}
+		}
 		if len(attachments) > 0 && !uploadsDone {
 			var err error
 			uploaded, err = m.uploadAttachments(attachments)
@@ -416,7 +464,7 @@ func (m *MatrixTarget) uploadFetch(attachment Attachment, params url.Values) (bo
 // the first event is dropped. The spec asks for an id unique across requests
 // sharing an access token, so this advances per event rather than per room.
 func (m *MatrixTarget) advanceMessageTransaction() {
-	if m.version != matrixVersionV3 || m.accessToken == "" {
+	if m.accessToken == "" {
 		return
 	}
 
@@ -607,9 +655,10 @@ func (m *MatrixTarget) login() bool {
 		}
 	} else {
 		payload = map[string]any{
-			"type":     "m.login.password",
-			"user":     m.user,
-			"password": m.password,
+			"type":                        "m.login.password",
+			"user":                        m.user,
+			"password":                    m.password,
+			"initial_device_display_name": matrixDefaultUserAgent,
 		}
 	}
 
@@ -690,26 +739,48 @@ func (m *MatrixTarget) roomJoin(room string) string {
 		return ""
 	}
 
-	if id, ok := m.normalizeRoomID(room); ok {
-		ok, _, _ := m.fetch("/join/"+url.PathEscape(id), map[string]any{}, nil, http.MethodPost, "")
-		if ok {
-			return id
+	identifier, isID := m.normalizeRoomID(room)
+	if !isID {
+		var ok bool
+		identifier, ok = m.normalizeRoomAlias(room)
+		if !ok {
+			return ""
 		}
-		return ""
 	}
 
-	alias, ok := m.normalizeRoomAlias(room)
+	// Upstream retains successful joins in the provider Store. Include the
+	// homeserver in the cache key even when hsreq=no leaves it out of the URL.
+	cacheKey := identifier
+	homeServer := m.homeServer
+	if _, explicitHomeServer, ok := strings.Cut(identifier, ":"); ok {
+		homeServer = explicitHomeServer
+	} else if homeServer != "" {
+		cacheKey += ":" + homeServer
+	} else {
+		cacheKey += ":None"
+	}
+	var mapping struct {
+		ID         string `json:"id"`
+		HomeServer string `json:"home_server"`
+	}
+	if storeGetJSON(m.store, cacheKey, &mapping) && mapping.ID != "" {
+		return mapping.ID
+	}
+
+	ok, response, _ := m.fetch("/join/"+url.PathEscape(identifier), map[string]any{}, nil, http.MethodPost, "")
 	if !ok {
 		return ""
 	}
-	ok, response, _ := m.fetch("/join/"+url.PathEscape(alias), map[string]any{}, nil, http.MethodPost, "")
-	if !ok {
-		return ""
+	mapping.ID, _ = response["room_id"].(string)
+	if mapping.ID == "" {
+		if !isID {
+			return ""
+		}
+		mapping.ID = identifier
 	}
-	if roomID, ok := response["room_id"].(string); ok && roomID != "" {
-		return roomID
-	}
-	return ""
+	mapping.HomeServer = homeServer
+	_ = m.store.Set(cacheKey, mapping, 0)
+	return mapping.ID
 }
 
 func (m *MatrixTarget) sendImage(roomID, title string, notifyType NotifyType) bool {
@@ -721,8 +792,11 @@ func (m *MatrixTarget) sendImage(roomID, title string, notifyType NotifyType) bo
 	if payload["body"] == "" {
 		payload["body"] = string(notifyType)
 	}
-	path := fmt.Sprintf("/rooms/%s/send/m.room.message", url.PathEscape(roomID))
-	ok, _, _ := m.fetch(path, payload, nil, http.MethodPost, "")
+	path := m.messagePath(roomID)
+	ok, _, _ := m.fetch(path, payload, nil, m.messageMethod(), "")
+	if ok {
+		m.advanceMessageTransaction()
+	}
 	return ok
 }
 
@@ -751,22 +825,12 @@ func (m *MatrixTarget) sendMessage(roomID, body, title string, notifyType Notify
 }
 
 func (m *MatrixTarget) messagePath(roomID string) string {
-	escapedRoom := url.PathEscape(roomID)
-	if m.version == matrixVersionV3 {
-		transaction := m.transactionIDString
-		if transaction == "" {
-			transaction = fmt.Sprintf("%d", m.transactionID)
-		}
-		return fmt.Sprintf("/rooms/%s/send/m.room.message/%s", escapedRoom, url.PathEscape(transaction))
-	}
-	return fmt.Sprintf("/rooms/%s/send/m.room.message", escapedRoom)
+	transaction := m.transactionValue()
+	return fmt.Sprintf("/rooms/%s/send/m.room.message/%s", url.PathEscape(roomID), url.PathEscape(transaction))
 }
 
 func (m *MatrixTarget) messageMethod() string {
-	if m.version == matrixVersionV3 {
-		return http.MethodPut
-	}
-	return http.MethodPost
+	return http.MethodPut
 }
 
 func (m *MatrixTarget) normalizeRoomID(room string) (string, bool) {

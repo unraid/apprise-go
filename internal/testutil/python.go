@@ -2,10 +2,12 @@ package testutil
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func PythonPath(t *testing.T) string {
@@ -46,8 +48,11 @@ func AppriseCLIPath(t *testing.T) string {
 
 func RunCommand(t *testing.T, name string, args ...string) (string, string, error) {
 	t.Helper()
+	return runCommand(t.Context(), name, args...)
+}
 
-	cmd := exec.Command(name, args...)
+func runCommand(ctx context.Context, name string, args ...string) (string, string, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Env = os.Environ()
 
 	var stdout bytes.Buffer
@@ -64,6 +69,13 @@ func RunPythonScript(t *testing.T, script string, args ...string) (string, strin
 
 	python := PythonPath(t)
 	cmdArgs := append([]string{script}, args...)
+	if filepath.Base(script) == "capture_request.py" {
+		// Bound each notification capture. Aggregate commands such as the
+		// golden check use the test's context and can compare many providers.
+		ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+		defer cancel()
+		return runCommand(ctx, python, cmdArgs...)
+	}
 	return RunCommand(t, python, cmdArgs...)
 }
 

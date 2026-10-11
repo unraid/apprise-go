@@ -222,7 +222,7 @@ func encodeJWTHeader(alg, kid string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(data), nil
+	return addJSONSpaces(data), nil
 }
 
 func encodeJWTPayload(iat, exp int64, iss, aud, scope string) (string, error) {
@@ -243,7 +243,7 @@ func encodeJWTPayload(iat, exp int64, iss, aud, scope string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(data), nil
+	return addJSONSpaces(data), nil
 }
 
 func signRS256(key *rsa.PrivateKey, signingInput string) (string, error) {

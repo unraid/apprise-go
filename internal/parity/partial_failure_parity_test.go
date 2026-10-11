@@ -96,11 +96,6 @@ func TestPartialFailureParity(t *testing.T) {
 			if err != nil {
 				continue
 			}
-			target, err := builder(parsed)
-			if err != nil {
-				continue
-			}
-
 			// A single-request case cannot show the difference: there is no
 			// "rest of the send" to abandon. The golden fixture already
 			// records how many requests the case makes, so this is read off
@@ -109,20 +104,30 @@ func TestPartialFailureParity(t *testing.T) {
 			if goldenRequestCount(t, def.Dir, c.Name) < 2 {
 				continue
 			}
-			multiCases++
-
 			pythonSpecs, pythonSuccess := testutil.CapturePythonRequestsWithFailuresResult(
 				t, c.URL, c.Body, c.Title, 1)
 
 			restore := testutil.FailNextRequests(1)
 			var goErr error
-			goSpecs := testutil.CaptureGoRequests(t, func() error {
+			goSpecs, buildErr := testutil.CaptureGoRequestsResult(t, func() error {
+				if name == "matrix" {
+					// Python's failure capture starts with a fresh provider store.
+					parsed.Query["store"] = "no"
+				}
+				target, err := builder(parsed)
+				if err != nil {
+					return err
+				}
 				goErr = notify.DispatchSendWithInput(
 					target, parsed, c.Body, c.Title, c.BodyFormat, notify.NotifyInfo, nil)
 				return nil
 			})
 			restore()
+			if buildErr != nil {
+				continue
+			}
 
+			multiCases++
 			checked++
 
 			if len(goSpecs) != len(pythonSpecs) {

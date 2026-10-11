@@ -103,7 +103,7 @@ KEEP_HEADERS = {
 }
 
 BLUESKY_CREATED_AT = "2024-01-01T00:00:00Z"
-CACHE_VERSION = 15
+CACHE_VERSION = 16
 
 # How many requests still have to fail before the mocks answer normally. Set
 # from --fail-first, and the only way to reach a retry path: every mock here
@@ -123,7 +123,13 @@ def matrix_e2ee_account():
     if _matrix_e2ee_account is None:
         from apprise.plugins.matrix.e2ee import MatrixOlmAccount
 
-        _matrix_e2ee_account = MatrixOlmAccount()
+        from matrix_receipt import RECEIVER_IDENTITY, RECEIVER_SIGNING, RECEIVER_OTK
+
+        _matrix_e2ee_account = MatrixOlmAccount(
+            ik_priv_b64=base64.b64encode(RECEIVER_IDENTITY).decode("ascii"),
+            sk_priv_b64=base64.b64encode(RECEIVER_SIGNING).decode("ascii"),
+            otks={"fixture": base64.b64encode(RECEIVER_OTK).decode("ascii")},
+        )
     return _matrix_e2ee_account
 
 
@@ -314,6 +320,7 @@ def cache_key(url, body, title, notify_type, body_format, attach=None):
         apprise_version = ""
     key = {
         "version": CACHE_VERSION,
+        "matrix_receipt_sha256": hashlib.sha256(Path(__file__).with_name("matrix_receipt.py").read_bytes()).hexdigest(),
         "url": url,
         "body": body,
         "title": title,
@@ -459,17 +466,21 @@ def apply_fixed_time():
     except Exception:
         pass
 
-    try:
-        import time as time_module
+    # Freeze payload timestamps at their call sites, leaving timers and the
+    # encryption key lifecycle on the real clock.
+    for module_name in ("slack", "matrix.base"):
+        try:
+            import importlib
 
-        time_module.time = lambda: fixed.timestamp()
-    except Exception:
-        pass
+            module = importlib.import_module("apprise.plugins." + module_name)
+            module.time = lambda: fixed.timestamp()
+        except ImportError:
+            pass
 
     try:
         import apprise.plugins.dingtalk as dingtalk
 
-        dingtalk.time.time = lambda: fixed.timestamp()
+        dingtalk.time = types.SimpleNamespace(time=lambda: fixed.timestamp())
     except Exception:
         pass
 
@@ -482,10 +493,16 @@ def apply_fixed_time():
 
     try:
         import uuid as uuid_module
+        import apprise.plugins.home_assistant as home_assistant
+        import apprise.plugins.pagertree as pagertree
+        import apprise.plugins.matrix.base as matrix_base
 
-        uuid_module.uuid4 = lambda: uuid_module.UUID(
-            "00000000-0000-4000-8000-000000000000"
-        )
+        fixed_uuid = lambda: uuid_module.UUID("00000000-0000-4000-8000-000000000000")
+        home_assistant.uuid4 = fixed_uuid
+        pagertree.uuid4 = fixed_uuid
+        matrix_base.uuid = types.SimpleNamespace(uuid4=fixed_uuid)
+        # matrix.e2ee uses the original uuid module: one-time key IDs must
+        # remain unique, or its fill-to-count loop can never terminate.
     except Exception:
         pass
 
@@ -816,6 +833,9 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
                     "user_id": f"@user:{host}",
                 }
             ).encode("utf-8")
+        elif "/_matrix/client/" in parsed.path and parsed.path.endswith("/account/whoami"):
+            host = parsed.hostname or parsed.netloc.split(":")[0]
+            response._content = json.dumps({"user_id": f"@user:{host}", "device_id": "APPRISEDEVICE"}).encode("utf-8")
         elif "/_matrix/client/" in parsed.path and "/join/" in parsed.path:
             host = parsed.hostname or parsed.netloc.split(":")[0]
             response._content = json.dumps({"room_id": f"!room:{host}"}).encode("utf-8")
@@ -1009,7 +1029,11 @@ def capture_request(url, body, title, notify_type, body_format=None, attach=None
 
     requests.sessions.Session.request = patched_request
     try:
-        asset_kwargs = {}
+        # Compare uploads using the same controlled icon input on both sides.
+        # Provider URL assets are still compared using the existing URL mapping.
+        asset_kwargs = {
+            "image_path_mask": str(Path(__file__).resolve().parents[3] / "assets/themes/{THEME}/apprise-{TYPE}-{XY}{EXTENSION}")
+        }
         if body_format:
             asset_kwargs["body_format"] = NotifyFormat(body_format)
         asset = AppriseAsset(**asset_kwargs)

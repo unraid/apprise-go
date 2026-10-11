@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import sys
+from enum import Enum
 import urllib.parse
 from pathlib import Path
 
@@ -118,6 +119,7 @@ def cache_key(requested):
     payload = {
         "version": CACHE_VERSION,
         "script": "schema_exercise_cases",
+        "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "requested": sorted(requested),
         "apprise_version": apprise_version,
         "apprise_sha": apprise_git_sha(),
@@ -607,6 +609,8 @@ def template_token_count(template):
 
 
 def query_value_from_default(default, spec):
+    if isinstance(default, Enum):
+        default = default.value
     if default is None:
         return None
     if isinstance(default, bool):

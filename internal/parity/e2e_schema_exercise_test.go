@@ -86,7 +86,7 @@ func TestE2ERequestParitySchemaExercise(t *testing.T) {
 			if !ok {
 				t.Fatalf("no provider manifest for schema %s", schema)
 			}
-			builder, ok := providerBuilders[provider]
+			_, ok = providerBuilders[provider]
 			if !ok {
 				t.Fatalf("missing provider builder for %s (schema %s)", provider, schema)
 			}
@@ -98,6 +98,7 @@ func TestE2ERequestParitySchemaExercise(t *testing.T) {
 				c.URL,
 				body,
 				defaultTitle,
+				"",
 				notify.NotifyInfo,
 			)
 
@@ -108,18 +109,21 @@ func TestE2ERequestParitySchemaExercise(t *testing.T) {
 				}
 				t.Fatalf("parse url: %v", err)
 			}
-			target, err := builder(parsedURL)
-			if err != nil {
-				if pythonSuccess != nil && !*pythonSuccess {
-					return
-				}
-				if len(pythonSpecs) == 0 {
-					return
-				}
-				t.Fatalf("build target: %v", err)
-			}
 			goSpecs, err := testutil.CaptureGoRequestsResult(t, func() error {
-				return target.Send(body, defaultTitle, notify.NotifyInfo)
+				// Python runs each case in a fresh process. Keep Matrix's store
+				// per-instance; retain the existing reset for other providers.
+				if provider == "matrix" {
+					parsedURL.Query["store"] = "no"
+				} else if err := notify.StoreFor(parsedURL).Clear(); err != nil {
+					return err
+				}
+				target, err := notify.NewTarget(parsedURL)
+				if err != nil {
+					return err
+				}
+				// The Python asset has no input format: preserve that provenance
+				// while still exercising retry, overflow and optional handling.
+				return notify.DispatchSendWithInput(target, parsedURL, body, defaultTitle, "", notify.NotifyInfo, nil)
 			})
 			if shouldSkip := assertNotifySuccessMatches(t, pythonSuccess, err); shouldSkip {
 				return
@@ -128,7 +132,7 @@ func TestE2ERequestParitySchemaExercise(t *testing.T) {
 				t.Fatalf("send request failed: %v", err)
 			}
 
-			assertRequestSpecSequenceMatches(t, pythonSpecs, goSpecs)
+			assertRequestSpecSequenceMatchesExcept(t, pythonSpecs, goSpecs, defs[provider].VolatileHeaders)
 		})
 	}
 

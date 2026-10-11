@@ -118,6 +118,9 @@ func (d *DiscordTarget) buildPayload(body, title string, notifyType NotifyType) 
 		if err != nil {
 			return nil, err
 		}
+		if err := validateWebhookTemplate(rendered); err != nil {
+			return nil, err
+		}
 		for key, value := range rendered {
 			payload[key] = value
 		}

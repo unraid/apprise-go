@@ -77,8 +77,12 @@ func NewBrevoTarget(target *ParsedURL) (*BrevoTarget, error) {
 	// it, so a typo here fails the URL instead of silently sending mail nobody
 	// can reply to.
 	replyTo := strings.TrimSpace(target.Query["reply"])
-	if replyTo != "" && !isEmailAddress(replyTo) {
-		return nil, fmt.Errorf("invalid reply-to address: %q", replyTo)
+	if replyTo != "" {
+		entry, ok := parseReplyEmailEntry(replyTo)
+		if !ok {
+			return nil, fmt.Errorf("invalid reply-to address: %q", replyTo)
+		}
+		replyTo = entry.email
 	}
 
 	return &BrevoTarget{
@@ -184,7 +188,7 @@ func (b *BrevoTarget) buildPayload(body, title, target string, attachments []Att
 		payload["bcc"] = toEmailObjects(bcc)
 	}
 
-	if b.replyTo != "" && isSimpleEmail(b.replyTo) {
+	if b.replyTo != "" {
 		payload["replyTo"] = map[string]string{
 			"email": b.replyTo,
 		}

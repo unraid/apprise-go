@@ -59,12 +59,16 @@ func TestProviderRequestParity(t *testing.T) {
 					sendBody = converted
 				}
 
-				target, err := builder(parsedURL)
-				if err != nil {
-					t.Fatalf("build target: %v", err)
-				}
-
 				goSpecs, err := testutil.CaptureGoRequestsResult(t, func() error {
+					if name == "matrix" {
+						// Each Python capture starts with a fresh in-memory store.
+						// Use the per-target option so cases sharing a URL stay isolated.
+						parsedURL.Query["store"] = "no"
+					}
+					target, err := builder(parsedURL)
+					if err != nil {
+						t.Fatalf("build target: %v", err)
+					}
 					// The overflow-aware entry point, so a fixture exercises the
 					// path a caller actually takes rather than the provider in
 					// isolation.

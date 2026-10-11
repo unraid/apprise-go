@@ -63,7 +63,8 @@ func NewMastodonTarget(target *ParsedURL) (*MastodonTarget, error) {
 	targets := []string{}
 	hashtags := []string{}
 	hashtagSeen := map[string]struct{}{}
-	for _, entry := range sortedUniqueTargets(splitPath(target.Path)) {
+	entries := append(splitPath(target.Path), parseDelimitedList(target.Query["to"])...)
+	for _, entry := range sortedUniqueTargets(entries) {
 		if normalized, ok := normalizeMastodonTarget(entry); ok {
 			targets = append(targets, normalized)
 			continue
@@ -110,7 +111,7 @@ func NewMastodonTarget(target *ParsedURL) (*MastodonTarget, error) {
 	// A URL with no path posts to the timeline, which is valid. One that names
 	// path entries and yields nothing usable from any of them is not: upstream
 	// reports it has no targets rather than posting to the timeline instead.
-	if len(splitPath(target.Path)) > 0 && len(targets) == 0 && len(hashtags) == 0 {
+	if len(entries) > 0 && len(targets) == 0 && len(hashtags) == 0 {
 		return nil, fmt.Errorf("no mastodon targets to notify")
 	}
 

@@ -85,10 +85,6 @@ func NewKookTarget(target *ParsedURL) (*KookTarget, error) {
 		}
 	}
 
-	if mode == kookModeBot && len(kook.channels) == 0 && len(kook.dmUsers) == 0 {
-		return nil, fmt.Errorf("missing targets")
-	}
-
 	return kook, nil
 }
 
@@ -273,6 +269,11 @@ func (k *KookTarget) buildRequests(body, title string, notifyType NotifyType) ([
 	}
 
 	endpoints := k.endpoints()
+	// Missing bot destinations fail delivery, rather than construction, so
+	// the common retry and optional handling can apply just as in Apprise.
+	if len(endpoints) == 0 {
+		return nil, fmt.Errorf("missing targets")
+	}
 
 	specs := make([]RequestSpec, 0, len(endpoints))
 	for _, endpoint := range endpoints {

@@ -39,24 +39,30 @@ func TestFailureHandlingParity(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		target, err := builder(parsed)
-		if err != nil {
-			continue
-		}
-
 		// Fail everything, so neither side can reach a success path.
 		_, pythonSuccess := testutil.CapturePythonRequestsWithFailuresResult(
 			t, c.URL, c.Body, c.Title, 1000)
 
 		restore := testutil.FailNextRequests(1000)
 		var goErr error
-		testutil.CaptureGoRequests(t, func() error {
+		_, buildErr := testutil.CaptureGoRequestsResult(t, func() error {
+			if name == "matrix" {
+				// Match the fresh in-memory Python failure capture instance.
+				parsed.Query["store"] = "no"
+			}
+			target, err := builder(parsed)
+			if err != nil {
+				return err
+			}
 			goErr = notify.DispatchSendWithInput(
 				target, parsed, c.Body, c.Title, c.BodyFormat, notify.NotifyInfo, nil)
 
 			return nil
 		})
 		restore()
+		if buildErr != nil {
+			continue
+		}
 
 		checked++
 		goSucceeded := goErr == nil

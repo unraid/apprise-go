@@ -66,7 +66,7 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 	// both have been read, not here.
 	token := strings.TrimSpace(target.Host)
 
-	notifyFormat := strings.ToLower(strings.TrimSpace(target.Query["format"]))
+	notifyFormat := normalizeNotifyFormat(target.Query["format"])
 	if notifyFormat == "" {
 		// Slack is markdown-native upstream.
 		notifyFormat = "markdown"
@@ -162,7 +162,7 @@ func NewSlackTarget(target *ParsedURL) (*SlackTarget, error) {
 	includeImage := parseBool(target.Query["image"], true)
 	includeFooter := parseBool(target.Query["footer"], true)
 	includeTimestamp := parseBool(target.Query["timestamp"], true)
-	useBlocks := parseBool(target.Query["blocks"], false)
+	useBlocks := parseBool(target.Query["blocks"], false) || strings.TrimSpace(target.Query["template"]) != ""
 
 	if accessToken != "" && mode == "" {
 		mode = slackModeBot
@@ -228,6 +228,9 @@ func (s *SlackTarget) workflowSpec(body, title string, notifyType NotifyType) (R
 	if s.templatePath != "" {
 		rendered, err := renderNotifyTemplate(s.templatePath, s.templateTokens, body, title, notifyType, "72x72")
 		if err != nil {
+			return RequestSpec{}, err
+		}
+		if err := validateBlockKitTemplate(rendered); err != nil {
 			return RequestSpec{}, err
 		}
 		payload = rendered
@@ -493,7 +496,16 @@ func (s *SlackTarget) buildPayload(body, title string, notifyType NotifyType) (m
 		imageURL = appriseImageURL(notifyType, "72x72")
 	}
 
-	if s.useBlocks {
+	if s.templatePath != "" {
+		rendered, err := renderNotifyTemplateWithImageURL(s.templatePath, s.templateTokens, body, title, notifyType, imageURL)
+		if err != nil {
+			return nil, err
+		}
+		if err := validateBlockKitTemplate(rendered); err != nil {
+			return nil, err
+		}
+		payload["attachments"] = []any{rendered}
+	} else if s.useBlocks {
 		blockText := map[string]any{
 			"type": "section",
 			"text": map[string]any{

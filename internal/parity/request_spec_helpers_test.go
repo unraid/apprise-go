@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/unraid/apprise-go/internal/notify"
+	"github.com/unraid/apprise-go/internal/testutil"
 )
 
 var headerDrop = map[string]struct{}{
@@ -122,6 +123,8 @@ func assertRequestSpecSequenceMatches(t *testing.T, pythonSpecs, goSpecs []notif
 
 func assertRequestSpecSequenceMatchesExcept(t *testing.T, pythonSpecs, goSpecs []notify.RequestSpec, volatile []string) {
 	t.Helper()
+	pythonSpecs = testutil.NormalizeMatrixReceipts(t, pythonSpecs)
+	goSpecs = testutil.NormalizeMatrixReceipts(t, goSpecs)
 
 	if len(pythonSpecs) != len(goSpecs) {
 		t.Fatalf("request count mismatch: python=%d go=%d", len(pythonSpecs), len(goSpecs))

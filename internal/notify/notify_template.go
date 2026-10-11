@@ -79,3 +79,41 @@ func renderNotifyTemplateWithImageURL(
 
 	return payload, nil
 }
+
+func validateWebhookTemplate(payload map[string]any) error {
+	content, _ := payload["content"].(string)
+	var embeds []any
+	if raw, present := payload["embeds"]; present {
+		var ok bool
+		embeds, ok = raw.([]any)
+		if !ok {
+			return fmt.Errorf("webhook template embeds must be an array")
+		}
+	}
+	if content == "" && len(embeds) == 0 {
+		return fmt.Errorf("webhook template requires non-empty content or embeds")
+	}
+	for _, embed := range embeds {
+		if _, ok := embed.(map[string]any); !ok {
+			return fmt.Errorf("webhook template embed must be an object")
+		}
+	}
+	return nil
+}
+
+func validateBlockKitTemplate(payload map[string]any) error {
+	blocks, _ := payload["blocks"].([]any)
+	if len(blocks) == 0 {
+		return fmt.Errorf("slack template requires non-empty blocks")
+	}
+	for _, block := range blocks {
+		object, ok := block.(map[string]any)
+		if !ok {
+			return fmt.Errorf("slack template block must be an object")
+		}
+		if _, ok := object["type"].(string); !ok {
+			return fmt.Errorf("slack template block requires a type string")
+		}
+	}
+	return nil
+}

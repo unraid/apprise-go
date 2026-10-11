@@ -18,6 +18,17 @@ func URLID(target *ParsedURL, storageIDLen int, storageSalt []byte) string {
 		return ""
 	}
 
+	if scheme == "matrix" || scheme == "matrixs" {
+		// Matrix token-only and query-token forms must identify the same store
+		// in the provider and the CLI's storage administration commands.
+		resolved := *target
+		user, password, _ := matrixCredentials(target, matrixRoomsForURL(target))
+		resolved.Host = strings.TrimSpace(target.Host)
+		resolved.User, resolved.HasUser = user, user != ""
+		resolved.Password, resolved.HasPassword = password, password != ""
+		target = &resolved
+	}
+
 	hasher := sha256.New()
 	hasher.Write(storageSalt)
 	hasher.Write([]byte(scheme))

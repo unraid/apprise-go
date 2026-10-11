@@ -84,11 +84,6 @@ func TestProviderGoldenRequests(t *testing.T) {
 					t.Fatalf("parse url: %v", err)
 				}
 
-				target, err := builder(parsedURL)
-				if err != nil {
-					t.Fatalf("build target: %v", err)
-				}
-
 				attachments := loadCaseAttachments(t, c)
 				sendBody := c.Body
 				if c.BodyFormat != "" {
@@ -100,6 +95,15 @@ func TestProviderGoldenRequests(t *testing.T) {
 					sendBody = converted
 				}
 				goSpecs := testutil.CaptureGoRequests(t, func() error {
+					if name == "matrix" {
+						// Goldens describe a fresh Python in-memory provider instance.
+						// Keep this case's store local without resetting shared stores.
+						parsedURL.Query["store"] = "no"
+					}
+					target, err := builder(parsedURL)
+					if err != nil {
+						t.Fatalf("build target: %v", err)
+					}
 					// The overflow-aware entry point, so a fixture exercises the
 					// path a caller actually takes rather than the provider in
 					// isolation.

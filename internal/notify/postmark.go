@@ -86,8 +86,8 @@ func NewPostmarkTarget(target *ParsedURL) (*PostmarkTarget, error) {
 		fromEmail: fromEmail,
 		fromName:  strings.TrimSpace(target.Query["name"]),
 		targets:   targets,
-		cc:        parseDelimitedList(target.Query["cc"]),
-		bcc:       parseDelimitedList(target.Query["bcc"]),
+		cc:        validEmailRecipients(target.Query["cc"]),
+		bcc:       validEmailRecipients(target.Query["bcc"]),
 		format:    format,
 	}, nil
 }
@@ -126,6 +126,9 @@ func (p *PostmarkTarget) SendWithAttachments(body, title string, notifyType Noti
 // buildRequests sends one message per recipient.
 func (p *PostmarkTarget) buildRequests(body, title string, notifyType NotifyType, attachments []Attachment) ([]RequestSpec, error) {
 	_ = notifyType
+	if len(p.targets) == 0 {
+		return nil, fmt.Errorf("missing postmark recipients")
+	}
 
 	subject := title
 	if strings.TrimSpace(subject) == "" {
@@ -151,11 +154,11 @@ func (p *PostmarkTarget) buildRequests(body, title string, notifyType NotifyType
 		} else {
 			payload["TextBody"] = body
 		}
-		if len(p.cc) > 0 {
-			payload["Cc"] = strings.Join(p.cc, ",")
+		if cc := filterExactEmailList(p.cc, p.bcc, recipient); len(cc) > 0 {
+			payload["Cc"] = strings.Join(cc, ",")
 		}
-		if len(p.bcc) > 0 {
-			payload["Bcc"] = strings.Join(p.bcc, ",")
+		if bcc := filterExactEmailList(p.bcc, nil, recipient); len(bcc) > 0 {
+			payload["Bcc"] = strings.Join(bcc, ",")
 		}
 		if len(attachments) > 0 {
 			payload["Attachments"] = attachmentsPostmarkStyle(attachments)

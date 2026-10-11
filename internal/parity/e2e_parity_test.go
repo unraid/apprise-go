@@ -99,12 +99,15 @@ func TestE2ERequestParityAllSchemas(t *testing.T) {
 				t.Fatalf("parse url: %v", err)
 			}
 
-			target, err := builder(parsedURL)
-			if err != nil {
-				t.Fatalf("build target: %v", err)
-			}
-
 			goSpecs, err := testutil.CaptureGoRequestsResult(t, func() error {
+				if provider == "matrix" {
+					// Each Python schema capture uses a fresh provider store.
+					parsedURL.Query["store"] = "no"
+				}
+				target, err := builder(parsedURL)
+				if err != nil {
+					t.Fatalf("build target: %v", err)
+				}
 				return target.Send(c.Body, c.Title, notifyType)
 			})
 			if shouldSkip := assertNotifySuccessMatches(t, pythonSuccess, err); shouldSkip {
@@ -114,7 +117,7 @@ func TestE2ERequestParityAllSchemas(t *testing.T) {
 				t.Fatalf("send request failed: %v", err)
 			}
 
-			assertRequestSpecSequenceMatches(t, pythonSpecs, goSpecs)
+			assertRequestSpecSequenceMatchesExcept(t, pythonSpecs, goSpecs, caseVolatileHeaders(def, c))
 		})
 	}
 }
