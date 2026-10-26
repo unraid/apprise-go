@@ -34,11 +34,4 @@ jobs:
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.UNRAID_BOT_GITHUB_ADMIN_TOKEN }}
-        run: |
-          set -euo pipefail
-          version=$(sed -n 's/^var Version = "\([^" ]*\)"/\1/p' internal/version/version.go)
-          if [[ -z "$version" ]]; then
-            echo "Package version not found" >&2
-            exit 1
-          fi
-          knope release --override-version "$version"
+        run: knope publish-release

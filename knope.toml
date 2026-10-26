@@ -44,3 +44,10 @@ enabled = true
 [github]
 owner = "unraid"
 repo = "apprise-go"
+
+# Publish the version and notes already reviewed in the release PR.
+[[workflows]]
+name = "publish-release"
+
+[[workflows.steps]]
+type = "Release"
