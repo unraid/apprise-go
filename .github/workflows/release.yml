@@ -5,6 +5,12 @@ name: release
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to rebuild (uploads preserve its draft status)
+        type: string
+        required: true
 
 permissions:
   contents: write
@@ -64,6 +70,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          persist-credentials: false
+
+      - name: Validate release version
+        id: release-version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version=$(sed -n 's/^var Version = "\([^" ]*\)"/\1/p' internal/version/version.go)
+          if [[ -z "$version" || "$RELEASE_TAG" != "v$version" ]]; then
+            echo "Release tag does not match the checked-out package version" >&2
+            exit 1
+          fi
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json tagName >/dev/null
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -152,3 +175,19 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           files: dist/${{ steps.set-output-name.outputs.output_name }}
+
+      - name: Upload rebuilt release asset
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          OUTPUT_NAME: ${{ steps.set-output-name.outputs.output_name }}
+          NOTARIZED: ${{ matrix.notarize }}
+        run: |
+          set -euo pipefail
+          if [[ "$NOTARIZED" == "true" ]]; then
+            asset="dist/${OUTPUT_NAME}.zip"
+          else
+            asset="dist/${OUTPUT_NAME}"
+          fi
+          gh release upload "$RELEASE_TAG" "$asset" --clobber --repo "$GITHUB_REPOSITORY"
