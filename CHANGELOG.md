@@ -3,6 +3,12 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.3.4 (2026-10-26)
+
+### Fixes
+
+- repair provider requests and Matrix delivery
+
 ## 0.3.3 (2026-08-31)
 
 ### Features
