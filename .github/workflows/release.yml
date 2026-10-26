@@ -133,7 +133,7 @@ jobs:
           else
             OUTPUT_NAME="apprise-go-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
           fi
-          echo "output_name=${OUTPUT_NAME}" >> $GITHUB_OUTPUT
+          echo "output_name=${OUTPUT_NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Sign darwin binary
         if: matrix.notarize
