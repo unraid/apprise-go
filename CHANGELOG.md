@@ -3,6 +3,38 @@
 This project maintains its own release version. Compatibility with upstream
 `caronc/apprise` releases is tracked separately via
 `internal/version.UpstreamVersion`.
+## 0.4.1 (2026-10-27)
+
+### Features
+
+- add WPUSH notification provider
+- port Apprise 2.1.0 providers and notification behavior
+- implement same-user SAS device verification
+- complete Apprise 2.1.0 compatibility (#110)
+- add WPUSH notification provider (#100)
+
+### Fixes
+
+- harden WPUSH Send against CodeRabbit findings
+- reject boolean WPUSH response codes
+- require explicit WPUSH JSON code 0
+- disable redirects on WPUSH Send
+- preserve reviewed versions and resume asset builds (#108)
+- upload assets without concurrent release metadata updates
+- align incident actions and threaded provider options
+- bound resolved templates and preserve numeric defaults
+- require integer timestamps for SAS requests
+- preserve the bounded SAS long-poll timeout
+- retain verified identities across sender instances
+- preserve AMQP bounds on 32-bit platforms
+- verify fresh encrypted Matrix golden captures
+- preserve Telegram notification line spacing
+- install native headers for Python parity dependencies
+- pin compressed fixture encoding across Python versions
+- isolate release builds and upstream job credentials
+- repair Telegram spacing and refresh dependencies (#111)
+- retain contributor redirect protection on current main
+
 ## 0.4.0 (2026-10-27)
 
 ### Features
