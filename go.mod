@@ -7,7 +7,7 @@ toolchain go1.27.3
 require (
 	github.com/gomarkdown/markdown v0.0.0-20261026184151-79e163b7b632
 	golang.org/x/crypto v0.58.0
-	golang.org/x/net v0.61.0
+	golang.org/x/net v0.62.0
 )
 
 require (
