@@ -1,6 +1,21 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
+  "extends": ["config:recommended"],
+  "enabledManagers": ["gomod"],
+  "separateMinorPatch": true,
+  "automerge": false,
+  "automergeType": "pr",
+  "platformAutomerge": false,
+  "rebaseWhen": "behind-base-branch",
+  "packageRules": [
+    {
+      "description": "Automerge stable Go module patches after parity and race tests.",
+      "matchManagers": ["gomod"],
+      "matchDatasources": ["go"],
+      "matchCurrentVersion": "/^v?[1-9][0-9]*\\.[0-9]+\\.[0-9]+$/",
+      "matchUpdateTypes": ["patch"],
+      "minimumReleaseAge": "3 days",
+      "automerge": true
+    }
   ]
 }
