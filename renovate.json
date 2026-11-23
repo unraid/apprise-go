@@ -7,6 +7,9 @@
   "automergeType": "pr",
   "platformAutomerge": false,
   "rebaseWhen": "behind-base-branch",
+  "vulnerabilityAlerts": {
+    "enabled": false
+  },
   "packageRules": [
     {
       "description": "Automerge stable Go module patches after parity and race tests.",
