@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
-  "enabledManagers": ["gomod"],
+  "enabledManagers": ["gomod", "github-actions"],
   "separateMinorPatch": true,
   "automerge": false,
   "automergeType": "pr",
