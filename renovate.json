@@ -19,6 +19,12 @@
       "matchUpdateTypes": ["patch"],
       "minimumReleaseAge": "3 days",
       "automerge": true
+    },
+    {
+      "description": "Automerge GitHub Action and reusable workflow updates after parity and race tests.",
+      "matchManagers": ["github-actions"],
+      "matchDepTypes": ["action", "workflow"],
+      "automerge": true
     }
   ]
 }
