@@ -10,6 +10,8 @@ github.com/fortytw2/leaktest v1.3.0 h1:u8491cBMTQ8ft8aeV+adlcytMZylmA5nnwwkRZjI8
 github.com/fortytw2/leaktest v1.3.0/go.mod h1:jDsjWgpAGjm2CA7WthBh/CdZYEPF31XHquHwclZch5g=
 github.com/gomarkdown/markdown v0.0.0-20261026184151-79e163b7b632 h1:kycupqEwsSTMkgv8OB0mbaWw47OAIc0cXfnM106CSVs=
 github.com/gomarkdown/markdown v0.0.0-20261026184151-79e163b7b632/go.mod h1:zLCvXLlUnS5tvOi4hpJgzzpJsq0+dliwn85VbPh1JbQ=
+github.com/gomarkdown/markdown v0.0.0-20261124143954-1814b856890d h1:TNmJpszOE9CvuUDlgmImqL+nCH75TCmY0GrSPA0/gEw=
+github.com/gomarkdown/markdown v0.0.0-20261124143954-1814b856890d/go.mod h1:y1k49yXXXS2Kifibe9TEOef1b8dMvgpCrSMq4iKd7D8=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
