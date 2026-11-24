@@ -2,7 +2,7 @@ module github.com/unraid/apprise-go
 
 go 1.26.0
 
-toolchain go1.27.3
+toolchain go1.27.4
 
 require (
 	github.com/gomarkdown/markdown v0.0.0-20261026184151-79e163b7b632
