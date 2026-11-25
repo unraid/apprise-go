@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       rabbitmq:
-        image: rabbitmq:4.4.1-management@sha256:61f90c401a5b5ed2486771973ea92ad66046471eacab9c9149f1a6e091c91677
+        image: rabbitmq:4.4.1-management@sha256:1c70aa901955dff9c3c86975cf77a9498a6e3448336a2e049dde888b44f9b977
         env:
           RABBITMQ_DEFAULT_USER: parity
           RABBITMQ_DEFAULT_PASS: parity-pass
