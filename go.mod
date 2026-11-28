@@ -5,7 +5,7 @@ go 1.26.0
 toolchain go1.27.4
 
 require (
-	github.com/gomarkdown/markdown v0.0.0-20261124143954-1814b856890d
+	github.com/gomarkdown/markdown v0.0.0-20261127224621-51f24eb83f8a
 	golang.org/x/crypto v0.59.0
 	golang.org/x/net v0.63.0
 )
